@@ -1,0 +1,5 @@
+build/
+test/test_midium
+*.o
+.vscode/
+.DS_Store

@@ -1,0 +1,138 @@
+/*
+ * disp_oled.c - SH1106 / SSD1306 128x64 OLED over I2C1 (400 kHz).
+ *
+ * Each 8-pixel page is exactly one console row of 6x8 cells, so a row
+ * redraw is a single page write (~3 ms at 400 kHz). 21 cells x 6 px = 126 px,
+ * centred with 1 px margin. The SH1106 has 132 columns of RAM with the
+ * visible 128 starting at column 2, hence the extra offset.
+ */
+#include <string.h>
+#include "pico/stdlib.h"
+#include "hardware/i2c.h"
+#include "hardware/gpio.h"
+
+#include "pins.h"
+#include "config.h"
+#include "display.h"
+#include "font5x7.h"
+
+#if MIDIUM_OLED_SSD1306
+#define OLED_COL_OFFSET 0
+#else
+#define OLED_COL_OFFSET 2
+#endif
+#define OLED_COLS  21
+#define OLED_ROWS  8
+#define OLED_XPAD  1
+
+static bool s_bus_ready;
+
+static void bus_init(void) {
+    if (s_bus_ready) return;
+    i2c_init(DISPLAY_I2C, I2C_BAUD);
+    gpio_set_function(PIN_I2C_SDA, GPIO_FUNC_I2C);
+    gpio_set_function(PIN_I2C_SCL, GPIO_FUNC_I2C);
+    /* Modules normally carry 4k7-10k pull-ups; the weak internal ones keep
+     * the probe deterministic when nothing is fitted. */
+    gpio_pull_up(PIN_I2C_SDA);
+    gpio_pull_up(PIN_I2C_SCL);
+    s_bus_ready = true;
+}
+
+bool oled_probe(void) {
+    bus_init();
+    uint8_t dummy;
+    int r = i2c_read_timeout_us(DISPLAY_I2C, OLED_I2C_ADDR, &dummy, 1, false, 5000);
+    return r == 1;
+}
+
+static bool cmds(const uint8_t *c, size_t n) {
+    uint8_t buf[32];
+    if (n + 1 > sizeof buf) return false;
+    buf[0] = 0x00;                      /* Co=0, D/C=0: command stream */
+    memcpy(buf + 1, c, n);
+    return i2c_write_timeout_us(DISPLAY_I2C, OLED_I2C_ADDR, buf, n + 1, false, 20000) == (int)(n + 1);
+}
+
+static bool oled_init(void) {
+    bus_init();
+    static const uint8_t init_seq[] = {
+        0xAE,             /* display off */
+        0xD5, 0x80,       /* clock divide */
+        0xA8, 0x3F,       /* multiplex 64 */
+        0xD3, 0x00,       /* display offset */
+        0x40,             /* start line 0 */
+#if MIDIUM_OLED_SSD1306
+        0x8D, 0x14,       /* charge pump on */
+        0x20, 0x02,       /* page addressing mode */
+#else
+        0xAD, 0x8B,       /* SH1106 DC-DC on */
+#endif
+        0xA1,             /* segment remap (column 127 = SEG0) */
+        0xC8,             /* COM scan descending */
+        0xDA, 0x12,       /* COM pins */
+        0x81, 0xCF,       /* contrast */
+        0xD9, 0xF1,       /* pre-charge */
+        0xDB, 0x40,       /* VCOMH */
+        0xA4,             /* resume to RAM content */
+        0xA6,             /* normal (not inverted) */
+    };
+    if (!cmds(init_seq, sizeof init_seq)) return false;
+
+    /* clear all of RAM (132 columns covers SH1106) */
+    uint8_t zero[133];
+    memset(zero, 0, sizeof zero);
+    zero[0] = 0x40;
+    for (uint8_t p = 0; p < 8; p++) {
+        uint8_t a[3] = { (uint8_t)(0xB0 | p), 0x00, 0x10 };
+        cmds(a, 3);
+        i2c_write_timeout_us(DISPLAY_I2C, OLED_I2C_ADDR, zero,
+                             MIDIUM_OLED_SSD1306 ? 129 : 133, false, 50000);
+    }
+    static const uint8_t on[] = { 0xAF };
+    return cmds(on, 1);
+}
+
+static void oled_draw_row(int row, const cell_t *cells) {
+    uint8_t buf[1 + 128];
+    memset(buf, 0, sizeof buf);
+    buf[0] = 0x40;                      /* data stream */
+    uint8_t *px = buf + 1 + OLED_XPAD;
+    for (int c = 0; c < OLED_COLS; c++) {
+        const uint8_t *g = &font5x7[(uint8_t)cells[c].ch * 5u];
+        bool inv = (cells[c].attr & ATTR_INVERSE) != 0;
+        for (int i = 0; i < 6; i++) {
+            uint8_t v = (i < 5) ? g[i] : 0x00;
+            px[c * 6 + i] = inv ? (uint8_t)~v : v;
+        }
+    }
+    /* extend inverse bars into the margins so highlighted rows look solid */
+    if (cells[0].attr & ATTR_INVERSE) buf[1] = 0xFF;
+    if (cells[OLED_COLS - 1].attr & ATTR_INVERSE) buf[128] = 0xFF;
+
+    uint8_t col = OLED_COL_OFFSET;
+    uint8_t a[3] = { (uint8_t)(0xB0 | (row & 7)), (uint8_t)(col & 0x0F), (uint8_t)(0x10 | (col >> 4)) };
+    cmds(a, 3);
+    i2c_write_timeout_us(DISPLAY_I2C, OLED_I2C_ADDR, buf, sizeof buf, false, 20000);
+}
+
+static void oled_set_brightness(uint8_t pct) {
+    if (pct > 100) pct = 100;
+    uint8_t c[2] = { 0x81, (uint8_t)(1 + (pct * 254u) / 100u) };
+    cmds(c, 2);
+}
+
+const display_driver_t g_disp_oled = {
+    .name = "OLED "
+#if MIDIUM_OLED_SSD1306
+            "SSD1306",
+#else
+            "SH1106",
+#endif
+    .cols = OLED_COLS,
+    .rows = OLED_ROWS,
+    .init = oled_init,
+    .draw_row = oled_draw_row,
+    .set_brightness = oled_set_brightness,
+    .has_colour = false,
+};

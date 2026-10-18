@@ -12,9 +12,10 @@ with USB at the top).
 | GPIO | Pico pin | Function | Connects to |
 |---|---|---|---|
 | GP0 | 1 | UART0 TX: MIDI OUT A | OUT A driver, via relay 2 |
-| GP1 | 2 | UART0 RX: MIDI IN | H11L1 pin 4 (output) |
+| GP1 | 2 | UART0 RX: MIDI IN A | U1 H11L1 pin 4 (output) |
 | GP2 | 4 | Bypass relay drive (HIGH = energised) | NPN base, via 1 kΩ |
 | GP4 | 6 | UART1 TX: MIDI OUT B | OUT B driver |
+| GP5 | 7 | UART1 RX: MIDI IN B | U2 H11L1 pin 4 (output) |
 | GP6 | 9 | I2C1 SDA | OLED SDA (later also the RTC and fuel gauge) |
 | GP7 | 10 | I2C1 SCL | OLED SCL |
 | GP8 | 11 | Joystick UP | joystick, other side to GND |
@@ -38,9 +39,15 @@ with USB at the top).
 | VBUS | 40 | 5 V from USB | relay coils |
 | GND | 3, 8, 13, 18, 23, 28, 33, 38 | Ground | common ground |
 
-Free pins: GP3, GP5 (UART1 RX, unused).
+Free pins: GP3.
 
-## 2. MIDI IN (H11L1 opto-isolator)
+## 2. MIDI IN A and MIDI IN B (H11L1 opto-isolators)
+
+There are two identical input circuits: **U1 for IN A** (to GP1) and **U2 for
+IN B** (to GP5). The table below is written for IN A; IN B is the same with
+its own 220 Ω, 1N4148, 470 Ω pull-up and 100 nF, its output going to **GP5**.
+Only IN A goes through the bypass relays. IN B connects straight to U2, so
+IN B is not passed through when the box is unpowered.
 
 Use an **H11L1**. A 6N137 needs a 5 V supply, so it is no good on a 3.3 V system.
 The H11L1 has a Schmitt-trigger output that runs happily from 3.3 V.
@@ -56,7 +63,7 @@ The H11L1 has a Schmitt-trigger output that runs happily from 3.3 V.
 | H11L1 pin 3 | | not connected |
 | MIDI IN DIN pin 2 (shield) | | **not connected** (the IN side must stay isolated) |
 
-On the real build, pins 4 and 5 of MIDI IN go through relay 1 first (section 4).
+On the real build, pins 4 and 5 of MIDI IN A go through relay 1 first (section 4). MIDI IN B does not.
 
 ## 3. MIDI OUT A and OUT B (3.3 V drivers)
 
@@ -251,4 +258,5 @@ device on OUT A makes step 3 easier.
 | 5 | Same. | Menu > Generate > Note test C4, Send CC, Send PC, MSC GO, MMC Play, PANIC. | The laptop sees each on OUT B, and the footer shows what was sent. MSC GO arrives as `F0 7F 7F 02 7F 01 F7`. |
 | 6 | Same. | Generate > Clock BPM 120 > Clock out on. | The laptop measures 120.0 BPM (24 ppqn, 20.833 ms per clock). |
 | 7 | Dense-stream test. | From the laptop, send a continuous stream on IN: a running-status CC sweep at full rate plus repeated 1 kB sysex dumps for 60 s. At the same time, run Note sweep and Clock out from the MIDIum. | The laptop on OUT B receives every input byte (compare counts or capture and diff). Generated notes and clocks are merged in without corrupting the stream: no stray data, no broken running status. Stats: `Drops out A/B` = 0, `UART errors` = 0, `Thru orphans` = 0. `Mon overflow` may count if the screen can't keep up. That affects the display only, never thru. |
-| 8 | Remove USB power mid-stream. | | Relays drop out and IN goes hard-wired to OUT A again. |
+| 8 | Second source into IN B (another interface output, or a loop from OUT B of a second device). | Menu > Routing > A+B to both outputs. Send from both sources at once, including sysex on each. | Both streams arrive merged on OUT A and OUT B, every message intact (sysex never interleaved). The monitor tags each line A or B. |
+| 9 | Remove USB power mid-stream. | | Relays drop out and IN A goes hard-wired to OUT A again. IN B stops. |

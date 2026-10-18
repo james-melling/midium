@@ -24,6 +24,7 @@ set(MIDIUM_SOURCES
     src/midi_io.c
     src/midi_parser.c
     src/midi_decode.c
+    src/msc_decode.c
     src/monitor.c
     src/generator.c
     src/console.c

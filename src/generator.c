@@ -20,6 +20,7 @@
 #include "midi_defs.h"
 #include "midi_parser.h"
 #include "midi_decode.h"
+#include "msc_decode.h"
 #include "settings.h"
 
 static char     s_last[MIDI_TEXT_MAX + 2];
@@ -90,7 +91,7 @@ static void set_last_from_bytes(const uint8_t *msg, uint8_t len) {
     s_dec_ok = false;
     for (uint8_t i = 0; i < len; i++) midi_parser_feed(&p, msg[i], 0);
     if (s_dec_ok) {
-        decode_opts_t o = { g_settings.note_c3 };
+        decode_opts_t o = { .note_c3 = g_settings.note_c3, .width = MIDI_TEXT_COLS - 1 };
         s_last[0] = '>';
         midi_decode(&s_dec_msg, &o, s_last + 1, sizeof s_last - 1);
     }
@@ -250,9 +251,24 @@ bool gen_clock_running(void) { return s_clk_on; }
 
 /* ---- show control ---- */
 void gen_msc(uint8_t cmd) {
-    const uint8_t m[] = { MIDI_SYSEX, 0x7F, 0x7F, 0x02, 0x7F, cmd, MIDI_EOX };
-    send(m, sizeof m);
+    const settings_t *st = &g_settings;
+    msc_gen_t g = {
+        .dev = st->msc_dev, .fmt = msc_gen_format(st->msc_fmt_idx), .cmd = cmd,
+        .cue_int = st->msc_cue_int, .cue_dec = st->msc_cue_dec, .list = st->msc_list,
+        .time_s = st->msc_time_s, .ctrl = st->msc_ctrl, .value = st->msc_value,
+        .macro = st->msc_macro,
+    };
+    uint8_t m[ME_GEN_MAX_LEN];
+    size_t len = msc_gen_build(&g, m, sizeof m);
+    if (!len) {
+        snprintf(s_last, sizeof s_last, cmd == MSC_LOAD ? "LOAD needs a cue" : "MSC build failed");
+        s_last_t = time_us_64();
+        return;
+    }
+    send(m, (uint8_t)len);
 }
+
+void gen_msc_send(void) { gen_msc(msc_gen_command(g_settings.msc_cmd_idx)); }
 
 void gen_mmc(uint8_t cmd) {
     const uint8_t m[] = { MIDI_SYSEX, 0x7F, 0x7F, 0x06, cmd, MIDI_EOX };

@@ -18,12 +18,28 @@ Raspberry Pi Pico 2 (RP2350). For the hookup, see [docs/wiring.md](docs/wiring.m
   downstream gear never sees a broken message. Sysex passes intact.
 * **Monitor.** A full MIDI 1.0 parser decodes messages to short text: notes
   with names, CC, PC, pitch bend, aftertouch, sysex with length and
-  manufacturer ID, **MSC** (GO / STOP / RESUME / ... with cue number and
-  device ID), **MMC**, MTC quarter and full frame, song position, clock and
-  transport. It keeps a 128-message history and per-type counters.
+  manufacturer ID, **MSC**, **MMC**, MTC quarter and full frame, song
+  position, clock and transport. It keeps a 128-message history and per-type
+  counters. Sysex is kept up to 128 bytes per message (the MSC limit).
+* **MIDI Show Control decoder** (MSC 1.1.1 including two-phase commit). Every
+  command format and command in the spec is named. The monitor line reads
+  like `MSC LTG GO Q12.5 L1 @1`, `MSC SND STOP`, `MSC LTG SET 3=255` or
+  `MSC TGO Q4 01:02:03`. It shortens itself to fit the screen: first the
+  device (`@1`, `@G3` for a group, nothing for all-call), then the format,
+  then the path and frames. A trailing `~` means fields were left out, and a
+  trailing `!` means the message breaks the spec. Pause on an MSC line and
+  press to open the **detail page**. It shows the device, the format (full
+  name), the command, cue / list / path, time (hh:mm:ss:ff.sf, frame rate,
+  colour-frame and status bits), SET control and value (with the lighting
+  meaning, e.g. "sub master 4"), the FIRE macro, and the 2PC checksum
+  (verified), sequence number, d1-d4 and status code (as text). Any
+  warnings follow, then the raw hex. Any other sysex gets the same page
+  with its ID, length and hex.
 * **Generator.** Note test, note sweep, CC, program change, pitch bend sweep,
-  MIDI clock (30-300 BPM, accurate timing), Start / Stop / Continue, MSC GO /
-  STOP / RESUME, MMC Play / Stop, and All Notes Off panic on all 16 channels.
+  MIDI clock (30-300 BPM, accurate timing), Start / Stop / Continue, MSC (any
+  command format and device ID; GO, STOP, RESUME, TIMED_GO, LOAD, SET, FIRE,
+  ALL_OFF, RESTORE, RESET, GO_OFF with cue, list, time, control / value or
+  macro), MMC Play / Stop, and All Notes Off panic on all 16 channels.
 * **Two display options**, detected at boot: a 1.3" SH1106 / 0.96" SSD1306 OLED
   (21 x 8 characters), or a 1.9" ST7789 colour TFT (26 x 10 characters,
   colour-coded by message type).
@@ -67,7 +83,10 @@ make -C test
 ```
 
 The suite covers running status, interleaved realtime, sysex (long, truncated,
-unterminated), the decoder's text output, and directed merge cases: the
+unterminated), the decoder's text output, the MSC decoder (every format and
+command, device IDs, cue / list / path, time code at every frame rate, SET,
+FIRE, 2PC checksums and status codes, malformed and fuzzed input, the
+detail page, and a generator round trip), and directed merge cases: the
 boundary rule, running-status restore, sysex protection, stall timeout and
 thru latching. It also runs three randomised merge runs of 200-400 kB of
 dense traffic with heavy generator load. These check that both outputs carry
@@ -84,9 +103,11 @@ every clock byte, no drops, and bounded latency.
 
 | Where | UP / DOWN | LEFT | RIGHT | PRESS |
 |---|---|---|---|---|
-| Monitor (home) | scroll history. Pauses the display and the header shows `PAUSED`. | back to live | time column on/off | open menu |
+| Monitor (home) | scroll history. Pauses the display and the header shows `PAUSED`. | back to live | time column on/off | open menu. When paused on a sysex / MSC line (highlighted): open its detail page |
+| Detail page | scroll | back to the monitor | next page (wraps) | next page (wraps) |
 | Menu | move (wraps) | back | select / toggle / edit | select / toggle / edit |
 | Editing a value | change value (hold to auto-repeat) | done | done | done |
+| Editing the MSC cue | change the part in `< >` | integer part, or done | decimal part, or done | done |
 
 The monitor header shows `MIDIum  A:on B:on` (thru state per output). A `*`
 at the right edge means MIDI arrived in the last 150 ms. On the TFT, a `C`
@@ -99,12 +120,19 @@ byte received.
 * **Generate**: Channel (1-16), Note test C4 (vel 100, off after 250 ms),
   Note sweep (C3-C5, 120 ms per note), CC number / CC value / Send CC,
   Program / Send PC, PB sweep, Clock BPM / Clock out, MIDI Start / Stop /
-  Continue, MSC GO / STOP / RESUME (device 7F all-call, command format 7F,
-  no cue number), MMC Play / Stop, PANIC (CC 123 on all 16 channels).
-  The footer shows what was just sent.
+  Continue, **MSC >**, MMC Play / Stop, PANIC (CC 123 on all 16 channels).
+  The footer shows what was just sent, decoded.
+* **Generate > MSC**: Send, Command, Format (ALL 7F, the general categories
+  LTG / SND / MACH / VID / PROJ / PROC / PYRO, then every specific format),
+  Device (0-111, G1-G15, ALL), Cue (`integer.decimal`, 0-9999 . 0-99; `none`
+  = no cue), Cue list (sent only with a cue), Time (TIMED_GO time, and SET
+  fade time when not 0:00; sent as 25 fps), SET control / SET value (0-16383),
+  FIRE macro. Defaults are GO, ALL format, all-call, cue 1. LOAD without a
+  cue is refused, because the spec requires one.
 * **Thru**: Thru A, Thru B, Generator to A, Generator to B.
 * **Display**: Hide realtime (default on), Note names (C4=60 or C3=60),
-  Time column, Brightness, USB log, Clear monitor.
+  Time column, Brightness, USB log, Show MSC only, MSC dev filter (all, or one
+  device ID; all-call messages always pass), Clear monitor.
 * **Stats**: counts per message type, bytes in, UART errors, monitor
   overflow, stray data, thru drops, generator counts, stalls, uptime.
 * **About**: model, version, build date, which display was detected, and
@@ -119,7 +147,9 @@ Notes on the display:
   once settings persistence lands in M2.
 * "Hide realtime" hides clock and active sensing from the monitor history,
   but they are still counted in Stats. It applies as messages arrive, so a
-  running clock can't flush the history in a few seconds.
+  running clock can't flush the history in a few seconds. "Show MSC only"
+  and "MSC dev filter" work the same way. Errors are always shown, and the
+  USB log is not filtered.
 * Timestamps (time column, USB log) are `mm:ss.mmm` since boot. Real time of
   day arrives with the RTC in M2.
 
@@ -168,6 +198,7 @@ core1 does nothing but run this loop from SRAM:
 | `src/midi_io.c` | UART setup, bypass relays, core1 loop, watchdog |
 | `src/midi_parser.c` | MIDI 1.0 parser (portable, unit tested) |
 | `src/midi_decode.c` | message to text and colour class (portable, unit tested) |
+| `src/msc_decode.c` | MIDI Show Control decoder, summary / detail text, message builder (portable, unit tested) |
 | `src/monitor.c` | core0 input ring to parser, history, counters |
 | `src/generator.c` | test message generator and clock |
 | `src/console.c` | character-grid console with dirty-row tracking |

@@ -5,6 +5,7 @@
 #include "monitor.h"
 #include "midi_io.h"
 #include "midi_decode.h"
+#include "msc_decode.h"
 #include "settings.h"
 #include "debug_log.h"
 #include "config.h"
@@ -24,6 +25,18 @@ static void on_msg(const midi_msg_t *m, void *ctx) {
     /* "Hide realtime" filters at insertion: at 120 BPM the clock alone would
      * flush a 128-entry history in under 3 seconds. Still counted above. */
     if (g_settings.hide_realtime && midi_is_noisy_realtime(m)) return;
+    /* MSC filters, also at insertion. Errors always stay visible. A device
+     * filter passes that device_ID and the all-call ID (7F), which every
+     * device must obey; group IDs are not matched (membership unknown). */
+    if ((g_settings.msc_only || g_settings.msc_dev_filter >= 0) && m->type != MT_ERROR) {
+        unsigned have = m->sx_len < MIDI_SX_STORE ? m->sx_len : MIDI_SX_STORE;
+        if (m->type == MT_SYSEX && msc_is_msc(m->sx, have)) {
+            int f = g_settings.msc_dev_filter;
+            if (f >= 0 && m->sx[2] != (uint8_t)f && m->sx[2] != MSC_DEV_ALL) return;
+        } else if (g_settings.msc_only) {
+            return;
+        }
+    }
     s_hist[s_seq % HISTORY_LEN] = *m;
     s_seq++;
     s_changed = true;

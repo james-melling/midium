@@ -11,11 +11,9 @@
 #include "midi_decode.h"
 #include "midi_defs.h"
 
-static int g_checks, g_fail;
-#define CHECK(cond) do { g_checks++; if (!(cond)) { g_fail++; \
-    printf("  FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond); } } while (0)
-#define CHECK_STR(a, b) do { g_checks++; if (strcmp((a), (b)) != 0) { g_fail++; \
-    printf("  FAIL %s:%d: \"%s\" != \"%s\"\n", __FILE__, __LINE__, (a), (b)); } } while (0)
+#include "test_common.h"
+
+int g_checks, g_fail;
 
 /* ------------------------------------------------------------------------ */
 /* message collector                                                         */
@@ -48,7 +46,7 @@ static bool msg_eq(const midi_msg_t *a, const midi_msg_t *b) {
 }
 
 static void decode(const midi_msg_t *m, char *buf) {
-    decode_opts_t o = { false };
+    decode_opts_t o = { false, 0 };
     midi_decode(m, &o, buf, MIDI_TEXT_MAX);
 }
 
@@ -133,7 +131,7 @@ static void test_parser(void) {
 static void dec_bytes(const uint8_t *b, int n, char *t, bool c3) {
     msglist_t l = ml_new();
     parse_bytes(b, n, &l, NULL);
-    decode_opts_t o = { c3 };
+    decode_opts_t o = { c3, 0 };
     if (l.n) midi_decode(&l.m[l.n - 1], &o, t, MIDI_TEXT_MAX);
     else strcpy(t, "<none>");
     ml_free(&l);
@@ -157,10 +155,10 @@ static void test_decode(void) {
     D("AT  1 64",            false, 0xD0, 64);
     D("PAT  1 C4    64",      false, 0xA0, 60, 64);
     D("SYSEX 12b id00201F",  false, 0xF0, 0x00, 0x20, 0x1F, 1, 2, 3, 4, 5, 6, 7, 0xF7);
-    D("MSC GO dev7F",        false, 0xF0, 0x7F, 0x7F, 0x02, 0x7F, 0x01, 0xF7);
-    D("MSC GO Q12.5 dev01",  false, 0xF0, 0x7F, 0x01, 0x02, 0x01, 0x01, '1', '2', '.', '5', 0xF7);
-    D("MSC STOP dev7F",      false, 0xF0, 0x7F, 0x7F, 0x02, 0x7F, 0x02, 0xF7);
-    D("MSC RESUME dev7F",    false, 0xF0, 0x7F, 0x7F, 0x02, 0x7F, 0x03, 0xF7);
+    D("MSC ALL GO",          false, 0xF0, 0x7F, 0x7F, 0x02, 0x7F, 0x01, 0xF7);
+    D("MSC LTG GO Q12.5 @1", false, 0xF0, 0x7F, 0x01, 0x02, 0x01, 0x01, '1', '2', '.', '5', 0xF7);
+    D("MSC ALL STOP",        false, 0xF0, 0x7F, 0x7F, 0x02, 0x7F, 0x02, 0xF7);
+    D("MSC ALL RESUME",      false, 0xF0, 0x7F, 0x7F, 0x02, 0x7F, 0x03, 0xF7);
     D("MMC PLAY",            false, 0xF0, 0x7F, 0x7F, 0x06, 0x02, 0xF7);
     D("MMC STOP",            false, 0xF0, 0x7F, 0x7F, 0x06, 0x01, 0xF7);
     D("MTC 01:02:03:04",     false, 0xF0, 0x7F, 0x7F, 0x01, 0x01, 0x61, 2, 3, 4, 0xF7);
@@ -557,6 +555,7 @@ static void run_merge(const char *name, int nmsgs, int idle_pct, int gen_per_mil
 int main(void) {
     test_parser();
     test_decode();
+    test_msc();
     test_engine_directed();
     run_merge("sparse input, moderate generator", 20000, 50, 20, false);
     run_merge("dense input (100%), heavy generator", 40000, 0, 50, true);

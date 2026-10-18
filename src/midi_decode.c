@@ -5,6 +5,7 @@
 #include <string.h>
 #include "midi_decode.h"
 #include "midi_defs.h"
+#include "msc_decode.h"
 
 static const char *const NOTE_NAMES[12] = {
     "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
@@ -21,38 +22,6 @@ void midi_format_time(uint64_t t_us, char *buf, size_t n) {
     unsigned sec  = (unsigned)((ms / 1000u) % 60u);
     unsigned min  = (unsigned)(ms / 60000u);
     snprintf(buf, n, "%02u:%02u.%03u", min % 100u, sec, msec);
-}
-
-static const char *msc_cmd_name(uint8_t c) {
-    switch (c) {
-    case 0x01: return "GO";
-    case 0x02: return "STOP";
-    case 0x03: return "RESUME";
-    case 0x04: return "TIMED GO";
-    case 0x05: return "LOAD";
-    case 0x06: return "SET";
-    case 0x07: return "FIRE";
-    case 0x08: return "ALL OFF";
-    case 0x09: return "RESTORE";
-    case 0x0A: return "RESET";
-    case 0x0B: return "GO OFF";
-    case 0x10: return "GO/JAM";
-    case 0x11: return "STBY+";
-    case 0x12: return "STBY-";
-    case 0x13: return "SEQ+";
-    case 0x14: return "SEQ-";
-    case 0x15: return "START CLK";
-    case 0x16: return "STOP CLK";
-    case 0x17: return "ZERO CLK";
-    case 0x18: return "SET CLK";
-    case 0x19: return "CHASE ON";
-    case 0x1A: return "CHASE OFF";
-    case 0x1B: return "OPEN LIST";
-    case 0x1C: return "CLOSE LIST";
-    case 0x1D: return "OPEN PATH";
-    case 0x1E: return "CLOSE PATH";
-    default:   return NULL;
-    }
 }
 
 static const char *mmc_cmd_name(uint8_t c) {
@@ -81,32 +50,19 @@ static unsigned sx_stored(const midi_msg_t *m) {
     return m->sx_len < MIDI_SX_STORE ? m->sx_len : MIDI_SX_STORE;
 }
 
-static msg_class_t decode_sysex(const midi_msg_t *m, char *buf, size_t n) {
+static msg_class_t decode_sysex(const midi_msg_t *m, unsigned width, char *buf, size_t n) {
     const uint8_t *s = m->sx;
     unsigned have = sx_stored(m);
     const char *bang = (m->flags & MSG_F_SX_UNTERM) ? "!" : "";
 
     /* Universal realtime: F0 7F <dev> <sub-id1> ... */
+    msc_msg_t d;
+    if (msc_decode(s, have, m->sx_len, &d)) {   /* MIDI Show Control: msc_decode.c */
+        msc_summary(&d, width, buf, n);
+        return CLS_SYSEX;
+    }
     if (have >= 6 && s[1] == 0x7F) {
-        uint8_t dev = s[2], sub1 = s[3];
-        if (sub1 == 0x02) {              /* MIDI Show Control */
-            /* F0 7F dev 02 <fmt> <cmd> [cue ASCII] [00 list] ... F7 */
-            const char *cn = msc_cmd_name(s[5]);
-            char cmd[12];
-            if (cn) snprintf(cmd, sizeof cmd, "%s", cn);
-            else snprintf(cmd, sizeof cmd, "CMD%02X", s[5]);
-            char cue[10];
-            unsigned ci = 0;
-            for (unsigned i = 6; i < have && ci < sizeof(cue) - 1u; i++) {
-                uint8_t c = s[i];
-                if (c == 0x00 || c == MIDI_EOX) break;
-                cue[ci++] = (c >= 0x20 && c < 0x7F) ? (char)c : '?';
-            }
-            cue[ci] = 0;
-            if (ci) snprintf(buf, n, "MSC %s Q%s dev%02X%s", cmd, cue, dev, bang);
-            else snprintf(buf, n, "MSC %s dev%02X%s", cmd, dev, bang);
-            return CLS_SYSEX;
-        }
+        uint8_t sub1 = s[3];
         if (sub1 == 0x06) {              /* MIDI Machine Control command */
             const char *cn = mmc_cmd_name(s[4]);
             if (cn) snprintf(buf, n, "MMC %s%s", cn, bang);
@@ -163,7 +119,7 @@ msg_class_t midi_decode(const midi_msg_t *m, const decode_opts_t *o, char *buf, 
         return CLS_CC;
     }
     case MT_SYSEX:
-        return decode_sysex(m, buf, n);
+        return decode_sysex(m, (o && o->width) ? o->width : MIDI_TEXT_COLS, buf, n);
     case MT_MTC_QF:
         snprintf(buf, n, "MTC QF %u:%X", (unsigned)(m->d1 >> 4) & 7u, (unsigned)m->d1 & 0x0Fu);
         return CLS_REALTIME;

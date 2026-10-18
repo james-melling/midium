@@ -1,6 +1,7 @@
 /*
  * midi_decode.h - turn parsed MIDI messages into short human-readable text
- * (fits 21 columns, the OLED width) plus a colour class. Portable C.
+ * (fits 21 columns, the OLED width, unless decode_opts_t.width says otherwise)
+ * plus a colour class. Portable C.
  */
 #ifndef MIDIUM_MIDI_DECODE_H
 #define MIDIUM_MIDI_DECODE_H
@@ -10,7 +11,8 @@
 #include <stdbool.h>
 #include "midi_parser.h"
 
-#define MIDI_TEXT_MAX 22   /* 21 chars + NUL */
+#define MIDI_TEXT_MAX 27   /* 26 chars (TFT width) + NUL */
+#define MIDI_TEXT_COLS 21  /* default line width (OLED) */
 
 /* Colour classes (the TFT maps these to colours; OLED ignores them). */
 typedef enum {
@@ -28,12 +30,13 @@ typedef enum {
 
 typedef struct {
     bool note_c3;   /* false: C4 = 60 (default), true: C3 = 60 (Yamaha) */
+    uint8_t width;  /* columns available; 0 = MIDI_TEXT_COLS. Only MSC adapts to it. */
 } decode_opts_t;
 
 /* Note name, e.g. "C4", "F#-1". buf >= 5 bytes. */
 void midi_note_name(uint8_t note, bool c3, char *buf, size_t n);
 
-/* Decode to text (<= 21 chars). Returns the colour class. */
+/* Decode to text (<= width chars, default 21). Returns the colour class. */
 msg_class_t midi_decode(const midi_msg_t *m, const decode_opts_t *o, char *buf, size_t n);
 
 /* Short type label used by the Stats screen, e.g. "Note On". */

@@ -26,7 +26,7 @@ void dbg_log_msg(const midi_msg_t *m) {
     if (!g_settings.usb_log || !stdio_usb_connected()) return;
     if (g_settings.hide_realtime && midi_is_noisy_realtime(m)) return;
     char t[16], txt[MIDI_TEXT_MAX];
-    decode_opts_t o = { g_settings.note_c3 };
+    decode_opts_t o = { .note_c3 = g_settings.note_c3, .width = MIDI_TEXT_MAX - 1 };
     midi_format_time(m->t_us, t, sizeof t);
     midi_decode(m, &o, txt, sizeof txt);
     printf("%s  %s", t, txt);

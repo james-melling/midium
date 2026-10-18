@@ -12,7 +12,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define MIDI_SX_STORE 32u   /* bytes of sysex kept per message (incl. F0) */
+/* Bytes of sysex kept per message (incl. F0 and F7). 128 = the MSC 1.1.1
+ * message length limit, so any legal MSC message is kept whole. */
+#define MIDI_SX_STORE 128u
 
 typedef enum {
     MT_NOTE_OFF = 0,

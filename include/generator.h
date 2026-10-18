@@ -23,7 +23,8 @@ void gen_clock_toggle(void);       /* F8 at settings bpm */
 bool gen_clock_running(void);
 void gen_clock_bpm_changed(void);
 void gen_realtime(uint8_t b);      /* FA start, FB continue, FC stop */
-void gen_msc(uint8_t cmd);         /* 01 GO, 02 STOP, 03 RESUME; dev 7F, fmt 7F */
+void gen_msc(uint8_t cmd);         /* MSC command with the MSC settings (format, device, cue...) */
+void gen_msc_send(void);           /* the MSC command selected in settings */
 void gen_mmc(uint8_t cmd);         /* 01 STOP, 02 PLAY; dev 7F */
 void gen_panic(void);              /* CC123 All Notes Off on all 16 channels */
 

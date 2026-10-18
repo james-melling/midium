@@ -3,3 +3,5 @@ test/test_midium
 *.o
 .vscode/
 .DS_Store
+__pycache__/
+*.pyc

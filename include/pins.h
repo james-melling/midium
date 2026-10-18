@@ -8,13 +8,14 @@
 #define MIDIUM_PINS_H
 
 /* ---- MIDI ------------------------------------------------------------- */
-#define PIN_MIDI_OUT_A_TX    0   /* UART0 TX -> MIDI OUT A driver (via bypass relays) */
-#define PIN_MIDI_IN_RX       1   /* UART0 RX <- MIDI IN (H11L1 opto output)          */
-#define PIN_BYPASS_RELAY     2   /* HIGH = relays energised = MCU owns IN and OUT A  */
-#define PIN_MIDI_OUT_B_TX    4   /* UART1 TX -> MIDI OUT B driver                    */
+#define PIN_MIDI_OUT_A_TX    0   /* UART0 TX -> MIDI OUT A driver (via bypass relays)  */
+#define PIN_MIDI_IN_A_RX     1   /* UART0 RX <- MIDI IN A (U1 H11L1, via bypass relays) */
+#define PIN_BYPASS_RELAY     2   /* HIGH = relays energised = MCU owns IN A and OUT A  */
+#define PIN_MIDI_OUT_B_TX    4   /* UART1 TX -> MIDI OUT B driver                      */
+#define PIN_MIDI_IN_B_RX     5   /* UART1 RX <- MIDI IN B (U2 H11L1, no bypass)        */
 
-#define MIDI_UART_A          uart0   /* RX = MIDI IN, TX = OUT A */
-#define MIDI_UART_B          uart1   /* TX = OUT B (RX unused)   */
+#define MIDI_UART_A          uart0   /* RX = MIDI IN A, TX = MIDI OUT A */
+#define MIDI_UART_B          uart1   /* RX = MIDI IN B, TX = MIDI OUT B */
 #define MIDI_BAUD            31250
 
 /* ---- I2C1: OLED (0x3C); later RV-3028 RTC + MAX17048 fuel gauge --------- */

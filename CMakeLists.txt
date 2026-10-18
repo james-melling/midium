@@ -8,7 +8,7 @@ endif()
 # Pull in the Pico SDK (PICO_SDK_PATH env var or -DPICO_SDK_PATH=...)
 include(pico_sdk_import.cmake)
 
-project(midium VERSION 0.2.0 LANGUAGES C CXX ASM)
+project(midium VERSION 0.3.0 LANGUAGES C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 

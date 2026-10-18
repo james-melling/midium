@@ -5,6 +5,7 @@ CC      ?= gcc
 CFLAGS  ?= -std=c11 -O2 -g -Wall -Wextra -Werror -fsanitize=address,undefined
 INC      = -I../include
 SRCS     = test_main.c test_msc.c ../src/midi_engine.c ../src/midi_parser.c ../src/midi_decode.c \
+           ../src/settings.c \
            ../src/msc_decode.c
 
 all: run

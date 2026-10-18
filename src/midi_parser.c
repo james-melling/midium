@@ -27,6 +27,7 @@ static void emit_simple(midi_parser_t *p, uint8_t type, uint8_t status,
     m.d1 = d1;
     m.d2 = d2;
     m.flags = 0;
+    m.src = p->src;
     m.sx_len = 0;
     p->cb(&m, p->ctx);
 }
@@ -104,6 +105,7 @@ void midi_parser_feed(midi_parser_t *p, uint8_t b, uint64_t t) {
             p->sx.t_us = t;
             p->sx.type = MT_SYSEX;
             p->sx.status = b;
+            p->sx.src = p->src;
             sysex_add(p, b);
             return;
         }

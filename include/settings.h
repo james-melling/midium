@@ -4,7 +4,7 @@
  * TODO(M2): persist to flash (versioned struct + CRC in a reserved sector,
  * written with core1 parked in RAM via multicore_lockout). Keep everything
  * the user can change in this one struct so that is a single save/load.
- * TODO(M4): routing rules (filter / transform) will live alongside.
+ * TODO(M4): filter / transform rules will live alongside the routing matrix.
  */
 #ifndef MIDIUM_SETTINGS_H
 #define MIDIUM_SETTINGS_H
@@ -14,7 +14,7 @@
 #include "midi_engine.h"
 
 typedef struct {
-    me_settings_t route;     /* thru A/B, generator to A/B (read by core1) */
+    me_settings_t route;     /* routing matrix: sources per output (read by core1) */
 
     /* display */
     bool    hide_realtime;   /* hide clock + active sensing in the monitor */
@@ -24,6 +24,7 @@ typedef struct {
     bool    usb_log;         /* printf decoded messages over USB CDC */
     bool    msc_only;        /* monitor keeps only MSC (and error) messages */
     int16_t msc_dev_filter;  /* -1 = all, else MSC device_ID 0-127 (all-call 7F also passes) */
+    uint8_t show_inputs;     /* monitor: SHOW_IN_* */
 
     /* generator */
     uint8_t  gen_channel;    /* 1..16 */
@@ -45,8 +46,28 @@ typedef struct {
     uint8_t  msc_macro;      /* FIRE macro */
 } settings_t;
 
+#define SHOW_IN_BOTH 0
+#define SHOW_IN_A    1
+#define SHOW_IN_B    2
+
 extern settings_t g_settings;
 
 void settings_defaults(settings_t *s);
+
+/* ---- routing presets (inputs only; generator routing is left alone) ----
+ *   0  "A->A, A->B (thru)"   default: IN A to both outputs, IN B monitored only
+ *   1  "A+B merge -> both"
+ *   2  "A->A, B->B (split)"
+ *   3  "B->A, B->B"                                                           */
+#define ROUTE_PRESET_COUNT 4
+const char *route_preset_name(int idx);
+/* Apply a preset. Routes are added before any are removed, so a message
+ * that is routed both before and after the change is never dropped by a
+ * half-written matrix (core1 latches routes per message start). */
+void route_preset_apply(me_settings_t *r, int idx);
+/* True if the input columns of r match the preset. */
+bool route_preset_active(const me_settings_t *r, int idx);
+/* Header summary for one output: input letters ("a", "b", "ab") or "-". */
+void route_summary(const me_settings_t *r, int out, char *buf, unsigned n);
 
 #endif /* MIDIUM_SETTINGS_H */

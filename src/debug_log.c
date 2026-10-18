@@ -29,7 +29,7 @@ void dbg_log_msg(const midi_msg_t *m) {
     decode_opts_t o = { .note_c3 = g_settings.note_c3, .width = MIDI_TEXT_MAX - 1 };
     midi_format_time(m->t_us, t, sizeof t);
     midi_decode(m, &o, txt, sizeof txt);
-    printf("%s  %s", t, txt);
+    printf("%s %c %s", t, m->src ? 'B' : 'A', txt);
     if (m->type == MT_SYSEX) {
         unsigned n = m->sx_len < MIDI_SX_STORE ? m->sx_len : MIDI_SX_STORE;
         printf("  [");

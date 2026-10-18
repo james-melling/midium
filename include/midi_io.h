@@ -13,7 +13,7 @@ extern me_t g_engine;
 /* Configure UART0/UART1 at 31250 baud with TX idle high. Call first. */
 void midi_io_init(me_settings_t *settings);
 
-/* Energise the bypass relays (GP2 HIGH): MCU takes over MIDI IN and OUT A. */
+/* Energise the bypass relays (GP2 HIGH): MCU takes over MIDI IN A and OUT A. */
 void midi_io_engage_relays(void);
 
 /* Launch the engine loop on core1. Also starts the watchdog, fed by core1:

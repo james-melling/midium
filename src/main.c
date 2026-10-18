@@ -1,6 +1,6 @@
 /*
  * MIDIum (NSK MT-1) - inline MIDI test / thru box.
- * Milestone 1 firmware: thru + merge engine, monitor, generator, menus.
+ * Thru + merge engine (two inputs, routing matrix), monitor, generator, menus.
  *
  * core1: MIDI engine only (src/midi_io.c, src/midi_engine.c).
  * core0: everything else - display, joystick, parser/monitor, generator, USB.
@@ -38,7 +38,7 @@ static void splash(void) {
 }
 
 int main(void) {
-    /* 1. Bypass relays OFF first: IN stays hard-wired to OUT A. */
+    /* 1. Bypass relays OFF first: IN A stays hard-wired to OUT A. */
     gpio_init(PIN_BYPASS_RELAY);
     gpio_put(PIN_BYPASS_RELAY, 0);
     gpio_set_dir(PIN_BYPASS_RELAY, GPIO_OUT);

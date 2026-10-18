@@ -2,9 +2,11 @@
  * midi_io.c - RP2350 glue for the MIDI thru/merge engine.
  *
  * core1 runs a tight polling loop from SRAM:
- *   UART0 RX -> me_input_byte() -> per-output TX queues -> UART0/UART1 TX
- * and copies every input byte (with a timestamp) into the monitor ring for
- * core0. No display, USB or flash work happens on core1.
+ *   UART0 RX (IN A) --+
+ *                     +-> me_input_byte() -> merger -> per-output TX queues -> UART0/UART1 TX
+ *   UART1 RX (IN B) --+
+ * and copies every input byte (with a timestamp and its input) into the
+ * monitor ring for core0. No display, USB or flash work happens on core1.
  *
  * TX pacing: a byte is written to a UART only when its TX FIFO is empty. The
  * shift register is still sending the previous byte at that point, so the
@@ -68,8 +70,8 @@ static void uart_setup(uart_inst_t *u, uint tx_pin, int rx_pin) {
 void midi_io_init(me_settings_t *settings) {
     s_wdt_reset = watchdog_caused_reboot();
     me_init(&g_engine, settings);
-    uart_setup(MIDI_UART_A, PIN_MIDI_OUT_A_TX, PIN_MIDI_IN_RX);
-    uart_setup(MIDI_UART_B, PIN_MIDI_OUT_B_TX, -1);
+    uart_setup(MIDI_UART_A, PIN_MIDI_OUT_A_TX, PIN_MIDI_IN_A_RX);
+    uart_setup(MIDI_UART_B, PIN_MIDI_OUT_B_TX, PIN_MIDI_IN_B_RX);
 
     gpio_init(PIN_LED_ACTIVITY);
     gpio_set_dir(PIN_LED_ACTIVITY, GPIO_OUT);
@@ -86,6 +88,30 @@ void midi_io_engage_relays(void) {
 bool midi_io_watchdog_reset(void) { return s_wdt_reset; }
 uint32_t midi_io_last_rx_ms(void) { return s_last_rx_ms; }
 
+/* Drain one UART's RX FIFO into the engine. Inlined into core1_main. */
+static inline bool __attribute__((always_inline)) rx_poll(me_t *me, uart_hw_t *u, int in, uint64_t *now) {
+    bool got = false;
+    while (!(u->fr & UART_UARTFR_RXFE_BITS)) {
+        uint32_t dr = u->dr;
+        *now = now_us();
+        if (dr & (UART_UARTDR_OE_BITS | UART_UARTDR_BE_BITS | UART_UARTDR_FE_BITS)) {
+            me->in[in].st.uart_errors++;
+            uint8_t code = (dr & UART_UARTDR_BE_BITS) ? ME_ERR_BREAK
+                         : (dr & UART_UARTDR_FE_BITS) ? ME_ERR_FRAMING
+                         : ME_ERR_OVERRUN;
+            me_mon_push(me, in, code, ME_MON_F_ERR, *now);
+            /* Overrun: this byte is good, earlier ones were lost.
+             * Framing / break: this byte is garbage, drop it. */
+            if (code != ME_ERR_OVERRUN) continue;
+        }
+        uint8_t b = (uint8_t)dr;
+        me_input_byte(me, in, b, *now);
+        me_mon_push(me, in, b, 0, *now);
+        got = true;
+    }
+    return got;
+}
+
 static void __not_in_flash_func(core1_main)(void) {
     uart_hw_t *const ua = uart_get_hw(MIDI_UART_A);
     uart_hw_t *const ub = uart_get_hw(MIDI_UART_B);
@@ -97,23 +123,10 @@ static void __not_in_flash_func(core1_main)(void) {
     for (;;) {
         uint64_t now = now_us();
 
-        /* ---- receive ---- */
-        while (!(ua->fr & UART_UARTFR_RXFE_BITS)) {
-            uint32_t dr = ua->dr;
-            now = now_us();
-            if (dr & (UART_UARTDR_OE_BITS | UART_UARTDR_BE_BITS | UART_UARTDR_FE_BITS)) {
-                me->stats.uart_errors++;
-                uint8_t code = (dr & UART_UARTDR_BE_BITS) ? ME_ERR_BREAK
-                             : (dr & UART_UARTDR_FE_BITS) ? ME_ERR_FRAMING
-                             : ME_ERR_OVERRUN;
-                me_mon_push(me, code, ME_MON_F_ERR, now);
-                /* Overrun: this byte is good, earlier ones were lost.
-                 * Framing / break: this byte is garbage, drop it. */
-                if (code != ME_ERR_OVERRUN) continue;
-            }
-            uint8_t b = (uint8_t)dr;
-            me_input_byte(me, b, now);
-            me_mon_push(me, b, 0, now);
+        /* ---- receive: IN A (UART0), IN B (UART1) ---- */
+        bool got = rx_poll(me, ua, ME_IN_A, &now);
+        got |= rx_poll(me, ub, ME_IN_B, &now);
+        if (got) {
             s_last_rx_ms = (uint32_t)(now / 1000u);
             sio_hw->gpio_set = 1u << PIN_LED_ACTIVITY;
             led_on = true;

@@ -56,6 +56,7 @@ typedef struct {
     uint8_t  status;        /* raw status byte */
     uint8_t  d1, d2;
     uint8_t  flags;
+    uint8_t  src;           /* input the message came from (0 = IN A, 1 = IN B) */
     uint16_t sx_len;        /* total sysex length incl. F0 (and F7 if present) */
     uint8_t  sx[MIDI_SX_STORE];
 } midi_msg_t;
@@ -71,6 +72,7 @@ typedef struct {
     bool     in_sysex;
     midi_msg_t sx;          /* sysex under construction */
     uint32_t stray_data;    /* data bytes with no status */
+    uint8_t  src;           /* copied into every message (set after init) */
     midi_msg_cb cb;
     void    *ctx;
 } midi_parser_t;

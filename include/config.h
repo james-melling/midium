@@ -6,7 +6,7 @@
 #define MIDIUM_CONFIG_H
 
 #ifndef MIDIUM_VERSION
-#define MIDIUM_VERSION "0.2.0"
+#define MIDIUM_VERSION "0.3.0"
 #endif
 
 #define MIDIUM_NAME   "MIDIum"

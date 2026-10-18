@@ -80,14 +80,33 @@ static bool     s_dl_msc;
 /* ------------------------------------------------------------------------ */
 /* Getters / setters / formatters                                            */
 /* ------------------------------------------------------------------------ */
-static int  get_thru_a(void)  { return g_settings.route.thru[ME_OUT_A]; }
-static void set_thru_a(int v) { g_settings.route.thru[ME_OUT_A] = v != 0; }
-static int  get_thru_b(void)  { return g_settings.route.thru[ME_OUT_B]; }
-static void set_thru_b(int v) { g_settings.route.thru[ME_OUT_B] = v != 0; }
-static int  get_gen_a(void)   { return g_settings.route.gen[ME_OUT_A]; }
-static void set_gen_a(int v)  { g_settings.route.gen[ME_OUT_A] = v != 0; }
-static int  get_gen_b(void)   { return g_settings.route.gen[ME_OUT_B]; }
-static void set_gen_b(int v)  { g_settings.route.gen[ME_OUT_B] = v != 0; }
+/* Routing grid: one getter / setter pair per (output, source) cell. */
+#define ROUTE_CELL(name, o, col) \
+    static int  get_##name(void)  { return g_settings.route.src[o][col]; } \
+    static void set_##name(int v) { g_settings.route.src[o][col] = v != 0; }
+ROUTE_CELL(r_aa, ME_OUT_A, ME_SRC_A)
+ROUTE_CELL(r_ab, ME_OUT_A, ME_SRC_B)
+ROUTE_CELL(r_ag, ME_OUT_A, ME_SRC_GEN)
+ROUTE_CELL(r_ba, ME_OUT_B, ME_SRC_A)
+ROUTE_CELL(r_bb, ME_OUT_B, ME_SRC_B)
+ROUTE_CELL(r_bg, ME_OUT_B, ME_SRC_GEN)
+#undef ROUTE_CELL
+
+#define ROUTE_PRESET(n) \
+    static void act_preset##n(void) { route_preset_apply(&g_settings.route, n); } \
+    static int  get_preset##n(void) { return route_preset_active(&g_settings.route, n); }
+ROUTE_PRESET(0)
+ROUTE_PRESET(1)
+ROUTE_PRESET(2)
+ROUTE_PRESET(3)
+#undef ROUTE_PRESET
+static void fmt_mark(int v, char *b, size_t n) { snprintf(b, n, "%s", v ? "*" : ""); }
+
+static int  get_showin(void)  { return g_settings.show_inputs; }
+static void set_showin(int v) { g_settings.show_inputs = (uint8_t)v; }
+static void fmt_showin(int v, char *b, size_t n) {
+    snprintf(b, n, "%s", v == SHOW_IN_A ? "A only" : v == SHOW_IN_B ? "B only" : "A+B");
+}
 
 static int  get_ch(void)      { return g_settings.gen_channel; }
 static void set_ch(int v)     { g_settings.gen_channel = (uint8_t)v; }
@@ -174,20 +193,36 @@ static void act_clear(void)      { monitor_clear(); s_paused = false; }
 static void fmt_count(int t, char *b, size_t n) { snprintf(b, n, "%lu", (unsigned long)monitor_type_count((midi_type_t)t)); }
 static void fmt_stat(int which, char *b, size_t n) {
     const me_stats_t *st = &g_engine.stats;
+    const me_out_t *oa = &g_engine.out[ME_OUT_A], *ob = &g_engine.out[ME_OUT_B];
     unsigned long v = 0;
     switch (which) {
-    case 0: v = st->bytes_in; break;
     case 1: v = monitor_total_msgs(); break;
-    case 2: v = st->mon_overflow; break;
-    case 3: v = st->uart_errors; break;
-    case 4: v = st->orphan_data; break;
-    case 5: v = g_engine.out[ME_OUT_A].drops; break;
-    case 6: v = g_engine.out[ME_OUT_B].drops; break;
+    case 5: v = oa->drops; break;
+    case 6: v = ob->drops; break;
     case 7: v = st->gen_msgs; break;
     case 8: v = st->gen_rt; break;
-    case 9: v = (unsigned long)g_engine.out[ME_OUT_A].gen_shed + g_engine.out[ME_OUT_B].gen_shed; break;
+    case 9: v = (unsigned long)oa->gen_shed + ob->gen_shed; break;
     case 10: v = st->stalls; break;
     case 11: v = monitor_stray_bytes(); break;
+    case 12: v = (unsigned long)oa->rt_shed + ob->rt_shed; break;
+    default: break;
+    }
+    snprintf(b, n, "%lu", v);
+}
+/* Per-input stats: which = input * 16 + field. */
+#define IST(in, f) ((in) * 16 + (f))
+static void fmt_istat(int which, char *b, size_t n) {
+    int in = which / 16;
+    const me_in_stats_t *st = &g_engine.in[in].st;
+    unsigned long v = 0;
+    switch (which % 16) {
+    case 0: v = st->bytes_in; break;
+    case 1: v = monitor_input_msgs(in); break;
+    case 2: v = st->uart_errors; break;
+    case 3: v = st->mon_overflow; break;
+    case 4: v = (unsigned long)g_engine.out[ME_OUT_A].merge_drops[in] + g_engine.out[ME_OUT_B].merge_drops[in]; break;
+    case 5: v = st->orphan_data; break;
+    case 6: v = st->stalls; break;
     default: break;
     }
     snprintf(b, n, "%lu", v);
@@ -217,6 +252,7 @@ static void fmt_about(int which, char *b, size_t n) {
 /* ------------------------------------------------------------------------ */
 #define ACT(l, f)              { l, MI_ACTION, NULL, f, NULL, NULL, 0, 0, 0, NULL }
 #define ACTS(l, f, g)          { l, MI_ACTION, NULL, f, g, NULL, 0, 0, 0, NULL }
+#define ACTF(l, f, g, fm)      { l, MI_ACTION, NULL, f, g, NULL, 0, 0, 0, fm }
 #define TOG(l, g, s)           { l, MI_TOGGLE, NULL, NULL, g, s, 0, 1, 1, NULL }
 #define TOGF(l, g, s, f)       { l, MI_TOGGLE, NULL, NULL, g, s, 0, 1, 1, f }
 #define VAL(l, g, s, lo, hi, st, f) { l, MI_VALUE, NULL, NULL, g, s, lo, hi, st, f }
@@ -259,11 +295,22 @@ static const menu_item_t gen_items[] = {
     ACT("PANIC notes off", act_panic),
 };
 
-static const menu_item_t thru_items[] = {
-    TOG("Thru A", get_thru_a, set_thru_a),
-    TOG("Thru B", get_thru_b, set_thru_b),
-    TOG("Generator to A", get_gen_a, set_gen_a),
-    TOG("Generator to B", get_gen_b, set_gen_b),
+static const menu_item_t grid_items[] = {
+    TOG("OUT A <- IN A", get_r_aa, set_r_aa),
+    TOG("OUT A <- IN B", get_r_ab, set_r_ab),
+    TOG("OUT A <- Gen", get_r_ag, set_r_ag),
+    TOG("OUT B <- IN A", get_r_ba, set_r_ba),
+    TOG("OUT B <- IN B", get_r_bb, set_r_bb),
+    TOG("OUT B <- Gen", get_r_bg, set_r_bg),
+};
+static const menu_t grid_menu = MENU("Custom routing", grid_items);
+
+static const menu_item_t route_items[] = {
+    ACTF("A->A, A->B (thru)", act_preset0, get_preset0, fmt_mark),
+    ACTF("A+B merge -> both", act_preset1, get_preset1, fmt_mark),
+    ACTF("A->A, B->B (split)", act_preset2, get_preset2, fmt_mark),
+    ACTF("B->A, B->B", act_preset3, get_preset3, fmt_mark),
+    SUB("Custom", &grid_menu),
 };
 
 static const menu_item_t disp_items[] = {
@@ -272,14 +319,28 @@ static const menu_item_t disp_items[] = {
     TOG("Time column", get_timecol, set_timecol),
     VAL("Brightness", get_bright, set_bright, 10, 100, 10, fmt_pct),
     TOG("USB log", get_usblog, set_usblog),
+    VAL("Show inputs", get_showin, set_showin, 0, 2, 1, fmt_showin),
     TOG("Show MSC only", get_msc_only, set_msc_only),
     VAL("MSC dev filter", get_devf, set_devf, -1, 127, 1, fmt_devf),
     ACT("Clear monitor", act_clear),
 };
 
 static const menu_item_t stats_items[] = {
-    INFO("Bytes in", fmt_stat, 0),
     INFO("Messages", fmt_stat, 1),
+    INFO("IN A bytes", fmt_istat, IST(ME_IN_A, 0)),
+    INFO("IN A msgs", fmt_istat, IST(ME_IN_A, 1)),
+    INFO("IN A UART err", fmt_istat, IST(ME_IN_A, 2)),
+    INFO("IN A mon ovf", fmt_istat, IST(ME_IN_A, 3)),
+    INFO("IN A merge drop", fmt_istat, IST(ME_IN_A, 4)),
+    INFO("IN A orphans", fmt_istat, IST(ME_IN_A, 5)),
+    INFO("IN A stalls", fmt_istat, IST(ME_IN_A, 6)),
+    INFO("IN B bytes", fmt_istat, IST(ME_IN_B, 0)),
+    INFO("IN B msgs", fmt_istat, IST(ME_IN_B, 1)),
+    INFO("IN B UART err", fmt_istat, IST(ME_IN_B, 2)),
+    INFO("IN B mon ovf", fmt_istat, IST(ME_IN_B, 3)),
+    INFO("IN B merge drop", fmt_istat, IST(ME_IN_B, 4)),
+    INFO("IN B orphans", fmt_istat, IST(ME_IN_B, 5)),
+    INFO("IN B stalls", fmt_istat, IST(ME_IN_B, 6)),
     INFO("Note On", fmt_count, MT_NOTE_ON),
     INFO("Note Off", fmt_count, MT_NOTE_OFF),
     INFO("CC", fmt_count, MT_CC),
@@ -300,12 +361,10 @@ static const menu_item_t stats_items[] = {
     INFO("Reset", fmt_count, MT_RESET),
     INFO("Undefined", fmt_count, MT_UNDEFINED),
     INFO("Errors", fmt_count, MT_ERROR),
-    INFO("UART errors", fmt_stat, 3),
-    INFO("Mon overflow", fmt_stat, 2),
     INFO("Stray data", fmt_stat, 11),
-    INFO("Thru orphans", fmt_stat, 4),
     INFO("Drops out A", fmt_stat, 5),
     INFO("Drops out B", fmt_stat, 6),
+    INFO("In RT shed", fmt_stat, 12),
     INFO("Gen msgs", fmt_stat, 7),
     INFO("Gen RT", fmt_stat, 8),
     INFO("Gen RT shed", fmt_stat, 9),
@@ -321,10 +380,13 @@ static const menu_item_t about_items[] = {
     INFO("", fmt_about, 3),
     INFO("Display", fmt_about, 4),
     INFO("Last reset", fmt_about, 5),
+    INFO("Unpowered:", NULL, 0),
+    INFO(" IN A -> OUT A", NULL, 0),
+    INFO(" IN B not passed", NULL, 0),
 };
 
 static const menu_t gen_menu   = MENU("Generate", gen_items);
-static const menu_t thru_menu  = MENU("Thru", thru_items);
+static const menu_t route_menu = MENU("Routing", route_items);
 static const menu_t disp_menu  = MENU("Display", disp_items);
 static const menu_t stats_menu = MENU("Stats", stats_items);
 static const menu_t about_menu = MENU("About", about_items);
@@ -332,7 +394,7 @@ static const menu_t about_menu = MENU("About", about_items);
 static const menu_item_t main_items[] = {
     ACT("Monitor", act_monitor),
     SUB("Generate", &gen_menu),
-    SUB("Thru", &thru_menu),
+    SUB("Routing", &route_menu),
     SUB("Display", &disp_menu),
     SUB("Stats", &stats_menu),
     SUB("About", &about_menu),
@@ -379,6 +441,7 @@ static void open_detail(const midi_msg_t *m) {
     s_dl_top = 0;
     unsigned have = m->sx_len < MIDI_SX_STORE ? m->sx_len : MIDI_SX_STORE;
     s_dl_msc = msc_is_msc(m->sx, have);
+    dl_line_cb(m->src ? "In   IN B" : "In   IN A", CLS_SYSEX, NULL);
     sysex_detail(&s_dl_msg, (unsigned)con_cols(), dl_line_cb, NULL);
     s_screen = SCR_DETAIL;
 }
@@ -510,10 +573,11 @@ static void render_monitor(uint64_t now) {
     char hdr[CON_MAX_COLS + 1];
     int cols = con_cols();
     bool act = (uint32_t)(now / 1000u) - midi_io_last_rx_ms() < 150u && midi_io_last_rx_ms() != 0;
-    snprintf(hdr, sizeof hdr, "%-7s A:%s B:%s",
-             s_paused ? "PAUSED" : MIDIUM_NAME,
-             g_settings.route.thru[ME_OUT_A] ? "on" : "off",
-             g_settings.route.thru[ME_OUT_B] ? "on" : "off");
+    char ra[4], rb[4];
+    route_summary(&g_settings.route, ME_OUT_A, ra, sizeof ra);
+    route_summary(&g_settings.route, ME_OUT_B, rb, sizeof rb);
+    snprintf(hdr, sizeof hdr, "%-7s A:%-2s B:%s",
+             s_paused ? "PAUSED" : MIDIUM_NAME, ra, rb);
     con_row(0, CLS_HEADER | ATTR_INVERSE, hdr);
     con_print(0, cols - 1, CLS_HEADER | ATTR_INVERSE, act ? "*" : " ");
     if (cols > 22 && gen_clock_running()) con_print(0, cols - 3, CLS_HEADER | ATTR_INVERSE, "C");
@@ -526,7 +590,8 @@ static void render_monitor(uint64_t now) {
     }
     uint32_t bottom = s_paused ? s_anchor : next - 1u;
     int rows = monitor_rows();
-    int width = con_cols() - (g_settings.time_column ? 10 : 0);
+    /* Each line starts with its input tag ("A " / "B "). */
+    int width = con_cols() - 2 - (g_settings.time_column ? 10 : 0);
     decode_opts_t o = { .note_c3 = g_settings.note_c3, .width = (uint8_t)(width > 0 ? width : 1) };
 
     for (int r = 0; r < rows; r++) {
@@ -539,12 +604,13 @@ static void render_monitor(uint64_t now) {
         char txt[MIDI_TEXT_MAX];
         char line[CON_MAX_COLS + 20];
         msg_class_t cls = midi_decode(&m, &o, txt, sizeof txt);
+        char tag = m.src ? 'B' : 'A';
         if (g_settings.time_column) {
             char t[16];
             midi_format_time(m.t_us, t, sizeof t);
-            snprintf(line, sizeof line, "%s %s", t, txt);
+            snprintf(line, sizeof line, "%c %s %s", tag, t, txt);
         } else {
-            snprintf(line, sizeof line, "%s", txt);
+            snprintf(line, sizeof line, "%c %s", tag, txt);
         }
         uint8_t attr = (uint8_t)cls;
         if (s_paused && r == 0) attr |= ATTR_INVERSE;
@@ -571,7 +637,8 @@ static void item_value_text(const menu_item_t *it, char *b, size_t n) {
         break;
     }
     case MI_ACTION:
-        if (it->get && it->get()) snprintf(b, n, "RUN");
+        if (it->fmt) it->fmt(it->get ? it->get() : 0, b, n);
+        else if (it->get && it->get()) snprintf(b, n, "RUN");
         break;
     case MI_INFO:
         if (it->fmt) it->fmt(it->min, b, n);
@@ -630,7 +697,7 @@ static void render_detail(void) {
     unsigned page = s_dl_top / (unsigned)rows + 1u;
     if (s_dl_top + (unsigned)rows >= s_dl_n) page = pages;       /* last screen */
     midi_format_time(s_dl_msg.t_us, t, sizeof t);
-    snprintf(left, sizeof left, "%s %s", s_dl_msc ? "MSC" : "SYSEX", t);
+    snprintf(left, sizeof left, "%s %c %s", s_dl_msc ? "MSC" : "SYX", s_dl_msg.src ? 'B' : 'A', t);
     snprintf(right, sizeof right, "%u/%u", page, pages);
     con_row_lr(0, CLS_HEADER | ATTR_INVERSE, left, right);
     for (int r = 0; r < rows; r++) {

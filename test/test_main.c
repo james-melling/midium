@@ -10,6 +10,7 @@
 #include "midi_parser.h"
 #include "midi_decode.h"
 #include "midi_defs.h"
+#include "settings.h"
 
 #include "test_common.h"
 
@@ -180,10 +181,22 @@ static void test_decode(void) {
 static me_t g_me;
 static me_settings_t g_set;
 
+/* Default routing (as 0.2): IN A to both outputs, generator to both, IN B
+ * monitored only. */
 static void eng_reset(void) {
-    g_set.thru[0] = g_set.thru[1] = true;
-    g_set.gen[0] = g_set.gen[1] = true;
+    memset(&g_set, 0, sizeof g_set);
+    g_set.src[0][ME_SRC_A] = g_set.src[1][ME_SRC_A] = true;
+    g_set.src[0][ME_SRC_GEN] = g_set.src[1][ME_SRC_GEN] = true;
     me_init(&g_me, &g_set);
+}
+
+/* Routing from a compact spec: route[out] = bitmask 1 = IN A, 2 = IN B, 4 = gen. */
+static void eng_reset_route(int ra, int rb) {
+    eng_reset();
+    for (int s = 0; s < ME_NUM_SRCS; s++) {
+        g_set.src[0][s] = (ra >> s) & 1;
+        g_set.src[1][s] = (rb >> s) & 1;
+    }
 }
 
 /* feed bytes, servicing after each, collecting everything out on port A */
@@ -196,7 +209,7 @@ static int drain(int port, uint8_t *out, int max) {
 
 static int feed(const uint8_t *in, int n, uint64_t *t) {
     for (int i = 0; i < n; i++) {
-        me_input_byte(&g_me, in[i], *t);
+        me_input_byte(&g_me, ME_IN_A, in[i], *t);
         me_service(&g_me, *t);
         *t += 320;
     }
@@ -207,7 +220,7 @@ static int feed(const uint8_t *in, int n, uint64_t *t) {
 static int feed_drain(const uint8_t *in, int n, uint64_t *t, uint8_t *oa, uint8_t *ob) {
     int na = 0, nb = 0;
     for (int i = 0; i < n; i++) {
-        me_input_byte(&g_me, in[i], *t);
+        me_input_byte(&g_me, ME_IN_A, in[i], *t);
         me_service(&g_me, *t);
         na += drain(0, oa + na, 256);
         nb += drain(1, ob + nb, 256);
@@ -325,7 +338,7 @@ static void test_engine_directed(void) {
         const uint8_t expA[] = { 0x90, 0x3C, 0x64 };
         uint8_t ob[64];
         int r = feed_drain(a, 2, &t, out, ob);
-        g_set.thru[0] = false;
+        g_set.src[0][ME_SRC_A] = false;
         int r2 = feed_drain(b, 4, &t, out + (r & 0xFFFF), ob + (r >> 16));
         CHECK(bytes_eq(out, (r & 0xFFFF) + (r2 & 0xFFFF), expA, sizeof expA));
         /* B unaffected */
@@ -334,7 +347,7 @@ static void test_engine_directed(void) {
         /* re-enable mid running-status stream: joins at next message with status */
         const uint8_t c[] = { 0x40 };
         feed(c, 1, &t);              /* first byte of next msg while A still off */
-        g_set.thru[0] = true;
+        g_set.src[0][ME_SRC_A] = true;
         const uint8_t d[] = { 0x10, 0x41, 0x11 };
         feed(d, 3, &t);
         const uint8_t expA2[] = { 0x41, 0x11 };  /* last status on A is still 90 */
@@ -345,7 +358,7 @@ static void test_engine_directed(void) {
     /* 7. generator routing: gen only to B */
     eng_reset();
     {
-        g_set.gen[0] = false;
+        g_set.src[0][ME_SRC_GEN] = false;
         const uint8_t g[] = { 0xC0, 0x01 };
         CHECK(me_gen_push(&g_me, g, 2));
         me_service(&g_me, t);
@@ -361,7 +374,7 @@ static void test_engine_directed(void) {
         feed(in, sizeof in, &t);
         n = drain(0, out, sizeof out);
         CHECK(bytes_eq(out, n, exp, sizeof exp));
-        CHECK(g_me.stats.orphan_data == 2);
+        CHECK(g_me.in[ME_IN_A].st.orphan_data == 2);
     }
 
     /* 9. stalled sysex: generated message waits for the long timeout, then the
@@ -469,10 +482,9 @@ static void run_merge(const char *name, int nmsgs, int idle_pct, int gen_per_mil
 
     /* one tick = one MIDI byte time (320 us). Each tick: maybe an input byte,
      * maybe a generator request, service, and each UART sends one byte. */
-    while (i < n || me_out_pending(&g_me, 0) || me_out_pending(&g_me, 1) ||
-           spsc_count(&g_me.genq_idx)) {
+    while (i < n || !me_idle(&g_me)) {
         if (i < n && (int)(rnd() % 100) >= idle_pct) {
-            me_input_byte(&g_me, s_in[i++], t);
+            me_input_byte(&g_me, ME_IN_A, s_in[i++], t);
         }
         if (i < n && (int)(rnd() % 1000) < gen_per_mille) {
             uint8_t g[ME_GEN_MAX_LEN];
@@ -542,7 +554,7 @@ static void run_merge(const char *name, int nmsgs, int idle_pct, int gen_per_mil
         ml_free(&om);
     }
     CHECK(in_stray == 0);
-    CHECK(g_me.stats.orphan_data == 0);
+    CHECK(g_me.in[ME_IN_A].st.orphan_data == 0);
     CHECK(g_me.stats.stalls == 0);
     printf("  input: %d bytes, %d msgs; generator accepted %d msgs, %u RT; max TX backlog %u bytes (%.1f ms)\n",
            n, in_msgs.n, gen_expect.n, (unsigned)gen_rt_ok, (unsigned)maxq, maxq * 0.32);
@@ -552,14 +564,617 @@ static void run_merge(const char *name, int nmsgs, int idle_pct, int gen_per_mil
     ml_free(&gen_expect);
 }
 
+/* ------------------------------------------------------------------------ */
+/* Two inputs: directed tests                                                */
+/* ------------------------------------------------------------------------ */
+static void in_bytes(int in, const uint8_t *b, int n, uint64_t *t) {
+    for (int i = 0; i < n; i++) {
+        me_input_byte(&g_me, in, b[i], *t);
+        me_service(&g_me, *t);
+        *t += 320;
+    }
+}
+#define IN(in, ...) do { const uint8_t b_[] = { __VA_ARGS__ }; in_bytes(in, b_, (int)sizeof b_, &t); } while (0)
+#define EXPECT(port, ...) do { const uint8_t e_[] = { __VA_ARGS__ }; uint8_t o_[4096]; \
+        int n_ = drain(port, o_, (int)sizeof o_); CHECK(bytes_eq(o_, n_, e_, (int)sizeof e_)); } while (0)
+#define EXPECT_NONE(port) do { uint8_t o_[64]; CHECK(drain(port, o_, 64) == 0); } while (0)
+
+static void test_engine_two_inputs(void) {
+    printf("engine (two inputs, directed)\n");
+    uint64_t t = 1000;
+
+    /* 1. merge: IN B waits for IN A's message to end, then goes in whole */
+    eng_reset_route(3, 3);
+    IN(ME_IN_A, 0x90, 0x3C);
+    IN(ME_IN_B, 0xB1, 0x07, 0x7F);
+    CHECK(me_out_pending(&g_me, 0) == 2 && me_out_pending(&g_me, 1) == 2);
+    IN(ME_IN_A, 0x64);
+    EXPECT(0, 0x90, 0x3C, 0x64, 0xB1, 0x07, 0x7F);
+    EXPECT(1, 0x90, 0x3C, 0x64, 0xB1, 0x07, 0x7F);
+    CHECK(me_idle(&g_me));
+
+    /* 2. running status per output: re-sent when the other input changed it */
+    eng_reset_route(3, 3);
+    IN(ME_IN_A, 0x90, 0x3C, 0x64);
+    IN(ME_IN_B, 0x91, 0x40, 0x40);
+    IN(ME_IN_A, 0x3E, 0x64);
+    IN(ME_IN_B, 0x41, 0x41);
+    IN(ME_IN_A, 0x3F, 0x10);
+    IN(ME_IN_A, 0x40, 0x11);         /* same source again: no re-send */
+    EXPECT(0, 0x90, 0x3C, 0x64, 0x91, 0x40, 0x40, 0x90, 0x3E, 0x64, 0x91, 0x41, 0x41,
+              0x90, 0x3F, 0x10, 0x40, 0x11);
+
+    /* 3. sysex is never interleaved; realtime from the other input is */
+    eng_reset_route(3, 3);
+    IN(ME_IN_A, 0xF0, 0x41, 0x01, 0x02);
+    EXPECT(0, 0xF0, 0x41, 0x01, 0x02);
+    IN(ME_IN_B, 0xC1, 0x05, 0xFD, 0x92, 0x10);
+    EXPECT(0, 0xFD);                 /* realtime straight through, mid-sysex */
+    IN(ME_IN_B, 0x10);
+    EXPECT_NONE(0);
+    IN(ME_IN_A, 0x03, 0xF7);
+    EXPECT(0, 0x03, 0xF7, 0xC1, 0x05, 0x92, 0x10, 0x10);
+
+    /* 4. B's sysex waits for A's message, and A's next message waits for it */
+    eng_reset_route(3, 0);
+    IN(ME_IN_A, 0xB0, 0x07);
+    IN(ME_IN_B, 0xF0, 0x42, 0x11);
+    IN(ME_IN_A, 0x7F);               /* A done: B's buffered sysex start goes out */
+    IN(ME_IN_A, 0xC0, 0x01);         /* waits: B is mid-sysex on OUT A */
+    IN(ME_IN_B, 0x12, 0xF7);
+    EXPECT(0, 0xB0, 0x07, 0x7F, 0xF0, 0x42, 0x11, 0x12, 0xF7, 0xC0, 0x01);
+    EXPECT_NONE(1);
+
+    /* 5. routing changes latch at each input's next message start */
+    eng_reset_route(1, 2);                           /* split */
+    IN(ME_IN_A, 0x90, 0x3C);
+    route_preset_apply(&g_set, 1);                   /* merge -> both */
+    IN(ME_IN_A, 0x64);
+    EXPECT_NONE(1);                                  /* no half message on OUT B */
+    IN(ME_IN_A, 0x3E, 0x50);
+    EXPECT(1, 0x90, 0x3E, 0x50);                     /* status re-sent: B had none */
+    EXPECT(0, 0x90, 0x3C, 0x64, 0x3E, 0x50);
+    IN(ME_IN_A, 0xB0, 0x07);
+    route_preset_apply(&g_set, 3);                   /* B -> both: A removed mid-message */
+    IN(ME_IN_A, 0x7F);                               /* finishes where it started */
+    IN(ME_IN_A, 0x08, 0x10);                         /* next message: routed nowhere */
+    IN(ME_IN_B, 0x93, 0x20, 0x21);
+    EXPECT(0, 0xB0, 0x07, 0x7F, 0x93, 0x20, 0x21);
+    EXPECT(1, 0xB0, 0x07, 0x7F, 0x93, 0x20, 0x21);
+
+    /* 6. stall with two inputs: A stops mid-message, B waits 100 ms, then
+     *    the boundary is forced; A's late remainder is dropped there */
+    eng_reset_route(3, 3);
+    IN(ME_IN_A, 0x90, 0x3C);
+    uint64_t t_a = t - 320;
+    IN(ME_IN_B, 0xC1, 0x05);
+    me_service(&g_me, t_a + ME_STALL_MSG_US - 1000);
+    CHECK(me_out_pending(&g_me, 0) == 2);
+    t = t_a + ME_STALL_MSG_US + 1000;
+    me_service(&g_me, t);
+    CHECK(g_me.stats.stalls == 1 && g_me.in[ME_IN_A].st.stalls == 1);
+    IN(ME_IN_A, 0x64);                               /* late: dropped */
+    IN(ME_IN_A, 0x3E, 0x50);
+    EXPECT(0, 0x90, 0x3C, 0xC1, 0x05, 0x90, 0x3E, 0x50);
+    EXPECT(1, 0x90, 0x3C, 0xC1, 0x05, 0x90, 0x3E, 0x50);
+    CHECK(g_me.stats.stalls == 1);                   /* counted once per message */
+
+    /* 6b. a slow input with nobody waiting is never cut */
+    eng_reset_route(3, 3);
+    IN(ME_IN_A, 0x90, 0x3C);
+    t += 2 * ME_STALL_SYSEX_US;
+    me_service(&g_me, t);
+    IN(ME_IN_A, 0x64);
+    EXPECT(0, 0x90, 0x3C, 0x64);
+    CHECK(g_me.stats.stalls == 0);
+
+    /* 6c. B stalls mid-message (it owns OUT A), A waits, then goes */
+    eng_reset_route(3, 3);
+    IN(ME_IN_B, 0xE1, 0x00);
+    uint64_t t_b = t - 320;
+    EXPECT(0, 0xE1, 0x00);
+    IN(ME_IN_A, 0xF8, 0xC0, 0x09);                   /* clock passes at once */
+    EXPECT(0, 0xF8);
+    t = t_b + ME_STALL_MSG_US + 1000;
+    me_service(&g_me, t);
+    EXPECT(0, 0xC0, 0x09);
+    CHECK(g_me.in[ME_IN_B].st.stalls == 1 && g_me.in[ME_IN_A].st.stalls == 0);
+
+    /* 7. stalled sysex: the long timeout applies */
+    eng_reset_route(3, 3);
+    IN(ME_IN_A, 0xF0, 0x41, 0x01);
+    t_a = t - 320;
+    IN(ME_IN_B, 0xC1, 0x05);
+    me_service(&g_me, t_a + ME_STALL_MSG_US * 3);
+    CHECK(me_out_pending(&g_me, 0) == 3);
+    t = t_a + ME_STALL_SYSEX_US + 1000;
+    me_service(&g_me, t);
+    IN(ME_IN_A, 0x02, 0xF7, 0xC0, 0x02);
+    EXPECT(0, 0xF0, 0x41, 0x01, 0xC1, 0x05, 0xC0, 0x02);
+
+    /* 8. realtime goes only where its input is routed */
+    eng_reset_route(1, 2);
+    IN(ME_IN_B, 0xFD);
+    IN(ME_IN_A, 0xF8);
+    EXPECT(0, 0xF8);
+    EXPECT(1, 0xFD);
+
+    /* 9. generator + two inputs: generator waits for whichever input owns
+     *    the output, per output */
+    eng_reset_route(1 | 4, 2 | 4);
+    IN(ME_IN_A, 0x90, 0x3C);                         /* OUT A busy, OUT B free */
+    CHECK(me_gen_push(&g_me, (const uint8_t[]){ 0xCF, 0x07 }, 2));
+    me_service(&g_me, t);
+    EXPECT(1, 0xCF, 0x07);                           /* OUT B did not wait for IN A */
+    IN(ME_IN_A, 0x64);
+    EXPECT(0, 0x90, 0x3C, 0x64, 0xCF, 0x07);
+
+    /* 10. a B message bigger than its lane, while A owns the output: dropped
+     *     whole and counted; A intact; B's next message passes */
+    eng_reset_route(3, 2);
+    {
+        static uint8_t ob[ME_OUTQ_SIZE * 4];
+        int na = 0, nb = 0;
+        uint8_t b;
+        me_input_byte(&g_me, ME_IN_A, 0xF0, t);
+        for (int k = 0; k < 3000; k++) {
+            me_input_byte(&g_me, ME_IN_A, 0x41, t);
+            if (k == 10) me_input_byte(&g_me, ME_IN_B, 0xF0, t);
+            else if (k > 10 && k < 1600) me_input_byte(&g_me, ME_IN_B, (uint8_t)(k & 0x7F), t);
+            else if (k == 1600) me_input_byte(&g_me, ME_IN_B, 0xF7, t);
+            else if (k == 1601) me_input_byte(&g_me, ME_IN_B, 0xC2, t);
+            else if (k == 1602) me_input_byte(&g_me, ME_IN_B, 0x03, t);
+            me_service(&g_me, t);
+            if (me_out_pop(&g_me, 0, &b)) na++;
+            if (me_out_pop(&g_me, 1, &b)) ob[nb++] = b;
+            t += 320;
+        }
+        me_input_byte(&g_me, ME_IN_A, 0xF7, t);
+        uint8_t oa[8192];
+        na += drain(0, oa, (int)sizeof oa);
+        CHECK(na == 3002 + 2);                       /* A's sysex + B's C2 03 */
+        CHECK(g_me.out[0].merge_drops[ME_IN_B] == 1);
+        CHECK(g_me.out[1].merge_drops[ME_IN_B] == 0);
+        nb += drain(1, ob + nb, (int)sizeof ob - nb);
+        CHECK(nb == 1591 + 2);                       /* OUT B (B only): all of it */
+        CHECK(g_me.out[0].drops == 0 && g_me.out[1].drops == 0);
+    }
+
+    /* 11. a big B sysex while the output is free passes whole, directly */
+    eng_reset_route(3, 3);
+    {
+        uint8_t b;
+        int n = 0, lat_bad = 0;
+        for (int k = 0; k < 6000; k++) {
+            uint8_t x = k == 0 ? 0xF0 : k == 5999 ? 0xF7 : (uint8_t)(k & 0x7F);
+            me_input_byte(&g_me, ME_IN_B, x, t);
+            me_service(&g_me, t);
+            if (me_out_pop(&g_me, 0, &b)) { n++; if (b != x) lat_bad++; } else lat_bad++;
+            t += 320;
+        }
+        CHECK(n == 6000 && lat_bad == 0);            /* each byte out in its own byte time */
+        CHECK(g_me.out[0].merge_drops[ME_IN_B] == 0);
+    }
+}
+
+/* Monitor ring: entries are tagged with their input; a gap is per input. */
+static void test_engine_monitor(void) {
+    printf("engine monitor ring\n");
+    eng_reset();
+    me_mon_entry_t e;
+    for (unsigned k = 0; k < ME_MONQ_SIZE; k++) me_mon_push(&g_me, ME_IN_A, 0x90, 0, k);
+    me_mon_push(&g_me, ME_IN_B, 0x91, 0, 9999);     /* ring full: lost */
+    CHECK(g_me.in[ME_IN_B].st.mon_overflow == 1 && g_me.in[ME_IN_A].st.mon_overflow == 0);
+    unsigned n = 0;
+    while (me_mon_pop(&g_me, &e)) { n++; if (e.src != ME_IN_A || e.flags) break; }
+    CHECK(n == ME_MONQ_SIZE);
+    me_mon_push(&g_me, ME_IN_A, 0x80, 0, 1);
+    me_mon_push(&g_me, ME_IN_B, 0x81, ME_MON_F_ERR, 2);
+    CHECK(me_mon_pop(&g_me, &e) && e.src == ME_IN_A && e.flags == 0);
+    CHECK(me_mon_pop(&g_me, &e) && e.src == ME_IN_B && e.flags == (ME_MON_F_GAP | ME_MON_F_ERR));
+    CHECK(!me_mon_pop(&g_me, &e));
+}
+
+/* Routing presets, header summary, monitor line widths. */
+static void test_routing_ui(void) {
+    printf("routing presets / display widths\n");
+    me_settings_t r;
+    memset(&r, 0, sizeof r);
+    char a[4], b[4];
+    static const char *const sum[ROUTE_PRESET_COUNT][2] = {
+        { "a", "a" }, { "ab", "ab" }, { "a", "b" }, { "b", "b" } };
+    for (int p = 0; p < ROUTE_PRESET_COUNT; p++) {
+        r.src[0][ME_SRC_GEN] = true; r.src[1][ME_SRC_GEN] = false;
+        route_preset_apply(&r, p);
+        for (int q = 0; q < ROUTE_PRESET_COUNT; q++) CHECK(route_preset_active(&r, q) == (p == q));
+        CHECK(r.src[0][ME_SRC_GEN] && !r.src[1][ME_SRC_GEN]);   /* generator left alone */
+        route_summary(&r, 0, a, sizeof a);
+        route_summary(&r, 1, b, sizeof b);
+        CHECK_STR(a, sum[p][0]);
+        CHECK_STR(b, sum[p][1]);
+        char hdr[32];
+        snprintf(hdr, sizeof hdr, "%-7s A:%-2s B:%s", "PAUSED", a, b);
+        CHECK(strlen(hdr) <= 19);                    /* room for the activity '*' */
+        CHECK(strlen(route_preset_name(p)) <= 19);   /* + " *" marker on 21 cols */
+    }
+    memset(&r, 0, sizeof r);
+    route_summary(&r, 0, a, sizeof a);
+    CHECK_STR(a, "-");
+    settings_defaults(&g_settings);
+    CHECK(route_preset_active(&g_settings.route, 0));
+    CHECK(g_settings.route.src[0][ME_SRC_GEN] && g_settings.route.src[1][ME_SRC_GEN]);
+
+    /* Monitor lines lose 2 columns to the input tag: MSC adapts. */
+    const uint8_t msc[] = { 0xF0, 0x7F, 0x01, 0x02, 0x01, 0x04, 0x61, 0x02, 0x03, 0x04, 0x05,
+                            '1', '2', '3', '.', '4', '5', 0x00, '6', '7', 0xF7 };
+    msglist_t l = ml_new();
+    parse_bytes(msc, sizeof msc, &l, NULL);
+    CHECK(l.n == 1);
+    for (unsigned w = 9; w <= 24; w++) {
+        char t[MIDI_TEXT_MAX];
+        decode_opts_t o = { false, (uint8_t)w };
+        midi_decode(&l.m[0], &o, t, sizeof t);
+        CHECK(strlen(t) <= w);
+        if (w == 19) CHECK(strncmp(t, "MSC ", 4) == 0);
+    }
+    ml_free(&l);
+}
+
+/* ------------------------------------------------------------------------ */
+/* Two inputs: randomised merge property test                                */
+/* ------------------------------------------------------------------------ */
+/* Input streams are tagged so every output message can be traced back:
+ *   IN A: channels 1-7, sysex ID 41, F1/F3/F2 data < 40h, F6, clock F8.
+ *   IN B: channels 8-15, sysex ID 42, F1/F3/F2 data >= 40h, realtime FD.
+ *   generator: channel 16, sysex ID 7D, realtime FE. */
+typedef struct {
+    uint8_t ch_lo, ch_n, sx_id, sc_tag, rt;
+    bool    tune_req;
+    int     bigsx_pm;      /* per mille of messages that are big (2-10 kB) sysex */
+    int     rt_div;        /* realtime after ~1 in rt_div bytes */
+} streamcfg_t;
+
+static const streamcfg_t SC_A = { 0, 7, 0x41, 0x00, 0xF8, true, 0, 23 };
+static const streamcfg_t SC_B = { 7, 8, 0x42, 0x40, 0xFD, false, 0, 29 };
+
+static int build_stream2(uint8_t *buf, uint8_t *start, int max, int nmsgs, const streamcfg_t *c) {
+    int n = 0;
+    uint8_t running = 0;
+    for (int i = 0; i < nmsgs && n < max - 10100; i++) {
+        uint32_t r = rnd() % 100;
+        start[n] = 1;                 /* first byte of each message (or lone realtime) */
+#define PUT(x) do { buf[n++] = (uint8_t)(x); start[n] = 0; \
+                   if (rnd() % (uint32_t)c->rt_div == 0) { buf[n++] = c->rt; start[n] = 0; } } while (0)
+        if (c->bigsx_pm && (int)(rnd() % 1000) < c->bigsx_pm) {
+            int len = 2000 + (int)(rnd() % 8000);
+            PUT(0xF0); PUT(c->sx_id);
+            for (int k = 0; k < len; k++) PUT(rnd() & 0x7F);
+            PUT(0xF7);
+            running = 0;
+        } else if (r < 70) {
+            static const uint8_t types[] = { 0x80, 0x90, 0xA0, 0xB0, 0xC0, 0xD0, 0xE0 };
+            uint8_t st = (uint8_t)(types[rnd() % 7] | (c->ch_lo + rnd() % c->ch_n));
+            if (rnd() % 3 && running) st = running;
+            if (st != running || rnd() % 5 == 0) PUT(st);
+            running = st;
+            for (int k = 0; k < midi_data_len(st); k++) PUT(rnd() & 0x7F);
+        } else if (r < 85) {
+            int len = (int)(rnd() % 120);
+            PUT(0xF0); PUT(c->sx_id);
+            for (int k = 0; k < len; k++) PUT(rnd() & 0x7F);
+            PUT(0xF7);
+            running = 0;
+        } else if (r < 92) {
+            static const uint8_t sc[] = { 0xF1, 0xF2, 0xF3, 0xF6 };
+            uint8_t st = sc[rnd() % (c->tune_req ? 4 : 3)];
+            PUT(st);
+            if (st == 0xF1 || st == 0xF3) PUT(c->sc_tag | (rnd() & 0x3F));
+            if (st == 0xF2) { PUT(rnd() & 0x7F); PUT(c->sc_tag | (rnd() & 0x3F)); }
+            running = 0;
+        } else {
+            PUT(c->rt);
+        }
+#undef PUT
+    }
+    return n;
+}
+
+/* 0 = IN A, 1 = IN B, 2 = generator, -1 = realtime / unknown */
+static int msg_source(const midi_msg_t *m) {
+    if (m->type == MT_SYSEX) {
+        uint8_t id = m->sx_len > 1 ? m->sx[1] : 0;
+        return id == 0x41 ? 0 : id == 0x42 ? 1 : id == 0x7D ? 2 : -1;
+    }
+    if (m->status >= 0x80 && m->status < 0xF0) {
+        unsigned ch = m->status & 0x0Fu;
+        return ch == 15 ? 2 : ch >= 7 ? 1 : 0;
+    }
+    switch (m->status) {
+    case 0xF1: case 0xF3: return m->d1 >= 0x40;
+    case 0xF2: return m->d2 >= 0x40;
+    case 0xF6: return 0;
+    default: return -1;
+    }
+}
+
+static void parse_ticks(const uint8_t *b, const uint32_t *tk, int n, msglist_t *out, uint32_t *stray) {
+    midi_parser_t p;
+    midi_parser_init(&p, collect, out);
+    for (int i = 0; i < n; i++) midi_parser_feed(&p, b[i], tk[i]);
+    if (stray) *stray = p.stray_data;
+}
+
+typedef struct {
+    const char *name;
+    int  route_a, route_b;          /* bitmask: 1 IN A, 2 IN B, 4 generator */
+    int  msgs_a, msgs_b;
+    int  idle_a, idle_b;            /* per mille of byte-time slots left idle */
+    int  bigsx_pm_a;
+    int  gen_pm;                    /* generator requests per mille per byte time */
+    bool dense_gen;
+    bool expect_no_drops;
+    bool expect_identical;          /* OUT = IN A byte for byte, same byte time */
+    bool msg_gaps;                  /* idle only between messages: the bytes of a message are
+                                       back to back, as real senders do (else idle per byte) */
+    int  flip_every;                /* switch to a random routing preset every N byte times */
+} merge2_t;
+
+static uint8_t  s_in2[ME_NUM_INS][STREAM_MAX];
+static uint8_t  s_in2_start[ME_NUM_INS][STREAM_MAX];
+static uint8_t  s_msg_route[ME_NUM_INS][MAXMSG];   /* outputs routed when each message started */
+static uint32_t s_in2_tick[ME_NUM_INS][STREAM_MAX];
+static uint32_t s_out_tick[ME_NUM_OUTS][STREAM_MAX * 2];
+
+/* realtime enqueue tracking: (tick, rt bytes queued ahead) */
+#define RTT_MAX 400000
+static uint32_t s_rtt_tick[ME_NUM_OUTS][RTT_MAX], s_rtt_ahead[ME_NUM_OUTS][RTT_MAX];
+static int s_rtt_h[ME_NUM_OUTS], s_rtt_t[ME_NUM_OUTS];
+static uint32_t s_rh_seen[ME_NUM_OUTS];
+
+static void rt_track(uint32_t tick) {
+    for (int p = 0; p < ME_NUM_OUTS; p++) {
+        const me_out_t *o = &g_me.out[p];
+        for (; s_rh_seen[p] != o->rh; s_rh_seen[p]++) {
+            if (s_rtt_h[p] < RTT_MAX) {
+                s_rtt_tick[p][s_rtt_h[p]] = tick;
+                s_rtt_ahead[p][s_rtt_h[p]] = s_rh_seen[p] - o->rt_t;
+                s_rtt_h[p]++;
+            }
+        }
+    }
+}
+
+static void run_merge2(const merge2_t *c) {
+    printf("engine merge (2 inputs): %s\n", c->name);
+    eng_reset_route(c->route_a, c->route_b);
+    streamcfg_t ca = SC_A;
+    ca.bigsx_pm = c->bigsx_pm_a;
+    int n[ME_NUM_INS];
+    memset(s_in2_start, 0, sizeof s_in2_start);
+    n[0] = build_stream2(s_in2[0], s_in2_start[0], STREAM_MAX, c->msgs_a, &ca);
+    n[1] = build_stream2(s_in2[1], s_in2_start[1], STREAM_MAX, c->msgs_b, &SC_B);
+    const int idle[ME_NUM_INS] = { c->idle_a, c->idle_b };
+
+    msglist_t gen_expect = ml_new();
+    uint32_t gen_rt_ok = 0;
+    int outn[ME_NUM_OUTS] = { 0, 0 };
+    int pos[ME_NUM_INS] = { 0, 0 };
+    int msgi[ME_NUM_INS] = { 0, 0 }, rt_exp[ME_NUM_OUTS] = { 0, 0 }, flips = 0;
+    uint32_t tick = 0, maxq = 0, rt_delay_max = 0, rt_ahead_max = 0;
+    int rt_bad = 0;
+    memset(s_rtt_h, 0, sizeof s_rtt_h);
+    memset(s_rtt_t, 0, sizeof s_rtt_t);
+    memset(s_rh_seen, 0, sizeof s_rh_seen);
+
+    while (pos[0] < n[0] || pos[1] < n[1] || !me_idle(&g_me)) {
+        uint64_t t = (uint64_t)tick * 320u;
+        if (c->flip_every && tick % (uint32_t)c->flip_every == 0 && tick) {
+            route_preset_apply(&g_set, (int)(rnd() % ROUTE_PRESET_COUNT));
+            flips++;
+        }
+        for (int i = 0; i < ME_NUM_INS; i++) {
+            if (pos[i] >= n[i]) continue;
+            bool may_idle = !c->msg_gaps || s_in2_start[i][pos[i]];
+            if (may_idle && (int)(rnd() % 1000) < idle[i]) continue;
+            uint8_t b = s_in2[i][pos[i]];
+            uint8_t routed = (uint8_t)((g_set.src[0][i] ? 1 : 0) | (g_set.src[1][i] ? 2 : 0));
+            if (b >= 0xF8) {
+                for (int p = 0; p < ME_NUM_OUTS; p++) if ((routed >> p) & 1) rt_exp[p]++;
+            } else if (s_in2_start[i][pos[i]] && msgi[i] < MAXMSG) {
+                s_msg_route[i][msgi[i]++] = routed;
+            }
+            s_in2_tick[i][pos[i]] = tick;
+            me_input_byte(&g_me, i, s_in2[i][pos[i]++], t);
+            rt_track(tick);
+        }
+        bool feeding = pos[0] < n[0] || pos[1] < n[1];
+        if (feeding && (int)(rnd() % 1000) < c->gen_pm) {
+            uint8_t g[ME_GEN_MAX_LEN];
+            int gl = make_gen(g);
+            if (me_gen_push(&g_me, g, (uint8_t)gl)) {
+                midi_parser_t p;
+                midi_parser_init(&p, collect, &gen_expect);
+                for (int k = 0; k < gl; k++) midi_parser_feed(&p, g[k], 0);
+            }
+            if (c->dense_gen && me_gen_rt_push(&g_me, 0xFE)) gen_rt_ok++;
+        }
+        if (feeding && c->gen_pm && rnd() % 200 == 0 && me_gen_rt_push(&g_me, 0xFE)) gen_rt_ok++;
+        me_service(&g_me, t);
+        rt_track(tick);
+        for (int p = 0; p < ME_NUM_OUTS; p++) {
+            uint8_t b;
+            if (me_out_pending(&g_me, p) > maxq) maxq = me_out_pending(&g_me, p);
+            if (me_out_pop(&g_me, p, &b)) {
+                s_out[p][outn[p]] = b;
+                s_out_tick[p][outn[p]++] = tick;
+                if (b >= 0xF8) {
+                    if (s_rtt_t[p] >= s_rtt_h[p]) { rt_bad++; continue; }
+                    uint32_t d = tick - s_rtt_tick[p][s_rtt_t[p]];
+                    uint32_t ah = s_rtt_ahead[p][s_rtt_t[p]];
+                    s_rtt_t[p]++;
+                    if (d > ah) rt_bad++;     /* only other realtime may go first */
+                    if (d > rt_delay_max) rt_delay_max = d;
+                    if (ah > rt_ahead_max) rt_ahead_max = ah;
+                }
+            }
+        }
+        tick++;
+        if (tick > 20u * 1000u * 1000u) break;
+    }
+
+    /* expected per-input message lists (realtime excluded) */
+    msglist_t in_msgs[ME_NUM_INS];
+    int in_rt[ME_NUM_INS] = { 0, 0 };
+    for (int i = 0; i < ME_NUM_INS; i++) {
+        msglist_t all = ml_new();
+        uint32_t stray;
+        parse_ticks(s_in2[i], s_in2_tick[i], n[i], &all, &stray);
+        CHECK(stray == 0);
+        in_msgs[i] = ml_new();
+        for (int k = 0; k < all.n; k++) {
+            if (all.m[k].status >= 0xF8) in_rt[i]++;
+            else in_msgs[i].m[in_msgs[i].n++] = all.m[k];
+        }
+        ml_free(&all);
+        CHECK(msgi[i] == in_msgs[i].n);
+    }
+
+    for (int p = 0; p < ME_NUM_OUTS; p++) {
+        int route = p ? c->route_b : c->route_a;
+        /* what this output should carry from each input: the messages that
+         * started while the input was routed here */
+        msglist_t exp[ME_NUM_INS];
+        for (int s = 0; s < ME_NUM_INS; s++) {
+            exp[s] = ml_new();
+            for (int k = 0; k < in_msgs[s].n; k++)
+                if ((s_msg_route[s][k] >> p) & 1) exp[s].m[exp[s].n++] = in_msgs[s].m[k];
+        }
+        msglist_t om = ml_new();
+        uint32_t stray;
+        parse_ticks(s_out[p], s_out_tick[p], outn[p], &om, &stray);
+        int ii[ME_NUM_INS] = { 0, 0 }, got[ME_NUM_INS] = { 0, 0 };
+        int gi = 0, rt_in[ME_NUM_INS] = { 0, 0 }, fe = 0, bad = 0;
+        uint32_t lat_max[ME_NUM_INS] = { 0, 0 };
+        for (int k = 0; k < om.n; k++) {
+            const midi_msg_t *m = &om.m[k];
+            if (m->status == 0xF8) { rt_in[0]++; continue; }
+            if (m->status == 0xFD) { rt_in[1]++; continue; }
+            if (m->status == 0xFE) { fe++; continue; }
+            int s = msg_source(m);
+            if (s == 2) {
+                if (gi >= gen_expect.n || !msg_eq(m, &gen_expect.m[gi])) bad++;
+                gi++;
+                continue;
+            }
+            if (s < 0) {
+                if (bad < 3) printf("  port %c: unexpected message status %02X\n", 'A' + p, m->status);
+                bad++;
+                continue;
+            }
+            /* next message from input s must be a later message of s (whole
+             * messages may have been dropped, never reordered or altered) */
+            while (ii[s] < exp[s].n && !msg_eq(m, &exp[s].m[ii[s]])) ii[s]++;
+            if (ii[s] >= exp[s].n) {
+                if (bad < 3) {
+                    char a[32];
+                    decode(m, a);
+                    printf("  port %c: message from IN %c out of order / altered: \"%s\"\n", 'A' + p, 'A' + s, a);
+                }
+                bad++;
+                continue;
+            }
+            uint32_t lat = (uint32_t)(m->t_us - exp[s].m[ii[s]].t_us);
+            if (lat > lat_max[s]) lat_max[s] = lat;
+            ii[s]++;
+            got[s]++;
+        }
+        CHECK(bad == 0);
+        CHECK(stray == 0);
+        CHECK(g_me.out[p].drops == 0);
+        CHECK(gi == ((route & 4) ? gen_expect.n : 0));
+        CHECK(fe == ((route & 4) ? (int)(gen_rt_ok - g_me.out[p].gen_shed) : 0));
+        uint32_t dropped_total = 0;
+        for (int s = 0; s < ME_NUM_INS; s++) {
+            uint32_t drops = g_me.out[p].merge_drops[s];
+            dropped_total += drops;
+            CHECK((uint32_t)got[s] + drops == (uint32_t)exp[s].n);   /* every loss counted, whole */
+            CHECK(rt_in[s] <= in_rt[s]);
+        }
+        /* input realtime: all of it unless shed (merge overload only) */
+        CHECK(rt_in[0] + rt_in[1] + (int)g_me.out[p].rt_shed == rt_exp[p]);
+        if (c->bigsx_pm_a && (route & 1))
+            CHECK(g_me.out[p].merge_drops[ME_IN_A] == 0);   /* the dumping input never loses */
+        if (c->expect_no_drops) {
+            CHECK(dropped_total == 0);
+            CHECK(g_me.out[p].rt_shed == 0);
+        }
+        printf("  port %c: %d bytes; IN A %d/%d msgs (lost %u, max lat %.1f ms); IN B %d/%d (lost %u, max lat %.1f ms);"
+               " gen %d; RT %d+%d (+%d gen)\n",
+               'A' + p, outn[p], got[0], exp[0].n, (unsigned)g_me.out[p].merge_drops[0],
+               lat_max[0] * 0.32, got[1], exp[1].n, (unsigned)g_me.out[p].merge_drops[1],
+               lat_max[1] * 0.32, gi, rt_in[0], rt_in[1], fe);
+
+        if (c->expect_identical) {
+            /* single input fast path: byte-identical, each byte in its own byte time */
+            int ok = outn[p] == n[0];
+            for (int k = 0; ok && k < n[0]; k++)
+                ok = s_out[p][k] == s_in2[0][k] && s_out_tick[p][k] == s_in2_tick[0][k];
+            CHECK(ok);
+        }
+        ml_free(&om);
+        ml_free(&exp[0]);
+        ml_free(&exp[1]);
+    }
+    if (flips) printf("  %d routing changes mid-stream\n", flips);
+    CHECK(rt_bad == 0);
+    CHECK(g_me.in[0].st.orphan_data == 0 && g_me.in[1].st.orphan_data == 0);
+    CHECK(g_me.stats.stalls == 0);
+    printf("  inputs: A %d bytes / %d msgs, B %d bytes / %d msgs; gen %d msgs, %u RT;"
+           " max TX backlog %u bytes (%.1f ms); realtime max delay %u byte times (queued behind %u RT)\n",
+           n[0], in_msgs[0].n, n[1], in_msgs[1].n, gen_expect.n, (unsigned)gen_rt_ok,
+           (unsigned)maxq, maxq * 0.32, (unsigned)rt_delay_max, (unsigned)rt_ahead_max);
+    CHECK(maxq <= ME_MERGE_BACKLOG_MAX + 2u * ME_GEN_MAX_LEN + 16u ||
+          maxq <= ME_LANE_SIZE + ME_MERGE_BACKLOG_MAX + 16u);
+    ml_free(&in_msgs[0]);
+    ml_free(&in_msgs[1]);
+    ml_free(&gen_expect);
+}
+
+/* IN B overflow: IN A sends 10 kB sysex dumps back to back on a merged
+ * output while IN B streams. Light IN B traffic fits in its lane and loses
+ * nothing; heavy IN B traffic loses whole IN B messages only, all counted.
+ * Checked by run_merge2's invariants. */
+static void test_engine_merge2(void) {
+    static const merge2_t runs[] = {
+        /* name                                                       rA rB  msgsA  msgsB idleA idleB bigsx gen dense nodrop ident gaps  flip */
+        { "fast path: IN A thru to both, IN B monitored only (dense)", 1, 1, 30000, 30000,   0,   0,  0,  0, false, true,  true,  false, 0 },
+        { "default routing, dense IN A + IN B + heavy generator",      5, 5, 30000, 30000,   0,   0,  0, 50, true,  true,  false, false, 0 },
+        { "split A->A, B->B, both dense + generator",                  5, 6, 30000, 30000,   0,   0,  0, 30, true,  true,  false, false, 0 },
+        { "B->A, B->B, IN A dense unrouted",                           2, 2, 20000, 20000,   0, 200,  0,  0, false, true,  false, false, 0 },
+        { "merge both, 45% + 45% (bytes trickled) + generator",       7, 7, 15000, 15000, 550, 550,  0, 10, false, true,  false, false, 0 },
+        { "merge both, ~45% + ~45% (whole messages) + generator",     7, 7, 15000, 15000, 940, 940,  0, 10, false, true,  false, true, 0 },
+        { "merge both, 2-10 kB dumps on A, IN B ~6% + generator",      7, 7,  3000,  3000, 995, 995, 15,  3, false, true,  false, true, 0 },
+        { "merge to A, 2-10 kB dumps on A, IN B ~35% (B overflows)",   3, 2,  3000, 15000, 995, 960, 15,  0, false, false, false, true, 0 },
+        { "routing preset changes every 50 ms, ~40% + ~40% + generator", 7, 7, 15000, 15000, 950, 950, 0, 10, false, true, false, true, 156 },
+        { "routing preset changes every 3 ms (mid-message), dense + gen", 4, 4, 15000, 15000, 300, 300, 0, 20, false, false, false, false, 9 },
+        { "merge both, both 100% + heavy generator (overload)",        7, 7, 30000, 30000,   0,   0,  0, 50, true,  false, false, false, 0 },
+        { "merge both, ~70% + ~70% + very heavy generator (overload)", 7, 7, 30000, 30000, 850, 850,  0,300, true,  false, false, true, 0 },
+    };
+    for (unsigned k = 0; k < sizeof runs / sizeof runs[0]; k++) run_merge2(&runs[k]);
+}
+
 int main(void) {
     test_parser();
     test_decode();
     test_msc();
     test_engine_directed();
+    test_engine_two_inputs();
+    test_engine_monitor();
+    test_routing_ui();
     run_merge("sparse input, moderate generator", 20000, 50, 20, false);
     run_merge("dense input (100%), heavy generator", 40000, 0, 50, true);
     run_merge("70% input, very heavy generator", 40000, 30, 300, true);
+    test_engine_merge2();
     printf("\n%d checks, %d failures\n", g_checks, g_fail);
     return g_fail ? 1 : 0;
 }

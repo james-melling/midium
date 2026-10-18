@@ -48,15 +48,17 @@ TOP = {   # top face, (u, v) = (x along length from IN end, z from front edge)
 }
 DIN_PITCH = 22.0
 END_A = {  # IN end, seen from outside: px right of centre, py up from body bottom
-    "din": [("MIDI IN", -21.0, 23.0)],
-    "rj45": ("XRC", 2.5, 22.5),
-    "jack": ("GPI", 23.0, 23.0),
+    "din": [("IN A", -22.0, 23.0), ("IN B", 0.0, 23.0)],
+    "rj45": ("XRC", 22.5, 22.5),
+    "group": ("MIDI", -22.0, 0.0),     # etched bracket + group label under the two DIN legends
 }
 END_B = {  # OUT end, seen from outside
     "din": [("OUT A", -22.0, 23.0), ("OUT B", 0.0, 23.0)],
     "usbc": ("USB / CHG", 22.5, 23.0),
+    "group": ("MIDI", -22.0, 0.0),
 }
 LABEL_CAP, LABEL_Y = 2.3, 10.2     # end-panel legend cap height, legend centre height (py)
+GROUP_CAP, GROUP_Y, GROUP_LINE = 1.8, 6.4, 0.28   # group label cap height, bracket line centre (py), line weight
 DIN_FLANGE_D, DIN_HOLE_D = 19.0, 16.0
 RJ_CUT = (16.4, 13.8)
 USB_CUT = (9.8, 4.0)
@@ -122,6 +124,14 @@ def end_artwork(spec):
         if key in spec:
             lab, x, y = spec[key]
             g.append(text_geom(lab, LABEL_CAP, x, LABEL_Y, ha="center", va="center"))
+    if "group" in spec:   # |____ MIDI ____|  bracket spanning the DIN pair, label in a gap at the middle
+        lab, xa, xb = spec["group"]
+        x0, x1, xm = xa - 7.0, xb + 7.0, (xa + xb) / 2
+        t = text_geom(lab, GROUP_CAP, xm, GROUP_Y, ha="center", va="center", font=FONT)
+        tx0, _, tx1, _ = t.bounds
+        hl, tick = GROUP_LINE / 2, 1.5
+        g += [t, sbox(x0, GROUP_Y - hl, tx0 - 1.2, GROUP_Y + hl), sbox(tx1 + 1.2, GROUP_Y - hl, x1, GROUP_Y + hl),
+              sbox(x0, GROUP_Y - hl, x0 + GROUP_LINE, GROUP_Y + tick), sbox(x1 - GROUP_LINE, GROUP_Y - hl, x1, GROUP_Y + tick)]
     return unary_union(g)
 
 
@@ -160,7 +170,7 @@ F5x7 = {
  "2": ".###.#...#....#...#...#...#...#####", "3": "#####" "...#." "..#.." "...#." "....#" "#...#" ".###.",
  "4": "...#...##..#.#.#..#.#####...#....#.", "5": "######....####.....#....##...#.###.",
  "6": "..##..#...#....####.#...##...#.###.", "7": "#####....#...#...#...#....#....#...",
- "8": ".###.#...##...#.###.#...##...#.###.", "9": ".###.#...##...#.####....#...#..##..",
+ "a": "".join([".....", ".....", ".###.", "....#", ".####", "#...#", ".####"]), "8": ".###.#...##...#.###.#...##...#.###.", "9": ".###.#...##...#.####....#...#..##..",
  "b": "#....#....#.##.##..##...##...#####.", "m": "..........##.#.#.#.##.#.##...##...#",
  "n": "..........#.##.##..##...##...##...#", "o": "...........###.#...##...##...#.###.",
  "p": "..........####.#...#####.#....#....", "u": "..........#...##...##...##..##.##.#",
@@ -191,23 +201,25 @@ def screen_texture(path, up=4):
     d = ImageDraw.Draw(img)
     d.rectangle([0, 0, 319, 19], fill=(22, 34, 56))
     draw_text(img, "MIDIum", 5, 3, (255, 255, 255))
-    draw_text(img, "A:", 5 + 8 * 12, 3, (170, 180, 195)); draw_text(img, "on", 5 + 10 * 12, 3, (60, 235, 110))
-    draw_text(img, "B:", 5 + 13 * 12, 3, (170, 180, 195)); draw_text(img, "on", 5 + 15 * 12, 3, (60, 235, 110))
+    # routing summary: input A -> outs a+b, input B -> outs a+b
+    draw_text(img, "A:", 5 + 8 * 12, 3, (170, 180, 195)); draw_text(img, "ab", 5 + 10 * 12, 3, (60, 235, 110))
+    draw_text(img, "B:", 5 + 13 * 12, 3, (170, 180, 195)); draw_text(img, "ab", 5 + 15 * 12, 3, (60, 235, 110))
     # battery icon
     d.rectangle([286, 4, 311, 15], outline=(220, 225, 230), width=2)
     d.rectangle([312, 7, 314, 12], fill=(220, 225, 230))
     d.rectangle([289, 7, 303, 12], fill=(60, 235, 110))
     G, C, Y, M, K = (40, 235, 100), (40, 215, 240), (255, 214, 10), (245, 80, 235), (150, 155, 160)
-    rows = [("21.480", "NOTE ON  1 C4  100", G), ("21.512", "CC 3 #7=127", C), ("21.733", "PC 1 12", Y),
-            ("22.004", "MSC LTG GO Q12.5", M), ("22.010", "NOTE OFF 1 C4  0", G), ("22.391", "MSC SND STOP", M),
-            ("22.500", "CLOCK 120bpm", K), ("22.617", "CC 3 #7=96", C)]
+    rows = [("21.480", "A", "NOTE ON 1 C4 100", G), ("21.512", "A", "CC 3 #7=127", C), ("21.733", "A", "PC 1 12", Y),
+            ("22.004", "B", "MSC LTG GO Q12.5", M), ("22.010", "A", "NOTE OFF 1 C4 0", G), ("22.391", "B", "MSC SND STOP", M),
+            ("22.500", "A", "CLOCK 120bpm", K), ("22.617", "A", "CC 3 #7=96", C)]
     y0, pitch = 23, 18
-    for i, (ts, msg, col) in enumerate(rows):
+    for i, (ts, src, msg, col) in enumerate(rows):
         y = y0 + i * pitch
         if i == len(rows) - 1:
             d.rectangle([0, y - 2, 313, y + 15], fill=(18, 26, 36))
         draw_text(img, ts, 3, y + 4, (95, 100, 110), scale=1)
-        draw_text(img, msg, 44, y + 1, col, scale=2)
+        draw_text(img, src, 44, y + 1, (120, 128, 140), scale=2)
+        draw_text(img, msg, 62, y + 1, col, scale=2)
     d.rectangle([316, 22, 318, 169], fill=(25, 30, 38))
     d.rectangle([316, 120, 318, 168], fill=(110, 120, 135))
     img = img.resize((320 * up, 170 * up), Image.NEAREST)
@@ -498,18 +510,23 @@ box {{ <0,0,0>, <1,1,0.001>
     return "#declare MT1 = union {\n" + "\n".join(s) + "\n}\n"
 
 
-def midi_cable():
-    """Moulded 5-pin DIN plug in MIDI IN plus cable trailing away on the floor (device frame)."""
-    _, px, py = END_A["din"][0]
+def midi_cable(idx, name):
+    """Moulded 5-pin DIN plug in END_A["din"][idx] plus cable trailing away on the floor (device frame)."""
+    _, px, py = END_A["din"][idx]
     # IN panel: local px -> device z = W/2 - px ; outward = -x
     zc, yc = W / 2 - px, FOOT + py
     x0 = -PANEL_T - 0.85   # flange front
     grip = " ".join(f"torus {{ 7.9, 0.35 rotate z*90 translate <{x0 - 9 - i * 2.2:.3f},0,0> }}" for i in range(7))
-    pts = [(x0 - 22, yc, zc), (x0 - 34, yc, zc), (x0 - 48, yc, zc), (x0 - 60, yc - 3, zc - 1), (x0 - 72, 9, zc - 4),
-           (x0 - 86, 2.6, zc - 8), (x0 - 108, 2.6, zc - 4), (x0 - 135, 2.6, zc + 18), (x0 - 160, 2.6, zc + 60),
-           (x0 - 178, 2.6, zc + 120), (x0 - 190, 2.6, zc + 200), (x0 - 196, 2.6, zc + 260)]
+    if idx == 0:   # IN A (rear socket): drops and sweeps away to the back
+        pts = [(x0 - 22, yc, zc), (x0 - 34, yc, zc), (x0 - 48, yc, zc), (x0 - 60, yc - 3, zc - 1), (x0 - 72, 9, zc - 4),
+               (x0 - 86, 2.6, zc - 8), (x0 - 108, 2.6, zc - 4), (x0 - 135, 2.6, zc + 18), (x0 - 160, 2.6, zc + 60),
+               (x0 - 178, 2.6, zc + 120), (x0 - 190, 2.6, zc + 200), (x0 - 196, 2.6, zc + 260)]
+    else:          # IN B (centre socket): drops a little further out and curls away towards the front
+        pts = [(x0 - 22, yc, zc), (x0 - 34, yc, zc), (x0 - 50, yc, zc), (x0 - 66, yc - 4, zc - 1), (x0 - 80, 10, zc - 4),
+               (x0 - 96, 2.6, zc - 9), (x0 - 118, 2.6, zc - 18), (x0 - 140, 2.6, zc - 40), (x0 - 156, 2.6, zc - 80),
+               (x0 - 164, 2.6, zc - 140), (x0 - 166, 2.6, zc - 200), (x0 - 166, 2.6, zc - 260)]
     sw = ", ".join(f"<{x:.2f},{y:.2f},{z:.2f}>, 2.6" for x, y, z in pts)
-    return f"""#declare Plug = union {{
+    return f"""#declare Plug{name} = union {{
   difference {{ cylinder {{ <{x0 + 3:.3f},0,0>, <{x0 - 0.2:.3f},0,0>, 6.6 }} cylinder {{ <{x0 + 4:.3f},0,0>, <{x0 - 1:.3f},0,0>, 6.0 }} texture {{ T_Nickel }} }}
   merge {{
     cylinder {{ <{x0 - 0.4:.3f},0,0>, <{x0 - 25:.3f},0,0>, 8.0 }}
@@ -520,7 +537,7 @@ def midi_cable():
     texture {{ pigment {{ rgb 0.028 }} normal {{ granite 0.06 scale 0.4 }} finish {{ ambient 0 diffuse 0.65 specular 0.18 roughness 0.06 }} }}
   }}
   translate <0,{yc:.3f},{zc:.3f}> }}
-#declare Cable = sphere_sweep {{ b_spline {len(pts)}, {sw} tolerance 0.05
+#declare Cable{name} = sphere_sweep {{ b_spline {len(pts)}, {sw} tolerance 0.05
   texture {{ pigment {{ rgb 0.03 }} finish {{ ambient 0 diffuse 0.6 specular 0.25 roughness 0.04 }} }} }}
 """
 
@@ -546,7 +563,7 @@ VIEWS = {
     # black flag over the camera axis (seen only in reflections, casts no shadow) - as a studio would for a flat-lay
     "top": dict(cam=lambda a: cam_top(178, a),
                 extra="disc { <0,260,0>, y, 170 pigment { rgb 0 } finish { ambient 0 diffuse 0 } no_image no_shadow no_radiosity }"),
-    "context": dict(cam=lambda a: cam_persp((-250, 230, -300), (-38, 6, 18), 35), cable=True),
+    "context": dict(cam=lambda a: cam_persp((-250, 230, -300), (-38, 6, 18), 35), cables=(0, 1)),
 }
 
 
@@ -555,9 +572,10 @@ def scene(path, view, aspect):
     out = [HEADER, v["cam"](aspect), device()]
     out.append(f"object {{ MT1 translate <{-CX},0,{-CZ}> }}")
     out.append(v.get("extra", ""))
-    if v.get("cable"):
-        out.append(midi_cable())
-        out.append(f"union {{ object {{ Plug }} object {{ Cable }} translate <{-CX},0,{-CZ}> }}")
+    for idx in v.get("cables", ()):
+        n = "AB"[idx]
+        out.append(midi_cable(idx, n))
+        out.append(f"union {{ object {{ Plug{n} }} object {{ Cable{n} }} translate <{-CX},0,{-CZ}> }}")
     open(path, "w").write("\n".join(out))
 
 

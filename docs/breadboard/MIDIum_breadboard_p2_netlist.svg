@@ -8,7 +8,7 @@
 <text x="267.00" y="273.30" font-size="5.00" text-anchor="start" font-weight="bold" fill="#111">MIDIum (NSK MT-1)</text>
 <text x="411.00" y="273.30" font-size="3.20" text-anchor="end" font-weight="normal" fill="#555">melling.audio</text>
 <text x="267.00" y="281.20" font-size="3.40" text-anchor="start" font-weight="normal" fill="#111">Breadboard prototype · Netlist / build table</text>
-<text x="267.00" y="288.60" font-size="3.20" text-anchor="start" font-weight="normal" fill="#111">Rev A · 18/10/2026 · J Melling</text>
+<text x="267.00" y="288.60" font-size="3.20" text-anchor="start" font-weight="normal" fill="#111">Rev B · 18/10/2026 · J Melling</text>
 <text x="379.00" y="281.20" font-size="3.20" text-anchor="start" font-weight="normal" fill="#111">Sheet 2 of 4</text>
 <text x="379.00" y="288.60" font-size="3.00" text-anchor="start" font-weight="normal" fill="#444">A3 · milestone 1</text>
 <text x="14.00" y="14.50" font-size="4.20" text-anchor="start" font-weight="bold" fill="#111">Sheet 2 · Jumper list: tick each row as you fit it</text>
@@ -22,449 +22,494 @@
 <text x="123.00" y="27.50" font-size="2.60" text-anchor="start" font-weight="bold" fill="#111">Signal / purpose</text>
 <line x1="12.00" y1="28.80" x2="238.00" y2="28.80" stroke="#000" stroke-width="0.35"/>
 <text x="19.00" y="32.30" font-size="2.45" text-anchor="start" font-weight="bold" fill="#24467a">Power rails, board 1</text>
-<rect x="13.00" y="33.62" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="35.72" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W01</text>
-<text x="29.00" y="35.72" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 a10</text>
-<text x="62.00" y="35.72" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 top 3V3 rail @10</text>
-<text x="104.00" y="35.72" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">6</text>
-<line x1="107.00" y1="34.92" x2="111.50" y2="34.92" stroke="#d62728" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="35.72" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">red</text>
-<text x="123.00" y="35.72" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">3V3 from Pico pin 36 to B1 top 3V3 rail</text>
-<rect x="13.00" y="37.24" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="39.34" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W02</text>
-<text x="29.00" y="39.34" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 a13</text>
-<text x="62.00" y="39.34" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 top GND rail @13</text>
-<text x="104.00" y="39.34" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">11</text>
-<line x1="107.00" y1="38.54" x2="111.50" y2="38.54" stroke="#1a1a1a" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="39.34" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">black</text>
-<text x="123.00" y="39.34" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GND from Pico pin 33 to B1 top GND rail</text>
-<rect x="13.00" y="40.86" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="42.96" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W03</text>
-<text x="29.00" y="42.96" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 j13</text>
-<text x="62.00" y="42.96" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 bottom GND rail @13</text>
-<text x="104.00" y="42.96" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">14</text>
-<line x1="107.00" y1="42.16" x2="111.50" y2="42.16" stroke="#1a1a1a" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="42.96" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">black</text>
-<text x="123.00" y="42.96" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GND from Pico pin 8 to B1 bottom GND rail</text>
-<rect x="13.00" y="44.48" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="46.58" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W04</text>
-<text x="29.00" y="46.58" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 top 3V3 rail @61</text>
-<text x="62.00" y="46.58" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 bottom 3V3 rail @61</text>
-<text x="104.00" y="46.58" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">51</text>
-<line x1="107.00" y1="45.78" x2="111.50" y2="45.78" stroke="#d62728" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="46.58" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">red</text>
-<text x="123.00" y="46.58" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">3V3 rail link, B1 top to B1 bottom</text>
-<text x="19.00" y="50.40" font-size="2.45" text-anchor="start" font-weight="bold" fill="#24467a">Power between the boards</text>
-<rect x="13.00" y="51.72" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="53.82" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W05</text>
-<text x="29.00" y="53.82" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 a6</text>
-<text x="62.00" y="53.82" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 bottom 5V rail @3</text>
-<text x="104.00" y="53.82" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">126</text>
-<line x1="107.00" y1="53.02" x2="111.50" y2="53.02" stroke="#ff8c00" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="53.82" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">orange</text>
-<text x="123.00" y="53.82" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">VBUS (Pico pin 40) to B2 bottom 5V rail</text>
-<rect x="13.00" y="55.34" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="57.44" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W06</text>
-<text x="29.00" y="57.44" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 bottom GND rail @57</text>
-<text x="62.00" y="57.44" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 top GND rail @57</text>
-<text x="104.00" y="57.44" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">33</text>
-<line x1="107.00" y1="56.64" x2="111.50" y2="56.64" stroke="#1a1a1a" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="57.44" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">black</text>
-<text x="123.00" y="57.44" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GND rail link, B1 bottom to B2 top</text>
-<rect x="13.00" y="58.96" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="61.06" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W07</text>
-<text x="29.00" y="61.06" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 bottom 3V3 rail @59</text>
-<text x="62.00" y="61.06" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 top 3V3 rail @59</text>
-<text x="104.00" y="61.06" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">41</text>
-<line x1="107.00" y1="60.26" x2="111.50" y2="60.26" stroke="#d62728" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="61.06" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">red</text>
-<text x="123.00" y="61.06" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">3V3 rail link, B1 bottom to B2 top</text>
-<rect x="13.00" y="62.58" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="64.68" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W08</text>
-<text x="29.00" y="64.68" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 top GND rail @61</text>
-<text x="62.00" y="64.68" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 bottom GND rail @61</text>
-<text x="104.00" y="64.68" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">51</text>
-<line x1="107.00" y1="63.88" x2="111.50" y2="63.88" stroke="#1a1a1a" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="64.68" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">black</text>
-<text x="123.00" y="64.68" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GND rail link, B2 top to B2 bottom</text>
-<text x="19.00" y="68.50" font-size="2.45" text-anchor="start" font-weight="bold" fill="#24467a">TFT (DS2)</text>
-<rect x="13.00" y="69.82" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="71.92" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W09</text>
-<text x="29.00" y="71.92" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 b36</text>
-<text x="62.00" y="71.92" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 top 3V3 rail @36</text>
-<text x="104.00" y="71.92" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">11</text>
-<line x1="107.00" y1="71.12" x2="111.50" y2="71.12" stroke="#d62728" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="71.92" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">red</text>
-<text x="123.00" y="71.92" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">TFT V+ (Vin) 3V3</text>
-<rect x="13.00" y="73.44" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="75.54" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W10</text>
-<text x="29.00" y="75.54" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 b38</text>
-<text x="62.00" y="75.54" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 top GND rail @37</text>
-<text x="104.00" y="75.54" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">13</text>
-<line x1="107.00" y1="74.74" x2="111.50" y2="74.74" stroke="#1a1a1a" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="75.54" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">black</text>
-<text x="123.00" y="75.54" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">TFT G (GND)</text>
-<rect x="13.00" y="77.06" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="79.16" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W11</text>
-<text x="29.00" y="79.16" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 b19</text>
-<text x="62.00" y="79.16" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 c46</text>
-<text x="104.00" y="79.16" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">99</text>
-<line x1="107.00" y1="78.36" x2="111.50" y2="78.36" stroke="#7f7f7f" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="79.16" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">grey</text>
-<text x="123.00" y="79.16" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP21 to TFT BL (backlight PWM)</text>
-<rect x="13.00" y="80.68" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="82.78" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W12</text>
-<text x="29.00" y="82.78" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 b20</text>
-<text x="62.00" y="82.78" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 d43</text>
-<text x="104.00" y="82.78" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">89</text>
-<line x1="107.00" y1="81.98" x2="111.50" y2="81.98" stroke="#7f7f7f" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="82.78" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">grey</text>
-<text x="123.00" y="82.78" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP20 to TFT RT (reset)</text>
-<rect x="13.00" y="84.30" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="86.40" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W13</text>
-<text x="29.00" y="86.40" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 b21</text>
-<text x="62.00" y="86.40" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 e40</text>
-<text x="104.00" y="86.40" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">66</text>
-<line x1="107.00" y1="85.60" x2="111.50" y2="85.60" stroke="#7f7f7f" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="86.40" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">grey</text>
-<text x="123.00" y="86.40" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP19 SPI0 MOSI to TFT SI</text>
-<rect x="13.00" y="87.92" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="90.02" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W14</text>
-<text x="29.00" y="90.02" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 b22</text>
-<text x="62.00" y="90.02" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 e39</text>
-<text x="104.00" y="90.02" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">53</text>
-<line x1="107.00" y1="89.22" x2="111.50" y2="89.22" stroke="#7f7f7f" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="90.02" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">grey</text>
-<text x="123.00" y="90.02" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP18 SPI0 SCK to TFT CK</text>
-<rect x="13.00" y="91.54" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="93.64" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W15</text>
-<text x="29.00" y="93.64" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 b24</text>
-<text x="62.00" y="93.64" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 e42</text>
-<text x="104.00" y="93.64" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">58</text>
-<line x1="107.00" y1="92.84" x2="111.50" y2="92.84" stroke="#7f7f7f" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="93.64" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">grey</text>
-<text x="123.00" y="93.64" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP17 to TFT TC (chip select)</text>
-<rect x="13.00" y="95.16" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="97.26" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W16</text>
-<text x="29.00" y="97.26" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 b25</text>
-<text x="62.00" y="97.26" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 e44</text>
-<text x="104.00" y="97.26" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">71</text>
-<line x1="107.00" y1="96.46" x2="111.50" y2="96.46" stroke="#7f7f7f" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="97.26" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">grey</text>
-<text x="123.00" y="97.26" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP16 to TFT DC</text>
-<text x="19.00" y="101.08" font-size="2.45" text-anchor="start" font-weight="bold" fill="#24467a">Joystick (SW1)</text>
-<rect x="13.00" y="102.40" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="104.50" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W17</text>
-<text x="29.00" y="104.50" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 b17</text>
-<text x="62.00" y="104.50" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 b48</text>
-<text x="104.00" y="104.50" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">109</text>
-<line x1="107.00" y1="103.70" x2="111.50" y2="103.70" stroke="#17becf" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="104.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">cyan</text>
-<text x="123.00" y="104.50" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP22 to joystick PRESS (pin 6)</text>
-<rect x="13.00" y="106.02" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="108.12" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W18</text>
-<text x="29.00" y="108.12" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 j16</text>
-<text x="62.00" y="108.12" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 b49</text>
-<text x="104.00" y="108.12" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">130</text>
-<line x1="107.00" y1="107.32" x2="111.50" y2="107.32" stroke="#17becf" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="108.12" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">cyan</text>
-<text x="123.00" y="108.12" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP8 to joystick UP (pin 5)</text>
-<rect x="13.00" y="109.64" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="111.74" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W19</text>
-<text x="29.00" y="111.74" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 b50</text>
-<text x="62.00" y="111.74" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 top GND rail @49</text>
-<text x="104.00" y="111.74" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">13</text>
-<line x1="107.00" y1="110.94" x2="111.50" y2="110.94" stroke="#1a1a1a" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="111.74" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">black</text>
-<text x="123.00" y="111.74" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">Joystick COM (pin 4) to GND</text>
-<rect x="13.00" y="113.26" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="115.36" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W20</text>
-<text x="29.00" y="115.36" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 j24</text>
-<text x="62.00" y="115.36" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 j48</text>
-<text x="104.00" y="115.36" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">64</text>
-<line x1="107.00" y1="114.56" x2="111.50" y2="114.56" stroke="#17becf" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="115.36" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">cyan</text>
-<text x="123.00" y="115.36" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP14 to joystick LEFT (pin 1)</text>
-<rect x="13.00" y="116.88" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="118.98" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W21</text>
-<text x="29.00" y="118.98" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 j17</text>
-<text x="62.00" y="118.98" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 j49</text>
-<text x="104.00" y="118.98" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">86</text>
-<line x1="107.00" y1="118.18" x2="111.50" y2="118.18" stroke="#17becf" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="118.98" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">cyan</text>
-<text x="123.00" y="118.98" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP9 to joystick DOWN (pin 2)</text>
-<rect x="13.00" y="120.50" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="122.60" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W22</text>
-<text x="29.00" y="122.60" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 j25</text>
-<text x="62.00" y="122.60" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 j50</text>
-<text x="104.00" y="122.60" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">66</text>
-<line x1="107.00" y1="121.80" x2="111.50" y2="121.80" stroke="#17becf" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="122.60" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">cyan</text>
-<text x="123.00" y="122.60" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP15 to joystick RIGHT (pin 3)</text>
-<text x="19.00" y="126.42" font-size="2.45" text-anchor="start" font-weight="bold" fill="#24467a">OLED (DS1)</text>
-<rect x="13.00" y="127.74" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="129.84" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W23</text>
-<text x="29.00" y="129.84" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 j14</text>
-<text x="62.00" y="129.84" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 e55</text>
-<text x="104.00" y="129.84" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">132</text>
-<line x1="107.00" y1="129.04" x2="111.50" y2="129.04" stroke="#e377c2" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="129.84" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">pink</text>
-<text x="123.00" y="129.84" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP6 I2C1 SDA to OLED Data</text>
-<rect x="13.00" y="131.36" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="133.46" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W24</text>
-<text x="29.00" y="133.46" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 j15</text>
-<text x="62.00" y="133.46" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 e56</text>
-<text x="104.00" y="133.46" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">135</text>
-<line x1="107.00" y1="132.66" x2="111.50" y2="132.66" stroke="#e377c2" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="133.46" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">pink</text>
-<text x="123.00" y="133.46" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP7 I2C1 SCL to OLED Clk</text>
-<rect x="13.00" y="134.98" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="137.08" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W25</text>
-<text x="29.00" y="137.08" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 b61</text>
-<text x="62.00" y="137.08" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 top 3V3 rail @60</text>
-<text x="104.00" y="137.08" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">11</text>
-<line x1="107.00" y1="136.28" x2="111.50" y2="136.28" stroke="#d62728" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="137.08" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">red</text>
-<text x="123.00" y="137.08" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">OLED Vin 3V3</text>
-<rect x="13.00" y="138.60" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="140.70" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W26</text>
-<text x="29.00" y="140.70" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 b62</text>
-<text x="62.00" y="140.70" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 top GND rail @61</text>
-<text x="104.00" y="140.70" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">13</text>
-<line x1="107.00" y1="139.90" x2="111.50" y2="139.90" stroke="#1a1a1a" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="140.70" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">black</text>
-<text x="123.00" y="140.70" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">OLED Gnd</text>
-<rect x="13.00" y="142.22" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="144.32" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W27</text>
-<text x="29.00" y="144.32" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 d57</text>
-<text x="62.00" y="144.32" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 d62</text>
-<text x="104.00" y="144.32" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">15</text>
-<line x1="107.00" y1="143.52" x2="111.50" y2="143.52" stroke="#1a1a1a" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="144.32" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">black</text>
-<text x="123.00" y="144.32" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">OLED DC (= SA0) to GND, sets address 0x3C</text>
-<text x="19.00" y="148.14" font-size="2.45" text-anchor="start" font-weight="bold" fill="#24467a">Pico signals to board 2</text>
-<rect x="13.00" y="149.46" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="151.56" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W28</text>
-<text x="29.00" y="151.56" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 j9</text>
-<text x="62.00" y="151.56" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 a6</text>
-<text x="104.00" y="151.56" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">57</text>
-<line x1="107.00" y1="150.76" x2="111.50" y2="150.76" stroke="#e6c200" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="151.56" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">yellow</text>
-<text x="123.00" y="151.56" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP2 bypass relay drive</text>
-<rect x="13.00" y="153.08" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="155.18" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W29</text>
-<text x="29.00" y="155.18" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 j7</text>
-<text x="62.00" y="155.18" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 c28</text>
-<text x="104.00" y="155.18" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">117</text>
-<line x1="107.00" y1="154.38" x2="111.50" y2="154.38" stroke="#2ca02c" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="155.18" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">green</text>
-<text x="123.00" y="155.18" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP1 UART0 RX from opto output</text>
-<rect x="13.00" y="156.70" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="158.80" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W30</text>
-<text x="29.00" y="158.80" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 j6</text>
-<text x="62.00" y="158.80" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 i30</text>
-<text x="104.00" y="158.80" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">152</text>
-<line x1="107.00" y1="158.00" x2="111.50" y2="158.00" stroke="#1f6fd1" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="158.80" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">blue</text>
-<text x="123.00" y="158.80" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP0 UART0 TX (OUT A)</text>
-<rect x="13.00" y="160.32" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="162.42" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W31</text>
-<text x="29.00" y="162.42" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 j11</text>
-<text x="62.00" y="162.42" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 a47</text>
-<text x="104.00" y="162.42" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">145</text>
-<line x1="107.00" y1="161.62" x2="111.50" y2="161.62" stroke="#8e44ad" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="162.42" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">violet</text>
-<text x="123.00" y="162.42" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP4 UART1 TX (OUT B)</text>
-<text x="19.00" y="166.24" font-size="2.45" text-anchor="start" font-weight="bold" fill="#24467a">Relay drive</text>
-<rect x="13.00" y="167.56" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="169.66" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W32</text>
-<text x="29.00" y="169.66" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 a9</text>
-<text x="62.00" y="169.66" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 top GND rail @9</text>
-<text x="104.00" y="169.66" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">11</text>
-<line x1="107.00" y1="168.86" x2="111.50" y2="168.86" stroke="#1a1a1a" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="169.66" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">black</text>
-<text x="123.00" y="169.66" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">Q1 emitter to GND</text>
-<rect x="13.00" y="171.18" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="173.28" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W33</text>
-<text x="29.00" y="173.28" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 a11</text>
-<text x="62.00" y="173.28" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 a13</text>
-<text x="104.00" y="173.28" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">8</text>
-<line x1="107.00" y1="172.48" x2="111.50" y2="172.48" stroke="#e6c200" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="173.28" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">yellow</text>
-<text x="123.00" y="173.28" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">COIL- : Q1 collector to D1 anode</text>
-<rect x="13.00" y="174.80" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="176.90" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W34</text>
-<text x="29.00" y="176.90" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 b13</text>
-<text x="62.00" y="176.90" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 b16</text>
-<text x="104.00" y="176.90" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">10</text>
-<line x1="107.00" y1="176.10" x2="111.50" y2="176.10" stroke="#e6c200" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="176.90" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">yellow</text>
-<text x="123.00" y="176.90" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">COIL- : D1 anode to RL1 pin 16</text>
-<rect x="13.00" y="178.42" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="180.52" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W35</text>
-<text x="29.00" y="180.52" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 a16</text>
-<text x="62.00" y="180.52" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 a40</text>
-<text x="104.00" y="180.52" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">69</text>
-<line x1="107.00" y1="179.72" x2="111.50" y2="179.72" stroke="#e6c200" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="180.52" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">yellow</text>
-<text x="123.00" y="180.52" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">COIL- : RL1 pin 16 to RL2 pin 1</text>
-<rect x="13.00" y="182.04" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="184.14" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W36</text>
-<text x="29.00" y="184.14" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 b40</text>
-<text x="62.00" y="184.14" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 b42</text>
-<text x="104.00" y="184.14" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">8</text>
-<line x1="107.00" y1="183.34" x2="111.50" y2="183.34" stroke="#e6c200" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="184.14" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">yellow</text>
-<text x="123.00" y="184.14" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">COIL- : RL2 pin 1 to D2 anode</text>
-<rect x="13.00" y="185.66" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="187.76" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W37</text>
-<text x="29.00" y="187.76" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 j13</text>
-<text x="62.00" y="187.76" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 bottom 5V rail @13</text>
-<text x="104.00" y="187.76" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">9</text>
-<line x1="107.00" y1="186.96" x2="111.50" y2="186.96" stroke="#ff8c00" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="187.76" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">orange</text>
-<text x="123.00" y="187.76" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">D1 cathode to 5V</text>
-<rect x="13.00" y="189.28" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="191.38" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W38</text>
-<text x="29.00" y="191.38" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 j16</text>
-<text x="62.00" y="191.38" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 bottom 5V rail @16</text>
-<text x="104.00" y="191.38" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">9</text>
-<line x1="107.00" y1="190.58" x2="111.50" y2="190.58" stroke="#ff8c00" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="191.38" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">orange</text>
-<text x="123.00" y="191.38" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">RL1 coil + (pin 1) to 5V</text>
-<rect x="13.00" y="192.90" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="195.00" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W39</text>
-<text x="29.00" y="195.00" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 j40</text>
-<text x="62.00" y="195.00" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 bottom 5V rail @40</text>
-<text x="104.00" y="195.00" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">9</text>
-<line x1="107.00" y1="194.20" x2="111.50" y2="194.20" stroke="#ff8c00" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="195.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">orange</text>
-<text x="123.00" y="195.00" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">RL2 coil + (pin 16) to 5V</text>
-<rect x="13.00" y="196.52" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="198.62" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W40</text>
-<text x="29.00" y="198.62" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 j42</text>
-<text x="62.00" y="198.62" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 bottom 5V rail @42</text>
-<text x="104.00" y="198.62" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">9</text>
-<line x1="107.00" y1="197.82" x2="111.50" y2="197.82" stroke="#ff8c00" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="198.62" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">orange</text>
-<text x="123.00" y="198.62" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">D2 cathode to 5V</text>
-<text x="19.00" y="202.44" font-size="2.45" text-anchor="start" font-weight="bold" fill="#24467a">MIDI IN opto (U1)</text>
-<rect x="13.00" y="203.76" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="205.86" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W41</text>
-<text x="29.00" y="205.86" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 c23</text>
-<text x="62.00" y="205.86" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 g27</text>
-<text x="104.00" y="205.86" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">25</text>
-<line x1="107.00" y1="205.06" x2="111.50" y2="205.06" stroke="#2ca02c" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="205.86" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">green</text>
-<text x="123.00" y="205.86" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">RL1 NO2 (pin 9) to H11L1 pin 2</text>
-<rect x="13.00" y="207.38" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="209.48" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W42</text>
-<text x="29.00" y="209.48" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 a26</text>
-<text x="62.00" y="209.48" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 top 3V3 rail @27</text>
-<text x="104.00" y="209.48" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">9</text>
-<line x1="107.00" y1="208.68" x2="111.50" y2="208.68" stroke="#d62728" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="209.48" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">red</text>
-<text x="123.00" y="209.48" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">H11L1 pin 6 Vcc to 3V3</text>
-<rect x="13.00" y="211.00" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="213.10" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W43</text>
-<text x="29.00" y="213.10" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 a27</text>
-<text x="62.00" y="213.10" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 top GND rail @27</text>
-<text x="104.00" y="213.10" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">11</text>
-<line x1="107.00" y1="212.30" x2="111.50" y2="212.30" stroke="#1a1a1a" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="213.10" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">black</text>
-<text x="123.00" y="213.10" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">H11L1 pin 5 to GND</text>
-<text x="19.00" y="216.92" font-size="2.45" text-anchor="start" font-weight="bold" fill="#24467a">Bypass links (relay NC to NC)</text>
-<rect x="13.00" y="218.24" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="220.34" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W44</text>
-<text x="29.00" y="220.34" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 g21</text>
-<text x="62.00" y="220.34" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 d35</text>
-<text x="104.00" y="220.34" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">53</text>
-<line x1="107.00" y1="219.54" x2="111.50" y2="219.54" stroke="#8c564b" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="220.34" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">brown</text>
-<text x="123.00" y="220.34" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">BYPASS 4: RL1 NC1 (pin 6) to RL2 NC1 (pin 6)</text>
-<rect x="13.00" y="221.86" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="223.96" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W45</text>
-<text x="29.00" y="223.96" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 a21</text>
-<text x="62.00" y="223.96" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 g35</text>
-<text x="104.00" y="223.96" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">64</text>
-<line x1="107.00" y1="223.16" x2="111.50" y2="223.16" stroke="#8c564b" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="223.96" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">brown</text>
-<text x="123.00" y="223.96" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">BYPASS 5: RL1 NC2 (pin 11) to RL2 NC2 (pin 11)</text>
-<text x="19.00" y="227.78" font-size="2.45" text-anchor="start" font-weight="bold" fill="#24467a">MIDI OUT B source</text>
-<rect x="13.00" y="229.10" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="231.20" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W46</text>
-<text x="29.00" y="231.20" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 a51</text>
-<text x="62.00" y="231.20" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 top 3V3 rail @51</text>
-<text x="104.00" y="231.20" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">6</text>
-<line x1="107.00" y1="230.40" x2="111.50" y2="230.40" stroke="#d62728" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="231.20" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">red</text>
-<text x="123.00" y="231.20" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">3V3 to R8 (OUT B source)</text>
-<text x="19.00" y="235.02" font-size="2.45" text-anchor="start" font-weight="bold" fill="#24467a">DIN flying leads (off-board)</text>
-<rect x="13.00" y="236.34" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="238.44" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W47</text>
-<text x="29.00" y="238.44" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">X1 pin 4</text>
-<text x="62.00" y="238.44" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 j19</text>
-<text x="104.00" y="238.44" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">37</text>
-<line x1="107.00" y1="237.64" x2="111.50" y2="237.64" stroke="#2ca02c" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="238.44" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">green</text>
-<text x="123.00" y="238.44" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">MIDI IN DIN pin 4 to RL1 COM1 (pin 4)</text>
-<rect x="13.00" y="239.96" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="242.06" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W48</text>
-<text x="29.00" y="242.06" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">X1 pin 5</text>
-<text x="62.00" y="242.06" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 d19</text>
-<text x="104.00" y="242.06" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">71</text>
-<line x1="107.00" y1="241.26" x2="111.50" y2="241.26" stroke="#2ca02c" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="242.06" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">green</text>
-<text x="123.00" y="242.06" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">MIDI IN DIN pin 5 to RL1 COM2 (pin 13)</text>
-<rect x="13.00" y="243.58" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="245.68" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W49</text>
-<text x="29.00" y="245.68" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">X2 pin 4</text>
-<text x="62.00" y="245.68" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 d37</text>
-<text x="104.00" y="245.68" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">79</text>
-<line x1="107.00" y1="244.88" x2="111.50" y2="244.88" stroke="#1f6fd1" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="245.68" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">blue</text>
-<text x="123.00" y="245.68" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">OUT A DIN pin 4 to RL2 COM1 (pin 4)</text>
-<rect x="13.00" y="247.20" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="249.30" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W50</text>
-<text x="29.00" y="249.30" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">X2 pin 5</text>
-<text x="62.00" y="249.30" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 j37</text>
-<text x="104.00" y="249.30" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">37</text>
-<line x1="107.00" y1="248.50" x2="111.50" y2="248.50" stroke="#1f6fd1" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="249.30" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">blue</text>
-<text x="123.00" y="249.30" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">OUT A DIN pin 5 to RL2 COM2 (pin 13)</text>
-<rect x="13.00" y="250.82" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="252.92" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W51</text>
-<text x="29.00" y="252.92" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">X2 pin 2</text>
-<text x="62.00" y="252.92" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 bottom GND rail @39</text>
-<text x="104.00" y="252.92" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">28</text>
-<line x1="107.00" y1="252.12" x2="111.50" y2="252.12" stroke="#1a1a1a" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="252.92" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">black</text>
-<text x="123.00" y="252.92" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">OUT A DIN pin 2 (shield) to GND</text>
-<rect x="13.00" y="254.44" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="256.54" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W52</text>
-<text x="29.00" y="256.54" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">X3 pin 4</text>
-<text x="62.00" y="256.54" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 j51</text>
-<text x="104.00" y="256.54" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">38</text>
-<line x1="107.00" y1="255.74" x2="111.50" y2="255.74" stroke="#8e44ad" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="256.54" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">violet</text>
-<text x="123.00" y="256.54" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">OUT B DIN pin 4 to R8 33R</text>
-<rect x="13.00" y="258.06" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="260.16" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W53</text>
-<text x="29.00" y="260.16" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">X3 pin 5</text>
-<text x="62.00" y="260.16" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 j47</text>
-<text x="104.00" y="260.16" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">38</text>
-<line x1="107.00" y1="259.36" x2="111.50" y2="259.36" stroke="#8e44ad" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="260.16" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">violet</text>
-<text x="123.00" y="260.16" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">OUT B DIN pin 5 to R9 10R</text>
-<rect x="13.00" y="261.68" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
-<text x="19.00" y="263.78" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W54</text>
-<text x="29.00" y="263.78" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">X3 pin 2</text>
-<text x="62.00" y="263.78" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 bottom GND rail @53</text>
-<text x="104.00" y="263.78" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">27</text>
-<line x1="107.00" y1="262.98" x2="111.50" y2="262.98" stroke="#1a1a1a" stroke-width="1.50" stroke-linecap="round"/>
-<text x="113.50" y="263.78" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">black</text>
-<text x="123.00" y="263.78" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">OUT B DIN pin 2 (shield) to GND</text>
-<line x1="12.00" y1="265.20" x2="238.00" y2="265.20" stroke="#000" stroke-width="0.25"/>
+<rect x="13.00" y="33.30" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="35.40" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W01</text>
+<text x="29.00" y="35.40" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 a10</text>
+<text x="62.00" y="35.40" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 top 3V3 rail @10</text>
+<text x="104.00" y="35.40" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">6</text>
+<line x1="107.00" y1="34.60" x2="111.50" y2="34.60" stroke="#d62728" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="35.40" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">red</text>
+<text x="123.00" y="35.40" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">3V3 from Pico pin 36 to B1 top 3V3 rail</text>
+<rect x="13.00" y="36.60" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="38.70" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W02</text>
+<text x="29.00" y="38.70" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 a13</text>
+<text x="62.00" y="38.70" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 top GND rail @13</text>
+<text x="104.00" y="38.70" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">11</text>
+<line x1="107.00" y1="37.90" x2="111.50" y2="37.90" stroke="#1a1a1a" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="38.70" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">black</text>
+<text x="123.00" y="38.70" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GND from Pico pin 33 to B1 top GND rail</text>
+<rect x="13.00" y="39.90" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="42.00" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W03</text>
+<text x="29.00" y="42.00" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 j13</text>
+<text x="62.00" y="42.00" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 bottom GND rail @13</text>
+<text x="104.00" y="42.00" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">14</text>
+<line x1="107.00" y1="41.20" x2="111.50" y2="41.20" stroke="#1a1a1a" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="42.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">black</text>
+<text x="123.00" y="42.00" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GND from Pico pin 8 to B1 bottom GND rail</text>
+<rect x="13.00" y="43.20" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="45.30" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W04</text>
+<text x="29.00" y="45.30" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 top 3V3 rail @61</text>
+<text x="62.00" y="45.30" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 bottom 3V3 rail @61</text>
+<text x="104.00" y="45.30" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">51</text>
+<line x1="107.00" y1="44.50" x2="111.50" y2="44.50" stroke="#d62728" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="45.30" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">red</text>
+<text x="123.00" y="45.30" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">3V3 rail link, B1 top to B1 bottom</text>
+<text x="19.00" y="48.80" font-size="2.45" text-anchor="start" font-weight="bold" fill="#24467a">Power between the boards</text>
+<rect x="13.00" y="49.80" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="51.90" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W05</text>
+<text x="29.00" y="51.90" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 a6</text>
+<text x="62.00" y="51.90" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 bottom 5V rail @3</text>
+<text x="104.00" y="51.90" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">126</text>
+<line x1="107.00" y1="51.10" x2="111.50" y2="51.10" stroke="#ff8c00" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="51.90" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">orange</text>
+<text x="123.00" y="51.90" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">VBUS (Pico pin 40) to B2 bottom 5V rail</text>
+<rect x="13.00" y="53.10" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="55.20" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W06</text>
+<text x="29.00" y="55.20" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 bottom GND rail @57</text>
+<text x="62.00" y="55.20" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 top GND rail @57</text>
+<text x="104.00" y="55.20" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">33</text>
+<line x1="107.00" y1="54.40" x2="111.50" y2="54.40" stroke="#1a1a1a" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="55.20" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">black</text>
+<text x="123.00" y="55.20" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GND rail link, B1 bottom to B2 top</text>
+<rect x="13.00" y="56.40" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="58.50" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W07</text>
+<text x="29.00" y="58.50" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 bottom 3V3 rail @59</text>
+<text x="62.00" y="58.50" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 top 3V3 rail @59</text>
+<text x="104.00" y="58.50" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">41</text>
+<line x1="107.00" y1="57.70" x2="111.50" y2="57.70" stroke="#d62728" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="58.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">red</text>
+<text x="123.00" y="58.50" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">3V3 rail link, B1 bottom to B2 top</text>
+<rect x="13.00" y="59.70" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="61.80" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W08</text>
+<text x="29.00" y="61.80" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 top GND rail @61</text>
+<text x="62.00" y="61.80" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 bottom GND rail @61</text>
+<text x="104.00" y="61.80" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">51</text>
+<line x1="107.00" y1="61.00" x2="111.50" y2="61.00" stroke="#1a1a1a" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="61.80" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">black</text>
+<text x="123.00" y="61.80" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GND rail link, B2 top to B2 bottom</text>
+<text x="19.00" y="65.30" font-size="2.45" text-anchor="start" font-weight="bold" fill="#24467a">TFT (DS2)</text>
+<rect x="13.00" y="66.30" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="68.40" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W09</text>
+<text x="29.00" y="68.40" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 b36</text>
+<text x="62.00" y="68.40" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 top 3V3 rail @36</text>
+<text x="104.00" y="68.40" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">11</text>
+<line x1="107.00" y1="67.60" x2="111.50" y2="67.60" stroke="#d62728" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="68.40" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">red</text>
+<text x="123.00" y="68.40" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">TFT V+ (Vin) 3V3</text>
+<rect x="13.00" y="69.60" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="71.70" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W10</text>
+<text x="29.00" y="71.70" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 b38</text>
+<text x="62.00" y="71.70" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 top GND rail @37</text>
+<text x="104.00" y="71.70" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">13</text>
+<line x1="107.00" y1="70.90" x2="111.50" y2="70.90" stroke="#1a1a1a" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="71.70" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">black</text>
+<text x="123.00" y="71.70" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">TFT G (GND)</text>
+<rect x="13.00" y="72.90" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="75.00" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W11</text>
+<text x="29.00" y="75.00" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 b19</text>
+<text x="62.00" y="75.00" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 c46</text>
+<text x="104.00" y="75.00" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">99</text>
+<line x1="107.00" y1="74.20" x2="111.50" y2="74.20" stroke="#7f7f7f" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="75.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">grey</text>
+<text x="123.00" y="75.00" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP21 to TFT BL (backlight PWM)</text>
+<rect x="13.00" y="76.20" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="78.30" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W12</text>
+<text x="29.00" y="78.30" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 b20</text>
+<text x="62.00" y="78.30" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 d43</text>
+<text x="104.00" y="78.30" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">89</text>
+<line x1="107.00" y1="77.50" x2="111.50" y2="77.50" stroke="#7f7f7f" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="78.30" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">grey</text>
+<text x="123.00" y="78.30" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP20 to TFT RT (reset)</text>
+<rect x="13.00" y="79.50" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="81.60" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W13</text>
+<text x="29.00" y="81.60" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 b21</text>
+<text x="62.00" y="81.60" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 e40</text>
+<text x="104.00" y="81.60" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">66</text>
+<line x1="107.00" y1="80.80" x2="111.50" y2="80.80" stroke="#7f7f7f" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="81.60" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">grey</text>
+<text x="123.00" y="81.60" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP19 SPI0 MOSI to TFT SI</text>
+<rect x="13.00" y="82.80" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="84.90" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W14</text>
+<text x="29.00" y="84.90" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 b22</text>
+<text x="62.00" y="84.90" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 e39</text>
+<text x="104.00" y="84.90" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">53</text>
+<line x1="107.00" y1="84.10" x2="111.50" y2="84.10" stroke="#7f7f7f" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="84.90" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">grey</text>
+<text x="123.00" y="84.90" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP18 SPI0 SCK to TFT CK</text>
+<rect x="13.00" y="86.10" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="88.20" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W15</text>
+<text x="29.00" y="88.20" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 b24</text>
+<text x="62.00" y="88.20" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 e42</text>
+<text x="104.00" y="88.20" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">58</text>
+<line x1="107.00" y1="87.40" x2="111.50" y2="87.40" stroke="#7f7f7f" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="88.20" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">grey</text>
+<text x="123.00" y="88.20" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP17 to TFT TC (chip select)</text>
+<rect x="13.00" y="89.40" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="91.50" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W16</text>
+<text x="29.00" y="91.50" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 b25</text>
+<text x="62.00" y="91.50" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 e44</text>
+<text x="104.00" y="91.50" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">71</text>
+<line x1="107.00" y1="90.70" x2="111.50" y2="90.70" stroke="#7f7f7f" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="91.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">grey</text>
+<text x="123.00" y="91.50" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP16 to TFT DC</text>
+<text x="19.00" y="95.00" font-size="2.45" text-anchor="start" font-weight="bold" fill="#24467a">Joystick (SW1)</text>
+<rect x="13.00" y="96.00" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="98.10" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W17</text>
+<text x="29.00" y="98.10" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 b17</text>
+<text x="62.00" y="98.10" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 b48</text>
+<text x="104.00" y="98.10" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">109</text>
+<line x1="107.00" y1="97.30" x2="111.50" y2="97.30" stroke="#17becf" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="98.10" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">cyan</text>
+<text x="123.00" y="98.10" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP22 to joystick PRESS (pin 6)</text>
+<rect x="13.00" y="99.30" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="101.40" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W18</text>
+<text x="29.00" y="101.40" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 j16</text>
+<text x="62.00" y="101.40" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 b49</text>
+<text x="104.00" y="101.40" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">130</text>
+<line x1="107.00" y1="100.60" x2="111.50" y2="100.60" stroke="#17becf" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="101.40" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">cyan</text>
+<text x="123.00" y="101.40" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP8 to joystick UP (pin 5)</text>
+<rect x="13.00" y="102.60" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="104.70" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W19</text>
+<text x="29.00" y="104.70" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 b50</text>
+<text x="62.00" y="104.70" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 top GND rail @49</text>
+<text x="104.00" y="104.70" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">13</text>
+<line x1="107.00" y1="103.90" x2="111.50" y2="103.90" stroke="#1a1a1a" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="104.70" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">black</text>
+<text x="123.00" y="104.70" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">Joystick COM (pin 4) to GND</text>
+<rect x="13.00" y="105.90" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="108.00" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W20</text>
+<text x="29.00" y="108.00" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 j24</text>
+<text x="62.00" y="108.00" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 j48</text>
+<text x="104.00" y="108.00" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">64</text>
+<line x1="107.00" y1="107.20" x2="111.50" y2="107.20" stroke="#17becf" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="108.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">cyan</text>
+<text x="123.00" y="108.00" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP14 to joystick LEFT (pin 1)</text>
+<rect x="13.00" y="109.20" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="111.30" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W21</text>
+<text x="29.00" y="111.30" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 j17</text>
+<text x="62.00" y="111.30" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 j49</text>
+<text x="104.00" y="111.30" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">86</text>
+<line x1="107.00" y1="110.50" x2="111.50" y2="110.50" stroke="#17becf" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="111.30" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">cyan</text>
+<text x="123.00" y="111.30" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP9 to joystick DOWN (pin 2)</text>
+<rect x="13.00" y="112.50" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="114.60" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W22</text>
+<text x="29.00" y="114.60" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 j25</text>
+<text x="62.00" y="114.60" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 j50</text>
+<text x="104.00" y="114.60" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">66</text>
+<line x1="107.00" y1="113.80" x2="111.50" y2="113.80" stroke="#17becf" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="114.60" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">cyan</text>
+<text x="123.00" y="114.60" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP15 to joystick RIGHT (pin 3)</text>
+<text x="19.00" y="118.10" font-size="2.45" text-anchor="start" font-weight="bold" fill="#24467a">OLED (DS1)</text>
+<rect x="13.00" y="119.10" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="121.20" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W23</text>
+<text x="29.00" y="121.20" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 j14</text>
+<text x="62.00" y="121.20" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 e55</text>
+<text x="104.00" y="121.20" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">132</text>
+<line x1="107.00" y1="120.40" x2="111.50" y2="120.40" stroke="#e377c2" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="121.20" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">pink</text>
+<text x="123.00" y="121.20" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP6 I2C1 SDA to OLED Data</text>
+<rect x="13.00" y="122.40" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="124.50" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W24</text>
+<text x="29.00" y="124.50" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 j15</text>
+<text x="62.00" y="124.50" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 e56</text>
+<text x="104.00" y="124.50" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">135</text>
+<line x1="107.00" y1="123.70" x2="111.50" y2="123.70" stroke="#e377c2" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="124.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">pink</text>
+<text x="123.00" y="124.50" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP7 I2C1 SCL to OLED Clk</text>
+<rect x="13.00" y="125.70" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="127.80" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W25</text>
+<text x="29.00" y="127.80" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 b61</text>
+<text x="62.00" y="127.80" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 top 3V3 rail @60</text>
+<text x="104.00" y="127.80" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">11</text>
+<line x1="107.00" y1="127.00" x2="111.50" y2="127.00" stroke="#d62728" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="127.80" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">red</text>
+<text x="123.00" y="127.80" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">OLED Vin 3V3</text>
+<rect x="13.00" y="129.00" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="131.10" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W26</text>
+<text x="29.00" y="131.10" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 b62</text>
+<text x="62.00" y="131.10" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 top GND rail @61</text>
+<text x="104.00" y="131.10" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">13</text>
+<line x1="107.00" y1="130.30" x2="111.50" y2="130.30" stroke="#1a1a1a" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="131.10" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">black</text>
+<text x="123.00" y="131.10" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">OLED Gnd</text>
+<rect x="13.00" y="132.30" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="134.40" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W27</text>
+<text x="29.00" y="134.40" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 d57</text>
+<text x="62.00" y="134.40" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 d62</text>
+<text x="104.00" y="134.40" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">15</text>
+<line x1="107.00" y1="133.60" x2="111.50" y2="133.60" stroke="#1a1a1a" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="134.40" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">black</text>
+<text x="123.00" y="134.40" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">OLED DC (= SA0) to GND, sets address 0x3C</text>
+<text x="19.00" y="137.90" font-size="2.45" text-anchor="start" font-weight="bold" fill="#24467a">Pico signals to board 2</text>
+<rect x="13.00" y="138.90" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="141.00" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W28</text>
+<text x="29.00" y="141.00" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 j9</text>
+<text x="62.00" y="141.00" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 a6</text>
+<text x="104.00" y="141.00" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">57</text>
+<line x1="107.00" y1="140.20" x2="111.50" y2="140.20" stroke="#e6c200" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="141.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">yellow</text>
+<text x="123.00" y="141.00" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP2 bypass relay drive</text>
+<rect x="13.00" y="142.20" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="144.30" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W29</text>
+<text x="29.00" y="144.30" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 j7</text>
+<text x="62.00" y="144.30" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 c28</text>
+<text x="104.00" y="144.30" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">117</text>
+<line x1="107.00" y1="143.50" x2="111.50" y2="143.50" stroke="#2ca02c" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="144.30" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">green</text>
+<text x="123.00" y="144.30" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP1 UART0 RX from opto A (U1) output</text>
+<rect x="13.00" y="145.50" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="147.60" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W30</text>
+<text x="29.00" y="147.60" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 j6</text>
+<text x="62.00" y="147.60" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 i30</text>
+<text x="104.00" y="147.60" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">152</text>
+<line x1="107.00" y1="146.80" x2="111.50" y2="146.80" stroke="#1f6fd1" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="147.60" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">blue</text>
+<text x="123.00" y="147.60" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP0 UART0 TX (OUT A)</text>
+<rect x="13.00" y="148.80" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="150.90" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W31</text>
+<text x="29.00" y="150.90" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 j11</text>
+<text x="62.00" y="150.90" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 a47</text>
+<text x="104.00" y="150.90" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">145</text>
+<line x1="107.00" y1="150.10" x2="111.50" y2="150.10" stroke="#8e44ad" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="150.90" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">violet</text>
+<text x="123.00" y="150.90" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP4 UART1 TX (OUT B)</text>
+<text x="19.00" y="154.40" font-size="2.45" text-anchor="start" font-weight="bold" fill="#24467a">Relay drive</text>
+<rect x="13.00" y="155.40" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="157.50" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W32</text>
+<text x="29.00" y="157.50" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 a9</text>
+<text x="62.00" y="157.50" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 top GND rail @9</text>
+<text x="104.00" y="157.50" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">11</text>
+<line x1="107.00" y1="156.70" x2="111.50" y2="156.70" stroke="#1a1a1a" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="157.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">black</text>
+<text x="123.00" y="157.50" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">Q1 emitter to GND</text>
+<rect x="13.00" y="158.70" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="160.80" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W33</text>
+<text x="29.00" y="160.80" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 a11</text>
+<text x="62.00" y="160.80" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 a13</text>
+<text x="104.00" y="160.80" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">8</text>
+<line x1="107.00" y1="160.00" x2="111.50" y2="160.00" stroke="#e6c200" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="160.80" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">yellow</text>
+<text x="123.00" y="160.80" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">COIL- : Q1 collector to D1 anode</text>
+<rect x="13.00" y="162.00" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="164.10" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W34</text>
+<text x="29.00" y="164.10" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 b13</text>
+<text x="62.00" y="164.10" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 b16</text>
+<text x="104.00" y="164.10" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">10</text>
+<line x1="107.00" y1="163.30" x2="111.50" y2="163.30" stroke="#e6c200" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="164.10" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">yellow</text>
+<text x="123.00" y="164.10" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">COIL- : D1 anode to RL1 pin 16</text>
+<rect x="13.00" y="165.30" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="167.40" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W35</text>
+<text x="29.00" y="167.40" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 a16</text>
+<text x="62.00" y="167.40" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 a40</text>
+<text x="104.00" y="167.40" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">69</text>
+<line x1="107.00" y1="166.60" x2="111.50" y2="166.60" stroke="#e6c200" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="167.40" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">yellow</text>
+<text x="123.00" y="167.40" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">COIL- : RL1 pin 16 to RL2 pin 1</text>
+<rect x="13.00" y="168.60" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="170.70" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W36</text>
+<text x="29.00" y="170.70" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 b40</text>
+<text x="62.00" y="170.70" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 b42</text>
+<text x="104.00" y="170.70" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">8</text>
+<line x1="107.00" y1="169.90" x2="111.50" y2="169.90" stroke="#e6c200" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="170.70" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">yellow</text>
+<text x="123.00" y="170.70" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">COIL- : RL2 pin 1 to D2 anode</text>
+<rect x="13.00" y="171.90" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="174.00" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W37</text>
+<text x="29.00" y="174.00" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 j13</text>
+<text x="62.00" y="174.00" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 bottom 5V rail @13</text>
+<text x="104.00" y="174.00" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">9</text>
+<line x1="107.00" y1="173.20" x2="111.50" y2="173.20" stroke="#ff8c00" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="174.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">orange</text>
+<text x="123.00" y="174.00" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">D1 cathode to 5V</text>
+<rect x="13.00" y="175.20" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="177.30" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W38</text>
+<text x="29.00" y="177.30" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 j16</text>
+<text x="62.00" y="177.30" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 bottom 5V rail @16</text>
+<text x="104.00" y="177.30" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">9</text>
+<line x1="107.00" y1="176.50" x2="111.50" y2="176.50" stroke="#ff8c00" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="177.30" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">orange</text>
+<text x="123.00" y="177.30" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">RL1 coil + (pin 1) to 5V</text>
+<rect x="13.00" y="178.50" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="180.60" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W39</text>
+<text x="29.00" y="180.60" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 j40</text>
+<text x="62.00" y="180.60" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 bottom 5V rail @40</text>
+<text x="104.00" y="180.60" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">9</text>
+<line x1="107.00" y1="179.80" x2="111.50" y2="179.80" stroke="#ff8c00" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="180.60" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">orange</text>
+<text x="123.00" y="180.60" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">RL2 coil + (pin 16) to 5V</text>
+<rect x="13.00" y="181.80" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="183.90" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W40</text>
+<text x="29.00" y="183.90" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 j42</text>
+<text x="62.00" y="183.90" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 bottom 5V rail @42</text>
+<text x="104.00" y="183.90" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">9</text>
+<line x1="107.00" y1="183.10" x2="111.50" y2="183.10" stroke="#ff8c00" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="183.90" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">orange</text>
+<text x="123.00" y="183.90" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">D2 cathode to 5V</text>
+<text x="19.00" y="187.40" font-size="2.45" text-anchor="start" font-weight="bold" fill="#24467a">MIDI IN A opto (U1)</text>
+<rect x="13.00" y="188.40" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="190.50" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W41</text>
+<text x="29.00" y="190.50" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 c23</text>
+<text x="62.00" y="190.50" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 g27</text>
+<text x="104.00" y="190.50" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">25</text>
+<line x1="107.00" y1="189.70" x2="111.50" y2="189.70" stroke="#2ca02c" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="190.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">green</text>
+<text x="123.00" y="190.50" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">RL1 NO2 (pin 9) to H11L1 pin 2</text>
+<rect x="13.00" y="191.70" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="193.80" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W42</text>
+<text x="29.00" y="193.80" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 a26</text>
+<text x="62.00" y="193.80" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 top 3V3 rail @27</text>
+<text x="104.00" y="193.80" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">9</text>
+<line x1="107.00" y1="193.00" x2="111.50" y2="193.00" stroke="#d62728" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="193.80" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">red</text>
+<text x="123.00" y="193.80" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">H11L1 pin 6 Vcc to 3V3</text>
+<rect x="13.00" y="195.00" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="197.10" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W43</text>
+<text x="29.00" y="197.10" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 a27</text>
+<text x="62.00" y="197.10" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 top GND rail @27</text>
+<text x="104.00" y="197.10" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">11</text>
+<line x1="107.00" y1="196.30" x2="111.50" y2="196.30" stroke="#1a1a1a" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="197.10" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">black</text>
+<text x="123.00" y="197.10" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">H11L1 pin 5 to GND</text>
+<text x="19.00" y="200.60" font-size="2.45" text-anchor="start" font-weight="bold" fill="#24467a">Bypass links (relay NC to NC)</text>
+<rect x="13.00" y="201.60" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="203.70" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W44</text>
+<text x="29.00" y="203.70" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 g21</text>
+<text x="62.00" y="203.70" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 d35</text>
+<text x="104.00" y="203.70" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">53</text>
+<line x1="107.00" y1="202.90" x2="111.50" y2="202.90" stroke="#8c564b" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="203.70" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">brown</text>
+<text x="123.00" y="203.70" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">BYPASS 4: RL1 NC1 (pin 6) to RL2 NC1 (pin 6)</text>
+<rect x="13.00" y="204.90" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="207.00" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W45</text>
+<text x="29.00" y="207.00" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 a21</text>
+<text x="62.00" y="207.00" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 g35</text>
+<text x="104.00" y="207.00" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">64</text>
+<line x1="107.00" y1="206.20" x2="111.50" y2="206.20" stroke="#8c564b" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="207.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">brown</text>
+<text x="123.00" y="207.00" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">BYPASS 5: RL1 NC2 (pin 11) to RL2 NC2 (pin 11)</text>
+<text x="19.00" y="210.50" font-size="2.45" text-anchor="start" font-weight="bold" fill="#24467a">MIDI OUT B source</text>
+<rect x="13.00" y="211.50" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="213.60" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W46</text>
+<text x="29.00" y="213.60" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 a51</text>
+<text x="62.00" y="213.60" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 top 3V3 rail @51</text>
+<text x="104.00" y="213.60" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">6</text>
+<line x1="107.00" y1="212.80" x2="111.50" y2="212.80" stroke="#d62728" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="213.60" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">red</text>
+<text x="123.00" y="213.60" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">3V3 to R8 (OUT B source)</text>
+<text x="19.00" y="217.10" font-size="2.45" text-anchor="start" font-weight="bold" fill="#24467a">DIN flying leads (off-board)</text>
+<rect x="13.00" y="218.10" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="220.20" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W47</text>
+<text x="29.00" y="220.20" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">X1 pin 4</text>
+<text x="62.00" y="220.20" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 j19</text>
+<text x="104.00" y="220.20" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">37</text>
+<line x1="107.00" y1="219.40" x2="111.50" y2="219.40" stroke="#2ca02c" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="220.20" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">green</text>
+<text x="123.00" y="220.20" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">MIDI IN A DIN pin 4 to RL1 COM1 (pin 4)</text>
+<rect x="13.00" y="221.40" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="223.50" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W48</text>
+<text x="29.00" y="223.50" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">X1 pin 5</text>
+<text x="62.00" y="223.50" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 d19</text>
+<text x="104.00" y="223.50" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">71</text>
+<line x1="107.00" y1="222.70" x2="111.50" y2="222.70" stroke="#2ca02c" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="223.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">green</text>
+<text x="123.00" y="223.50" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">MIDI IN A DIN pin 5 to RL1 COM2 (pin 13)</text>
+<rect x="13.00" y="224.70" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="226.80" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W49</text>
+<text x="29.00" y="226.80" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">X2 pin 4</text>
+<text x="62.00" y="226.80" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 d37</text>
+<text x="104.00" y="226.80" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">81</text>
+<line x1="107.00" y1="226.00" x2="111.50" y2="226.00" stroke="#1f6fd1" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="226.80" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">blue</text>
+<text x="123.00" y="226.80" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">OUT A DIN pin 4 to RL2 COM1 (pin 4)</text>
+<rect x="13.00" y="228.00" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="230.10" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W50</text>
+<text x="29.00" y="230.10" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">X2 pin 5</text>
+<text x="62.00" y="230.10" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 j37</text>
+<text x="104.00" y="230.10" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">39</text>
+<line x1="107.00" y1="229.30" x2="111.50" y2="229.30" stroke="#1f6fd1" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="230.10" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">blue</text>
+<text x="123.00" y="230.10" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">OUT A DIN pin 5 to RL2 COM2 (pin 13)</text>
+<rect x="13.00" y="231.30" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="233.40" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W51</text>
+<text x="29.00" y="233.40" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">X2 pin 2</text>
+<text x="62.00" y="233.40" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 bottom GND rail @39</text>
+<text x="104.00" y="233.40" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">30</text>
+<line x1="107.00" y1="232.60" x2="111.50" y2="232.60" stroke="#1a1a1a" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="233.40" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">black</text>
+<text x="123.00" y="233.40" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">OUT A DIN pin 2 (shield) to GND</text>
+<rect x="13.00" y="234.60" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="236.70" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W52</text>
+<text x="29.00" y="236.70" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">X3 pin 4</text>
+<text x="62.00" y="236.70" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 j51</text>
+<text x="104.00" y="236.70" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">36</text>
+<line x1="107.00" y1="235.90" x2="111.50" y2="235.90" stroke="#8e44ad" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="236.70" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">violet</text>
+<text x="123.00" y="236.70" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">OUT B DIN pin 4 to R8 33R</text>
+<rect x="13.00" y="237.90" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="240.00" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W53</text>
+<text x="29.00" y="240.00" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">X3 pin 5</text>
+<text x="62.00" y="240.00" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 j47</text>
+<text x="104.00" y="240.00" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">36</text>
+<line x1="107.00" y1="239.20" x2="111.50" y2="239.20" stroke="#8e44ad" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="240.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">violet</text>
+<text x="123.00" y="240.00" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">OUT B DIN pin 5 to R9 10R</text>
+<rect x="13.00" y="241.20" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="243.30" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W54</text>
+<text x="29.00" y="243.30" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">X3 pin 2</text>
+<text x="62.00" y="243.30" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 bottom GND rail @49</text>
+<text x="104.00" y="243.30" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">27</text>
+<line x1="107.00" y1="242.50" x2="111.50" y2="242.50" stroke="#1a1a1a" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="243.30" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">black</text>
+<text x="123.00" y="243.30" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">OUT B DIN pin 2 (shield) to GND (Rev B: was @53)</text>
+<text x="19.00" y="246.80" font-size="2.45" text-anchor="start" font-weight="bold" fill="#24467a">MIDI IN B opto (U2, GP5) · Rev B</text>
+<rect x="13.00" y="247.80" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="249.90" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W55</text>
+<text x="29.00" y="249.90" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B1 j12</text>
+<text x="62.00" y="249.90" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 a57</text>
+<text x="104.00" y="249.90" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">168</text>
+<line x1="107.00" y1="249.10" x2="111.50" y2="249.10" stroke="#555" stroke-width="1.90" stroke-linecap="round"/>
+<line x1="107.00" y1="249.10" x2="111.50" y2="249.10" stroke="#f2f2f2" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="249.90" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">white</text>
+<text x="123.00" y="249.90" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">GP5 UART1 RX from opto B (U2) output</text>
+<rect x="13.00" y="251.10" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="253.20" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W56</text>
+<text x="29.00" y="253.20" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 a55</text>
+<text x="62.00" y="253.20" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 top 3V3 rail @55</text>
+<text x="104.00" y="253.20" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">6</text>
+<line x1="107.00" y1="252.40" x2="111.50" y2="252.40" stroke="#d62728" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="253.20" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">red</text>
+<text x="123.00" y="253.20" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">H11L1 U2 pin 6 Vcc to 3V3</text>
+<rect x="13.00" y="254.40" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="256.50" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W57</text>
+<text x="29.00" y="256.50" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 a56</text>
+<text x="62.00" y="256.50" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 top GND rail @55</text>
+<text x="104.00" y="256.50" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">11</text>
+<line x1="107.00" y1="255.70" x2="111.50" y2="255.70" stroke="#1a1a1a" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="256.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">black</text>
+<text x="123.00" y="256.50" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">H11L1 U2 pin 5 to GND</text>
+<text x="19.00" y="260.00" font-size="2.45" text-anchor="start" font-weight="bold" fill="#24467a">MIDI IN B flying leads (off-board) · Rev B</text>
+<rect x="13.00" y="261.00" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="263.10" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W58</text>
+<text x="29.00" y="263.10" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">X4 pin 4</text>
+<text x="62.00" y="263.10" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 j58</text>
+<text x="104.00" y="263.10" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">39</text>
+<line x1="107.00" y1="262.30" x2="111.50" y2="262.30" stroke="#555" stroke-width="1.90" stroke-linecap="round"/>
+<line x1="107.00" y1="262.30" x2="111.50" y2="262.30" stroke="#f2f2f2" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="263.10" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">white</text>
+<text x="123.00" y="263.10" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">MIDI IN B DIN pin 4 to R10 220R</text>
+<rect x="13.00" y="264.30" width="2.40" height="2.40" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<text x="19.00" y="266.40" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">W59</text>
+<text x="29.00" y="266.40" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">X4 pin 5</text>
+<text x="62.00" y="266.40" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">B2 j56</text>
+<text x="104.00" y="266.40" font-size="2.35" text-anchor="end" font-weight="normal" fill="#111">37</text>
+<line x1="107.00" y1="265.60" x2="111.50" y2="265.60" stroke="#555" stroke-width="1.90" stroke-linecap="round"/>
+<line x1="107.00" y1="265.60" x2="111.50" y2="265.60" stroke="#f2f2f2" stroke-width="1.50" stroke-linecap="round"/>
+<text x="113.50" y="266.40" font-size="2.20" text-anchor="start" font-weight="normal" fill="#333">white</text>
+<text x="123.00" y="266.40" font-size="2.35" text-anchor="start" font-weight="normal" fill="#111">MIDI IN B DIN pin 5 to H11L1 U2 pin 2</text>
+<line x1="12.00" y1="267.50" x2="238.00" y2="267.50" stroke="#000" stroke-width="0.25"/>
 <text x="246.00" y="27.50" font-size="3.40" text-anchor="start" font-weight="bold" fill="#111">Parts on the boards</text>
 <text x="246.00" y="33.00" font-size="2.50" text-anchor="start" font-weight="bold" fill="#111">Ref</text>
 <text x="258.00" y="33.00" font-size="2.50" text-anchor="start" font-weight="bold" fill="#111">Part / value</text>
@@ -508,11 +553,11 @@
 <text x="246.00" y="103.60" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">R1</text>
 <text x="258.00" y="103.60" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">220 Ω resistor</text>
 <text x="297.00" y="103.60" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B2 i23 ↔ i26</text>
-<text x="258.00" y="106.90" font-size="1.95" text-anchor="start" font-weight="normal" fill="#555">opto LED series</text>
+<text x="258.00" y="106.90" font-size="1.95" text-anchor="start" font-weight="normal" fill="#555">opto A LED series</text>
 <text x="246.00" y="111.30" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">D3</text>
 <text x="258.00" y="111.30" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">1N4148 diode</text>
 <text x="297.00" y="111.30" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B2 K j26, A j27</text>
-<text x="258.00" y="114.60" font-size="1.95" text-anchor="start" font-weight="normal" fill="#555">opto LED reverse protection</text>
+<text x="258.00" y="114.60" font-size="1.95" text-anchor="start" font-weight="normal" fill="#555">opto A LED reverse protection</text>
 <text x="246.00" y="119.00" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">C1</text>
 <text x="258.00" y="119.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">100nF</text>
 <text x="297.00" y="119.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B2 b26 ↔ b27</text>
@@ -520,43 +565,62 @@
 <text x="246.00" y="126.70" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">R2</text>
 <text x="258.00" y="126.70" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">470 Ω resistor</text>
 <text x="297.00" y="126.70" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B2 b28 ↔ top 3V3 rail @28</text>
-<text x="258.00" y="130.00" font-size="1.95" text-anchor="start" font-weight="normal" fill="#555">opto output pull-up</text>
-<text x="246.00" y="134.40" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">R6</text>
-<text x="258.00" y="134.40" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">33 Ω resistor</text>
-<text x="297.00" y="134.40" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B2 b33 ↔ top 3V3 rail @33</text>
-<text x="258.00" y="137.70" font-size="1.95" text-anchor="start" font-weight="normal" fill="#555">OUT A source</text>
-<text x="246.00" y="142.10" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">R7</text>
-<text x="258.00" y="142.10" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">10 Ω resistor</text>
-<text x="297.00" y="142.10" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B2 j30 ↔ j33</text>
-<text x="258.00" y="145.40" font-size="1.95" text-anchor="start" font-weight="normal" fill="#555">OUT A sink</text>
-<text x="246.00" y="149.80" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">R9</text>
-<text x="258.00" y="149.80" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">10 Ω resistor</text>
-<text x="297.00" y="149.80" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B2 d47 ↔ g47</text>
-<text x="258.00" y="153.10" font-size="1.95" text-anchor="start" font-weight="normal" fill="#555">OUT B sink</text>
-<text x="246.00" y="157.50" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">R8</text>
-<text x="258.00" y="157.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">33 Ω resistor</text>
-<text x="297.00" y="157.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B2 d51 ↔ g51</text>
-<text x="258.00" y="160.80" font-size="1.95" text-anchor="start" font-weight="normal" fill="#555">OUT B source</text>
-<text x="246.00" y="165.20" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">DS1</text>
-<text x="258.00" y="165.20" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">Adafruit 938 1.3in OLED (I2C)</text>
-<text x="297.00" y="165.20" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B1 header in column a: Data a55, Clk a56, DC a57, Rst a58, CS a59, 3v3 a60</text>
-<text x="297.00" y="168.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">  Vin a61, Gnd a62</text>
-<text x="246.00" y="172.90" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">R5</text>
-<text x="258.00" y="172.90" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">10k resistor</text>
-<text x="297.00" y="172.90" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B1 c58 ↔ c61</text>
-<text x="258.00" y="176.20" font-size="1.95" text-anchor="start" font-weight="normal" fill="#555">OLED RST pull-up</text>
-<text x="246.00" y="180.60" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">C2</text>
-<text x="258.00" y="180.60" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">100nF</text>
-<text x="297.00" y="180.60" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B1 b58 ↔ b57</text>
-<text x="258.00" y="183.90" font-size="1.95" text-anchor="start" font-weight="normal" fill="#555">OLED RST to GND</text>
-<text x="246.00" y="188.30" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">DS2</text>
-<text x="258.00" y="188.30" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">Adafruit 5394 1.9in TFT</text>
-<text x="297.00" y="188.30" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B1 header in column a: V+ a36, 3V a37, G a38, CK a39, SI a40, SO a41</text>
-<text x="297.00" y="191.60" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">  TC a42, RT a43, DC a44, CC a45, BL a46</text>
-<text x="246.00" y="196.00" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">SW1</text>
-<text x="258.00" y="196.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">Adafruit 504 nav switch</text>
-<text x="297.00" y="196.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B1 6(PRESS) d48, 5(UP) d49, 4(COM) d50</text>
-<text x="297.00" y="199.30" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">   1(LEFT) f48, 2(DOWN) f49, 3(RIGHT) f50</text>
-<text x="246.00" y="206.20" font-size="2.10" text-anchor="start" font-weight="normal" fill="#444">Resistors and capacitors: either way round. Diodes: A = anode, K = cathode (band).</text>
-<text x="246.00" y="209.50" font-size="2.10" text-anchor="start" font-weight="normal" fill="#444">Relays: Omron G5V-2 terminal numbers (sheet 3). Q1: E, B, C.</text>
+<text x="258.00" y="130.00" font-size="1.95" text-anchor="start" font-weight="normal" fill="#555">opto A output pull-up</text>
+<text x="246.00" y="134.40" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">U2</text>
+<text x="258.00" y="134.40" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">H11L1M</text>
+<text x="297.00" y="134.40" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B2 1 f55, 2 f56, 3 f57, 6 e55, 5 e56, 4 e57</text>
+<text x="246.00" y="138.80" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">R10</text>
+<text x="258.00" y="138.80" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">220 Ω resistor</text>
+<text x="297.00" y="138.80" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B2 i58 ↔ i55</text>
+<text x="258.00" y="142.10" font-size="1.95" text-anchor="start" font-weight="normal" fill="#555">opto B LED series</text>
+<text x="246.00" y="146.50" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">D4</text>
+<text x="258.00" y="146.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">1N4148 diode</text>
+<text x="297.00" y="146.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B2 K g55, A g56</text>
+<text x="258.00" y="149.80" font-size="1.95" text-anchor="start" font-weight="normal" fill="#555">opto B LED reverse protection</text>
+<text x="246.00" y="154.20" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">C3</text>
+<text x="258.00" y="154.20" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">100nF</text>
+<text x="297.00" y="154.20" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B2 b55 ↔ b56</text>
+<text x="258.00" y="157.50" font-size="1.95" text-anchor="start" font-weight="normal" fill="#555">U2 decoupling</text>
+<text x="246.00" y="161.90" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">R11</text>
+<text x="258.00" y="161.90" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">470 Ω resistor</text>
+<text x="297.00" y="161.90" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B2 c57 ↔ c55</text>
+<text x="258.00" y="165.20" font-size="1.95" text-anchor="start" font-weight="normal" fill="#555">opto B output pull-up</text>
+<text x="246.00" y="169.60" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">R6</text>
+<text x="258.00" y="169.60" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">33 Ω resistor</text>
+<text x="297.00" y="169.60" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B2 b33 ↔ top 3V3 rail @33</text>
+<text x="258.00" y="172.90" font-size="1.95" text-anchor="start" font-weight="normal" fill="#555">OUT A source</text>
+<text x="246.00" y="177.30" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">R7</text>
+<text x="258.00" y="177.30" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">10 Ω resistor</text>
+<text x="297.00" y="177.30" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B2 j30 ↔ j33</text>
+<text x="258.00" y="180.60" font-size="1.95" text-anchor="start" font-weight="normal" fill="#555">OUT A sink</text>
+<text x="246.00" y="185.00" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">R9</text>
+<text x="258.00" y="185.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">10 Ω resistor</text>
+<text x="297.00" y="185.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B2 d47 ↔ g47</text>
+<text x="258.00" y="188.30" font-size="1.95" text-anchor="start" font-weight="normal" fill="#555">OUT B sink</text>
+<text x="246.00" y="192.70" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">R8</text>
+<text x="258.00" y="192.70" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">33 Ω resistor</text>
+<text x="297.00" y="192.70" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B2 d51 ↔ g51</text>
+<text x="258.00" y="196.00" font-size="1.95" text-anchor="start" font-weight="normal" fill="#555">OUT B source</text>
+<text x="246.00" y="200.40" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">DS1</text>
+<text x="258.00" y="200.40" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">Adafruit 938 1.3in OLED (I2C)</text>
+<text x="297.00" y="200.40" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B1 header in column a: Data a55, Clk a56, DC a57, Rst a58, CS a59, 3v3 a60</text>
+<text x="297.00" y="203.70" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">  Vin a61, Gnd a62</text>
+<text x="246.00" y="208.10" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">R5</text>
+<text x="258.00" y="208.10" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">10k resistor</text>
+<text x="297.00" y="208.10" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B1 c58 ↔ c61</text>
+<text x="258.00" y="211.40" font-size="1.95" text-anchor="start" font-weight="normal" fill="#555">OLED RST pull-up</text>
+<text x="246.00" y="215.80" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">C2</text>
+<text x="258.00" y="215.80" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">100nF</text>
+<text x="297.00" y="215.80" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B1 b58 ↔ b57</text>
+<text x="258.00" y="219.10" font-size="1.95" text-anchor="start" font-weight="normal" fill="#555">OLED RST to GND</text>
+<text x="246.00" y="223.50" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">DS2</text>
+<text x="258.00" y="223.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">Adafruit 5394 1.9in TFT</text>
+<text x="297.00" y="223.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B1 header in column a: V+ a36, 3V a37, G a38, CK a39, SI a40, SO a41</text>
+<text x="297.00" y="226.80" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">  TC a42, RT a43, DC a44, CC a45, BL a46</text>
+<text x="246.00" y="231.20" font-size="2.35" text-anchor="start" font-weight="bold" fill="#111">SW1</text>
+<text x="258.00" y="231.20" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">Adafruit 504 nav switch</text>
+<text x="297.00" y="231.20" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B1 6(PRESS) d48, 5(UP) d49, 4(COM) d50</text>
+<text x="297.00" y="234.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">   1(LEFT) f48, 2(DOWN) f49, 3(RIGHT) f50</text>
+<text x="246.00" y="241.40" font-size="2.10" text-anchor="start" font-weight="normal" fill="#444">Resistors and capacitors: either way round. Diodes: A = anode, K = cathode (band).</text>
+<text x="246.00" y="244.70" font-size="2.10" text-anchor="start" font-weight="normal" fill="#444">Relays: Omron G5V-2 terminal numbers (sheet 3). Q1: E, B, C.</text>
 </svg>

@@ -175,11 +175,24 @@ U1_R = 26    # notch left: pins 1,2,3 bottom (col f), 6,5,4 top (col e)
 part("U1", "dip6", "H11L1M",
      {"1": f"2:f{U1_R}", "2": f"2:f{U1_R+1}", "3": f"2:f{U1_R+2}",
       "6": f"2:e{U1_R}", "5": f"2:e{U1_R+1}", "4": f"2:e{U1_R+2}"})
-part("R1", "res", "220R", {"a": "2:i23", "b": "2:i26"}, note="opto LED series")
+part("R1", "res", "220R", {"a": "2:i23", "b": "2:i26"}, note="opto A LED series")
 part("D3", "diode_up", "1N4148", {"K": "2:j26", "A": "2:j27"},
-     note="opto LED reverse protection")
+     note="opto A LED reverse protection")
 part("C1", "cap", "100nF", {"a": "2:b26", "b": "2:b27"}, note="U1 decoupling")
-part("R2", "res", "470R", {"a": "2:b28", "b": "2:TP28"}, note="opto output pull-up")
+part("R2", "res", "470R", {"a": "2:b28", "b": "2:TP28"}, note="opto A output pull-up")
+
+# --- Board 2: MIDI IN B opto (Rev B) ----------------------------------------------
+# Same circuit as IN A but no relay: DIN pins 4/5 go straight to R10 / U2.
+# Sits in the free rows to the right of the OUT B drivers.
+U2_R = 55    # notch left: pins 1,2,3 bottom (col f), 6,5,4 top (col e)
+part("U2", "dip6", "H11L1M",
+     {"1": f"2:f{U2_R}", "2": f"2:f{U2_R+1}", "3": f"2:f{U2_R+2}",
+      "6": f"2:e{U2_R}", "5": f"2:e{U2_R+1}", "4": f"2:e{U2_R+2}"})
+part("R10", "res", "220R", {"a": "2:i58", "b": "2:i55"}, note="opto B LED series")
+part("D4", "diode_up", "1N4148", {"K": "2:g55", "A": "2:g56"},
+     note="opto B LED reverse protection")
+part("C3", "cap", "100nF", {"a": "2:b55", "b": "2:b56"}, note="U2 decoupling")
+part("R11", "res", "470R", {"a": "2:c57", "b": "2:c55"}, note="opto B output pull-up")
 
 # --- Board 2: MIDI OUT drivers -------------------------------------------------------
 part("R6", "res", "33R", {"a": "2:b33", "b": "2:TP33"}, note="OUT A source")
@@ -194,9 +207,10 @@ DIN_PIN_MM = {"5": (-5.0, -12.5), "4": (5.0, -12.5),
               "3": (-7.5, -10.0), "2": (0.0, -10.0), "1": (7.5, -10.0),
               "E1": (-2.5, 0.0), "E2": (2.5, 0.0)}
 DIN_SOCKETS = {
-    "X1": dict(label="MIDI IN", cx=20.5, cy=66.5),
-    "X2": dict(label="MIDI OUT A (thru / bypass)", cx=38.5, cy=66.5),
-    "X3": dict(label="MIDI OUT B", cx=54.0, cy=66.5),
+    "X1": dict(label="MIDI IN A", cx=20.5, cy=66.5),
+    "X2": dict(label="MIDI OUT A (thru / bypass)", cx=36.5, cy=66.5),
+    "X3": dict(label="MIDI OUT B", cx=50.0, cy=66.5),
+    "X4": dict(label="MIDI IN B", cx=62.0, cy=66.5),
 }
 
 
@@ -216,9 +230,9 @@ for ref, s in DIN_SOCKETS.items():
 WIRES = []
 
 
-def wire(a, b, col, sig, via=None):
+def wire(a, b, col, sig, via=None, prio=1):
     WIRES.append(dict(id=f"W{len(WIRES)+1:02d}", a=a, b=b, col=col, sig=sig,
-                      via=via or []))
+                      via=via or [], prio=prio))
 
 
 # Power, board 1
@@ -230,7 +244,8 @@ wire("1:TP61", "1:BP61", "3v3", "3V3 rail link, B1 top to B1 bottom")
 wire("1:a6", "2:BP3", "5v", "VBUS (Pico pin 40) to B2 bottom 5V rail")
 wire("1:BG57", "2:TG57", "gnd", "GND rail link, B1 bottom to B2 top")
 wire("1:BP59", "2:TP59", "3v3", "3V3 rail link, B1 bottom to B2 top")
-wire("2:TG61", "2:BG61", "gnd", "GND rail link, B2 top to B2 bottom")
+wire("2:TG61", "2:BG61", "gnd", "GND rail link, B2 top to B2 bottom",
+     prio=0)  # route before the IN B leads so it keeps its straight run
 
 # TFT (DS2)
 wire("1:b36", "1:TP36", "3v3", "TFT V+ (Vin) 3V3")
@@ -259,7 +274,7 @@ wire("1:d57", "1:d62", "gnd", "OLED DC (= SA0) to GND, sets address 0x3C")
 
 # Pico -> board 2 signals
 wire("1:j9", "2:a6", "relay", "GP2 bypass relay drive")
-wire("1:j7", "2:c28", "midiin", "GP1 UART0 RX from opto output")
+wire("1:j7", "2:c28", "midiin", "GP1 UART0 RX from opto A (U1) output")
 wire("1:j6", "2:i30", "outa", "GP0 UART0 TX (OUT A)")
 wire("1:j11", "2:a47", "outb", "GP4 UART1 TX (OUT B)")
 
@@ -287,20 +302,28 @@ wire("2:a21", "2:g35", "bypass", "BYPASS 5: RL1 NC2 (pin 11) to RL2 NC2 (pin 11)
 wire("2:a51", "2:TP51", "3v3", "3V3 to R8 (OUT B source)")
 
 # DIN flying leads
-wire("X1.4", "2:j19", "midiin", "MIDI IN DIN pin 4 to RL1 COM1 (pin 4)")
-wire("X1.5", "2:d19", "midiin", "MIDI IN DIN pin 5 to RL1 COM2 (pin 13)")
+wire("X1.4", "2:j19", "midiin", "MIDI IN A DIN pin 4 to RL1 COM1 (pin 4)")
+wire("X1.5", "2:d19", "midiin", "MIDI IN A DIN pin 5 to RL1 COM2 (pin 13)")
 wire("X2.4", "2:d37", "outa", "OUT A DIN pin 4 to RL2 COM1 (pin 4)")
 wire("X2.5", "2:j37", "outa", "OUT A DIN pin 5 to RL2 COM2 (pin 13)")
 wire("X2.2", "2:BG39", "gnd", "OUT A DIN pin 2 (shield) to GND")
 wire("X3.4", "2:j51", "outb", "OUT B DIN pin 4 to R8 33R")
 wire("X3.5", "2:j47", "outb", "OUT B DIN pin 5 to R9 10R")
-wire("X3.2", "2:BG53", "gnd", "OUT B DIN pin 2 (shield) to GND")
+wire("X3.2", "2:BG49", "gnd", "OUT B DIN pin 2 (shield) to GND (Rev B: was @53)")
+
+# MIDI IN B (Rev B).  Appended so that the Rev A wire numbers W01-W54 stay put.
+wire("1:j12", "2:a57", "midiinb", "GP5 UART1 RX from opto B (U2) output")
+wire("2:a55", "2:TP55", "3v3", "H11L1 U2 pin 6 Vcc to 3V3")
+wire("2:a56", "2:TG55", "gnd", "H11L1 U2 pin 5 to GND")
+wire("X4.4", "2:j58", "midiinb", "MIDI IN B DIN pin 4 to R10 220R")
+wire("X4.5", "2:j56", "midiinb", "MIDI IN B DIN pin 5 to H11L1 U2 pin 2")
 
 WIRE_COLOURS = {
     "3v3": ("#d62728", "3V3"),
     "5v": ("#ff8c00", "5V (VBUS)"),
     "gnd": ("#1a1a1a", "GND"),
-    "midiin": ("#2ca02c", "MIDI IN path (DIN IN, opto, GP1)"),
+    "midiin": ("#2ca02c", "MIDI IN A path (DIN IN A, U1, GP1)"),
+    "midiinb": ("#f2f2f2", "MIDI IN B path (DIN IN B, U2, GP5)"),
     "outa": ("#1f6fd1", "MIDI OUT A (GP0, DIN OUT A)"),
     "outb": ("#8e44ad", "MIDI OUT B (GP4, DIN OUT B)"),
     "bypass": ("#8c564b", "Bypass links (relay NC to NC)"),
@@ -311,24 +334,25 @@ WIRE_COLOURS = {
 }
 
 # ----------------------------------------------------------------------------
-# Expected netlist, transcribed from docs/wiring.md (sections 1-8).
+# Expected netlist, transcribed from docs/wiring.md (sections 1-8, Rev B:
+# MIDI IN B on U2 / GP5 per sections 1 and 2; wiring.md wins over pins.h).
 # Component pin = "REF.PIN".  Pico GND pins are joined on the Pico itself.
 # ----------------------------------------------------------------------------
 EXPECTED_NETS = {
     "3V3": ["A1.36", "U1.6", "C1.a", "R2.b", "R6.b", "R8.a", "DS1.Vin",
-            "R5.b", "DS2.V+"],
+            "R5.b", "DS2.V+", "U2.6", "C3.a", "R11.b"],
     "GND": ["A1.33", "A1.38", "A1.3", "A1.8", "A1.13", "A1.18", "A1.23",
             "A1.28", "U1.5", "C1.b", "Q1.E", "R4.b", "X2.2", "X3.2",
-            "DS1.Gnd", "DS1.DC", "C2.b", "DS2.G", "SW1.4"],
+            "DS1.Gnd", "DS1.DC", "C2.b", "DS2.G", "SW1.4", "U2.5", "C3.b"],
     "5V": ["A1.40", "RL1.1", "RL2.16", "D1.K", "D2.K"],
     "COIL-": ["Q1.C", "RL1.16", "RL2.1", "D1.A", "D2.A"],
     "GP2": ["A1.4", "R3.a", "R4.a"],
     "Q1 BASE": ["R3.b", "Q1.B"],
-    "IN DIN4": ["X1.4", "RL1.4"],
-    "IN DIN5": ["X1.5", "RL1.13"],
+    "IN A DIN4": ["X1.4", "RL1.4"],
+    "IN A DIN5": ["X1.5", "RL1.13"],
     "RL1 NO1": ["RL1.8", "R1.a"],
-    "OPTO A": ["R1.b", "U1.1", "D3.K"],
-    "OPTO K": ["RL1.9", "U1.2", "D3.A"],
+    "U1 LED A": ["R1.b", "U1.1", "D3.K"],
+    "U1 LED K": ["RL1.9", "U1.2", "D3.A"],
     "BYPASS 4": ["RL1.6", "RL2.6"],
     "BYPASS 5": ["RL1.11", "RL2.11"],
     "OUT A DIN4": ["X2.4", "RL2.4"],
@@ -338,6 +362,10 @@ EXPECTED_NETS = {
     "GP0": ["A1.1", "R7.a"],
     "GP1": ["A1.2", "U1.4", "R2.a"],
     "GP4": ["A1.6", "R9.a"],
+    "IN B DIN4": ["X4.4", "R10.a"],
+    "U2 LED A": ["R10.b", "U2.1", "D4.K"],
+    "U2 LED K": ["X4.5", "U2.2", "D4.A"],
+    "GP5": ["A1.7", "U2.4", "R11.a"],
     "OUT B DIN5": ["R9.b", "X3.5"],
     "OUT B DIN4": ["R8.b", "X3.4"],
     "SDA": ["A1.9", "DS1.Data"],

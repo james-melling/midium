@@ -32,7 +32,7 @@ import bb_route
 from bb_route import module_rect, part_xy
 
 FONT = "'Century Gothic','URW Gothic','URW Gothic L','Questrial',sans-serif"
-TITLE = "MIDIum (NSK MT-1) · Breadboard prototype · Rev A · 18/10/2026 · J Melling"
+TITLE = "MIDIum (NSK MT-1) · Breadboard prototype · Rev B · 18/10/2026 · J Melling"
 PAGE_W, PAGE_H = 420.0, 297.0
 
 # drawing scale on sheet 1: mm per 0.1 inch
@@ -119,7 +119,7 @@ def frame(s, sheet, title):
     s.text(x0 + w - 3, y0 + 6.3, "melling.audio", size=3.2, anchor="end",
            fill="#555")
     s.text(x0 + 3, y0 + 14.2, f"Breadboard prototype · {title}", size=3.4)
-    s.text(x0 + 3, y0 + 21.6, "Rev A · 18/10/2026 · J Melling", size=3.2)
+    s.text(x0 + 3, y0 + 21.6, "Rev B · 18/10/2026 · J Melling", size=3.2)
     s.text(x0 + 115, y0 + 14.2, f"Sheet {sheet} of 4", size=3.2)
     s.text(x0 + 115, y0 + 21.6, "A3 · milestone 1", size=3.0, fill="#444")
 
@@ -214,7 +214,9 @@ def draw_axial(s, ref, kind, a, b, value):
               f'stroke="#7a6a48" stroke-width="0.2"/>')
         bands = RES_BANDS[value]
         for k, col in enumerate(bands):
-            bxp = (-bl / 2 + 0.45 + k * 0.42 + (0.35 if k == 3 else 0)) * U
+            # band spacing scales with the body (identical to the old fixed
+            # spacing for a full 2.5 u body, stays inside shorter bodies)
+            bxp = (-bl / 2 + bl * (0.18 + k * 0.168 + (0.14 if k == 3 else 0))) * U
             g += (f'<rect x="{bxp:.2f}" y="{-bw*U/2:.2f}" width="{0.22*U:.2f}" '
                   f'height="{bw*U:.2f}" fill="{col}"/>')
         g += "</g>"
@@ -316,7 +318,7 @@ def draw_part(s, ref, p):
             s.text(tx, tyy, pin, size=1.1, anchor="middle", fill="#ffe680",
                    weight="bold")
         tx, ty = P((x1 + x2) / 2 + 0.2, cy + 0.3)
-        s.text(tx, ty, "U1 H11L1M", size=1.1, anchor="middle", fill="#fff",
+        s.text(tx, ty, f"{ref} H11L1M", size=1.1, anchor="middle", fill="#fff",
                weight="bold")
     elif k == "nav":
         pins = p["pins"]
@@ -453,7 +455,7 @@ def draw_din(s, ref, front_ok=True):
     s.text(*P(cx, front + 1.25), f"{ref}  {sk['label']}", size=2.3,
            anchor="middle", weight="bold")
     s.text(*P(cx, front + 2.5),
-           "SDS-50J top view, plug side facing down", size=1.6,
+           "SDS-50J top view, plug side down", size=1.6,
            anchor="middle", fill="#444")
 
 
@@ -498,6 +500,8 @@ LABELS = {  # ref -> (x, y, anchor) in u (absolute, sheet 1)
     "C2": (57.9, 6.4, "end"), "D1": (13.9, 43.4, "end"),
     "D2": (44.1, 43.4, "start"), "D3": (28.6, 49.6, "start"),
     "Q1": (8.0, 43.3, "middle"), "SW1": (50.5, 13.7, "middle"),
+    "R10": (58.0, 46.3, "middle"), "R11": (59.4, 39.4, "start"),
+    "C3": (55.0, 38.4, "end"), "D4": (55.3, 45.6, "end"),
 }
 
 
@@ -506,8 +510,8 @@ def part_label_text(ref):
     v = p["value"].replace("R", "Ω") if p["value"].endswith("R") else p["value"]
     if ref.startswith("SW"):
         return f"{ref} 5-way nav"
-    if ref == "U1":
-        return "U1 H11L1M"
+    if ref in ("U1", "U2"):
+        return f"{ref} H11L1M"
     return f"{ref} {v}"
 
 
@@ -581,7 +585,7 @@ def usb_callout(s):
 
 
 def offboard_table(s):
-    x0, y0 = 255.0, 172.0
+    x0, y0 = 255.0, 181.0
     s.text(x0, y0, "Off-board flying leads (DIN sockets)", size=3.6, weight="bold")
     y = y0 + 5.5
     xs = [x0, x0 + 13, x0 + 46, x0 + 84]
@@ -594,6 +598,9 @@ def offboard_table(s):
             continue
         ref, pin = w["a"].split(".")
         col = WIRE_COLOURS[w["col"]][0]
+        if w["col"] == "midiinb":   # white wire: outline it
+            s.line(xs[0], y - 0.9, xs[0] + 5, y - 0.9, stroke="#555", sw=1.6,
+                   extra=' stroke-linecap="round"')
         s.line(xs[0], y - 0.9, xs[0] + 5, y - 0.9, stroke=col, sw=1.2,
                extra=' stroke-linecap="round"')
         s.text(xs[0] + 6.5, y, w["id"][1:], size=2.4, weight="bold")
@@ -601,9 +608,9 @@ def offboard_table(s):
         s.text(xs[2], y, hole_label(w["b"]), size=2.4)
         fn = w["sig"].split(" to ", 1)[-1] if " to " in w["sig"] else w["sig"]
         s.text(xs[3], y, fn, size=2.4)
-        y += 4.0
-    s.text(x0, y + 1.0, "X1 MIDI IN: pins 1, 2, 3 and the shell tabs (E) stay "
-           "unconnected. X2/X3: pins 1, 3 unconnected.", size=2.3, fill="#444")
+        y += 3.7
+    s.text(x0, y + 1.0, "X1/X4 MIDI IN A/B: pins 1, 2, 3 and the shell tabs (E) "
+           "stay unconnected. X2/X3: pins 1, 3 unconnected.", size=2.3, fill="#444")
     s.text(x0, y + 4.6, "Pin 2 is the shield pin. Front, top and solder-side "
            "views of the socket are on sheet 3.", size=2.3, fill="#444")
 
@@ -618,7 +625,7 @@ def legend(s):
         s.line(x0, y - 1.0, x0 + 10, y - 1.0, stroke=col, sw=0.27 * U,
                extra=' stroke-linecap="round"')
         s.text(x0 + 13, y, lab, size=2.6)
-        y += 4.3
+        y += 3.9
     y += 1
     s.text(x0, y, "Symbols", size=3.6, weight="bold")
     y += 5
@@ -639,10 +646,12 @@ def legend(s):
 
 
 def notes1(s):
-    x0, y0 = 255.0, 98.0
+    x0, y0 = 255.0, 99.0
     s.text(x0, y0, "Read me first", size=3.6, weight="bold")
     notes = [
-        "Board 1 = MCU + UI.  Board 2 = MIDI IN, relays, OUT A/B drivers.",
+        "Rev B: adds MIDI IN B (X4, U2 rows 55-57, GP5), wires W55-W59.",
+        "  W01-W53 as Rev A; W54 moves to the GND rail @49 (X3 moved).",
+        "Board 1 = MCU + UI.  Board 2 = MIDI IN A/B, relays, OUT A/B.",
         "Pico 2: USB end off the left edge of B1, pin 1 (GP0) at h6,",
         "  pin 40 (VBUS) at c6.  Free holes per Pico pin: a/b and i/j.",
         "B2 bottom inner rail is 5 V (VBUS) - relay coils only.",
@@ -650,11 +659,12 @@ def notes1(s):
         "Check rail continuity at the middle of each rail with a meter:",
         "  some full-size boards split the rails between rows 31 and 33.",
         "Resistors lie flat over the holes they span (unused holes).",
-        "D3 stands upright between j26 (cathode, band) and j27.",
+        "D3 stands upright j26 (cathode, band) / j27; D4 the same, g55 / g56.",
+        "IN B has no bypass relay: it goes straight to R10 / U2.",
         "Relay pin numbers are the Omron G5V-2 terminal numbers;",
         "  RL2 is rotated 180° (coil end on the right).",
         "DIN sockets: short flying leads soldered to the socket pins.",
-        "  IN shell (E) and pins 1, 2, 3 stay unconnected.",
+        "  IN A/B shell (E) and pins 1, 2, 3 stay unconnected.",
         "OLED DC is tied to GND to force I2C address 0x3C (see sheet 3).",
         "Both displays can stay fitted: firmware uses the OLED if it answers",
         "  at 0x3C, else the TFT.  To test the TFT, pull W25 (OLED Vin).",
@@ -664,8 +674,8 @@ def notes1(s):
     ]
     y = y0 + 5
     for n in notes:
-        s.text(x0, y, n, size=2.45)
-        y += 3.55
+        s.text(x0, y, n, size=2.4)
+        y += 3.3
 
 
 # ----------------------------------------------------------------------------

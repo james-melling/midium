@@ -8,7 +8,7 @@
 <text x="267.00" y="273.30" font-size="5.00" text-anchor="start" font-weight="bold" fill="#111">MIDIum (NSK MT-1)</text>
 <text x="411.00" y="273.30" font-size="3.20" text-anchor="end" font-weight="normal" fill="#555">melling.audio</text>
 <text x="267.00" y="281.20" font-size="3.40" text-anchor="start" font-weight="normal" fill="#111">Breadboard prototype · Layout (top view, milestone 1)</text>
-<text x="267.00" y="288.60" font-size="3.20" text-anchor="start" font-weight="normal" fill="#111">Rev A · 18/10/2026 · J Melling</text>
+<text x="267.00" y="288.60" font-size="3.20" text-anchor="start" font-weight="normal" fill="#111">Rev B · 18/10/2026 · J Melling</text>
 <text x="379.00" y="281.20" font-size="3.20" text-anchor="start" font-weight="normal" fill="#111">Sheet 1 of 4</text>
 <text x="379.00" y="288.60" font-size="3.00" text-anchor="start" font-weight="normal" fill="#444">A3 · milestone 1</text>
 <text x="14.00" y="14.50" font-size="4.20" text-anchor="start" font-weight="bold" fill="#111">Sheet 1 · Breadboard layout, top view, drawn on a 0.1&quot; grid (scale 1.26:1)</text>
@@ -2206,6 +2206,31 @@
 <g transform="translate(111.20 169.80) rotate(0.0)"><ellipse cx="0" cy="0" rx="1.98" ry="1.34" fill="#f2b33d" stroke="#8a5a00" stroke-width="0.2"/><text x="0" y="0.54" font-size="1.34" text-anchor="middle" fill="#5a3a00">104</text></g>
 <line x1="116.00" y1="169.80" x2="116.00" y2="158.60" stroke="#8a8a8a" stroke-width="0.70"/>
 <g transform="translate(116.00 164.20) rotate(-90.0)"><rect x="-4.00" y="-1.28" width="8.00" height="2.56" rx="0.96" fill="#e8d3a3" stroke="#7a6a48" stroke-width="0.2"/><rect x="-2.56" y="-1.28" width="0.70" height="2.56" fill="#ffd700"/><rect x="-1.22" y="-1.28" width="0.70" height="2.56" fill="#7b2fbf"/><rect x="0.13" y="-1.28" width="0.70" height="2.56" fill="#8b4513"/><rect x="2.59" y="-1.28" width="0.70" height="2.56" fill="#d4af37"/></g>
+<rect x="200.00" y="180.10" width="11.20" height="8.19" rx="0.30" fill="#2b2b2b" stroke="#000" stroke-width="0.30"/>
+<path d="M 200.00 182.76 A 1.44 1.44 0 0 1 200.00 185.64" fill="#777" stroke="none" stroke-width="0.25"/>
+<circle cx="201.44" cy="186.92" r="0.48" fill="#bbb" stroke="none" stroke-width="0.25"/>
+<circle cx="202.40" cy="189.00" r="0.58" fill="#c0c0c0" stroke="none" stroke-width="0.25"/>
+<text x="202.40" y="187.72" font-size="1.10" text-anchor="middle" font-weight="bold" fill="#ffe680">1</text>
+<circle cx="205.60" cy="189.00" r="0.58" fill="#c0c0c0" stroke="none" stroke-width="0.25"/>
+<text x="205.60" y="187.72" font-size="1.10" text-anchor="middle" font-weight="bold" fill="#ffe680">2</text>
+<circle cx="208.80" cy="189.00" r="0.58" fill="#c0c0c0" stroke="none" stroke-width="0.25"/>
+<text x="208.80" y="187.72" font-size="1.10" text-anchor="middle" font-weight="bold" fill="#ffe680">3</text>
+<circle cx="202.40" cy="179.40" r="0.58" fill="#c0c0c0" stroke="none" stroke-width="0.25"/>
+<text x="202.40" y="181.80" font-size="1.10" text-anchor="middle" font-weight="bold" fill="#ffe680">6</text>
+<circle cx="205.60" cy="179.40" r="0.58" fill="#c0c0c0" stroke="none" stroke-width="0.25"/>
+<text x="205.60" y="181.80" font-size="1.10" text-anchor="middle" font-weight="bold" fill="#ffe680">5</text>
+<circle cx="208.80" cy="179.40" r="0.58" fill="#c0c0c0" stroke="none" stroke-width="0.25"/>
+<text x="208.80" y="181.80" font-size="1.10" text-anchor="middle" font-weight="bold" fill="#ffe680">4</text>
+<text x="206.24" y="185.16" font-size="1.10" text-anchor="middle" font-weight="bold" fill="#fff">U2 H11L1M</text>
+<line x1="212.00" y1="198.60" x2="202.40" y2="198.60" stroke="#8a8a8a" stroke-width="0.70"/>
+<g transform="translate(207.20 198.60) rotate(180.0)"><rect x="-4.00" y="-1.28" width="8.00" height="2.56" rx="0.96" fill="#e8d3a3" stroke="#7a6a48" stroke-width="0.2"/><rect x="-2.56" y="-1.28" width="0.70" height="2.56" fill="#d62728"/><rect x="-1.22" y="-1.28" width="0.70" height="2.56" fill="#d62728"/><rect x="0.13" y="-1.28" width="0.70" height="2.56" fill="#8b4513"/><rect x="2.59" y="-1.28" width="0.70" height="2.56" fill="#d4af37"/></g>
+<path d="M 202.40 192.20 Q 204.00 189.00 205.60 192.20" fill="none" stroke="#8a8a8a" stroke-width="0.64"/>
+<circle cx="202.40" cy="192.20" r="1.44" fill="#f0a08a" stroke="#8a3a2a" stroke-width="0.20"/>
+<circle cx="202.40" cy="192.20" r="0.80" fill="#111" stroke="none" stroke-width="0.25"/>
+<line x1="202.40" y1="169.80" x2="205.60" y2="169.80" stroke="#8a8a8a" stroke-width="0.70"/>
+<g transform="translate(204.00 169.80) rotate(0.0)"><ellipse cx="0" cy="0" rx="1.98" ry="1.34" fill="#f2b33d" stroke="#8a5a00" stroke-width="0.2"/><text x="0" y="0.54" font-size="1.34" text-anchor="middle" fill="#5a3a00">104</text></g>
+<line x1="208.80" y1="173.00" x2="202.40" y2="173.00" stroke="#8a8a8a" stroke-width="0.70"/>
+<g transform="translate(205.60 173.00) rotate(180.0)"><rect x="-2.56" y="-1.28" width="5.12" height="2.56" rx="0.96" fill="#e8d3a3" stroke="#7a6a48" stroke-width="0.2"/><rect x="-1.64" y="-1.28" width="0.70" height="2.56" fill="#ffd700"/><rect x="-0.78" y="-1.28" width="0.70" height="2.56" fill="#7b2fbf"/><rect x="0.08" y="-1.28" width="0.70" height="2.56" fill="#8b4513"/><rect x="1.66" y="-1.28" width="0.70" height="2.56" fill="#d4af37"/></g>
 <line x1="132.00" y1="169.80" x2="132.00" y2="158.60" stroke="#8a8a8a" stroke-width="0.70"/>
 <g transform="translate(132.00 164.20) rotate(-90.0)"><rect x="-4.00" y="-1.28" width="8.00" height="2.56" rx="0.96" fill="#e8d3a3" stroke="#7a6a48" stroke-width="0.2"/><rect x="-2.56" y="-1.28" width="0.70" height="2.56" fill="#ff8c00"/><rect x="-1.22" y="-1.28" width="0.70" height="2.56" fill="#ff8c00"/><rect x="0.13" y="-1.28" width="0.70" height="2.56" fill="#000000"/><rect x="2.59" y="-1.28" width="0.70" height="2.56" fill="#d4af37"/></g>
 <line x1="122.40" y1="201.80" x2="132.00" y2="201.80" stroke="#8a8a8a" stroke-width="0.70"/>
@@ -2232,48 +2257,68 @@
 <text x="90.35" y="264.52" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">E</text>
 <circle cx="77.75" cy="254.70" r="1.50" fill="#222" stroke="#777" stroke-width="0.15"/>
 <circle cx="96.65" cy="254.70" r="1.50" fill="#222" stroke="#777" stroke-width="0.15"/>
-<text x="87.20" y="268.15" font-size="2.30" text-anchor="middle" font-weight="bold" fill="#111">X1  MIDI IN</text>
-<text x="87.20" y="272.15" font-size="1.60" text-anchor="middle" font-weight="normal" fill="#444">SDS-50J top view, plug side facing down</text>
-<rect x="132.20" y="244.24" width="25.20" height="19.91" rx="0.40" fill="#3a3a3a" stroke="#111" stroke-width="0.30"/>
-<rect x="132.20" y="261.88" width="25.20" height="2.27" rx="0.00" fill="#555" stroke="none" stroke-width="0.25"/>
-<circle cx="154.25" cy="248.40" r="1.02" fill="#9a9a9a" stroke="#000" stroke-width="0.15"/>
-<text x="154.25" y="252.08" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">1</text>
-<circle cx="144.80" cy="248.40" r="1.02" fill="#d9d9d9" stroke="#000" stroke-width="0.15"/>
-<text x="144.80" y="252.08" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">2</text>
-<circle cx="135.35" cy="248.40" r="1.02" fill="#9a9a9a" stroke="#000" stroke-width="0.15"/>
-<text x="135.35" y="252.08" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">3</text>
-<circle cx="151.10" cy="245.25" r="1.02" fill="#d9d9d9" stroke="#000" stroke-width="0.15"/>
-<text x="151.10" y="248.93" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">4</text>
-<circle cx="138.50" cy="245.25" r="1.02" fill="#d9d9d9" stroke="#000" stroke-width="0.15"/>
-<text x="138.50" y="248.93" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">5</text>
-<circle cx="141.65" cy="261.00" r="1.02" fill="#9a9a9a" stroke="#000" stroke-width="0.15"/>
-<text x="141.65" y="264.52" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">E</text>
-<circle cx="147.95" cy="261.00" r="1.02" fill="#9a9a9a" stroke="#000" stroke-width="0.15"/>
-<text x="147.95" y="264.52" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">E</text>
-<circle cx="135.35" cy="254.70" r="1.50" fill="#222" stroke="#777" stroke-width="0.15"/>
-<circle cx="154.25" cy="254.70" r="1.50" fill="#222" stroke="#777" stroke-width="0.15"/>
-<text x="144.80" y="268.15" font-size="2.30" text-anchor="middle" font-weight="bold" fill="#111">X2  MIDI OUT A (thru / bypass)</text>
-<text x="144.80" y="272.15" font-size="1.60" text-anchor="middle" font-weight="normal" fill="#444">SDS-50J top view, plug side facing down</text>
-<rect x="181.80" y="244.24" width="25.20" height="19.91" rx="0.40" fill="#3a3a3a" stroke="#111" stroke-width="0.30"/>
-<rect x="181.80" y="261.88" width="25.20" height="2.27" rx="0.00" fill="#555" stroke="none" stroke-width="0.25"/>
-<circle cx="203.85" cy="248.40" r="1.02" fill="#9a9a9a" stroke="#000" stroke-width="0.15"/>
-<text x="203.85" y="252.08" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">1</text>
-<circle cx="194.40" cy="248.40" r="1.02" fill="#d9d9d9" stroke="#000" stroke-width="0.15"/>
-<text x="194.40" y="252.08" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">2</text>
-<circle cx="184.95" cy="248.40" r="1.02" fill="#9a9a9a" stroke="#000" stroke-width="0.15"/>
-<text x="184.95" y="252.08" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">3</text>
-<circle cx="200.70" cy="245.25" r="1.02" fill="#d9d9d9" stroke="#000" stroke-width="0.15"/>
-<text x="200.70" y="248.93" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">4</text>
-<circle cx="188.10" cy="245.25" r="1.02" fill="#d9d9d9" stroke="#000" stroke-width="0.15"/>
-<text x="188.10" y="248.93" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">5</text>
-<circle cx="191.25" cy="261.00" r="1.02" fill="#9a9a9a" stroke="#000" stroke-width="0.15"/>
-<text x="191.25" y="264.52" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">E</text>
-<circle cx="197.55" cy="261.00" r="1.02" fill="#9a9a9a" stroke="#000" stroke-width="0.15"/>
-<text x="197.55" y="264.52" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">E</text>
-<circle cx="184.95" cy="254.70" r="1.50" fill="#222" stroke="#777" stroke-width="0.15"/>
-<circle cx="203.85" cy="254.70" r="1.50" fill="#222" stroke="#777" stroke-width="0.15"/>
-<text x="194.40" y="268.15" font-size="2.30" text-anchor="middle" font-weight="bold" fill="#111">X3  MIDI OUT B</text>
-<text x="194.40" y="272.15" font-size="1.60" text-anchor="middle" font-weight="normal" fill="#444">SDS-50J top view, plug side facing down</text>
+<text x="87.20" y="268.15" font-size="2.30" text-anchor="middle" font-weight="bold" fill="#111">X1  MIDI IN A</text>
+<text x="87.20" y="272.15" font-size="1.60" text-anchor="middle" font-weight="normal" fill="#444">SDS-50J top view, plug side down</text>
+<rect x="125.80" y="244.24" width="25.20" height="19.91" rx="0.40" fill="#3a3a3a" stroke="#111" stroke-width="0.30"/>
+<rect x="125.80" y="261.88" width="25.20" height="2.27" rx="0.00" fill="#555" stroke="none" stroke-width="0.25"/>
+<circle cx="147.85" cy="248.40" r="1.02" fill="#9a9a9a" stroke="#000" stroke-width="0.15"/>
+<text x="147.85" y="252.08" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">1</text>
+<circle cx="138.40" cy="248.40" r="1.02" fill="#d9d9d9" stroke="#000" stroke-width="0.15"/>
+<text x="138.40" y="252.08" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">2</text>
+<circle cx="128.95" cy="248.40" r="1.02" fill="#9a9a9a" stroke="#000" stroke-width="0.15"/>
+<text x="128.95" y="252.08" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">3</text>
+<circle cx="144.70" cy="245.25" r="1.02" fill="#d9d9d9" stroke="#000" stroke-width="0.15"/>
+<text x="144.70" y="248.93" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">4</text>
+<circle cx="132.10" cy="245.25" r="1.02" fill="#d9d9d9" stroke="#000" stroke-width="0.15"/>
+<text x="132.10" y="248.93" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">5</text>
+<circle cx="135.25" cy="261.00" r="1.02" fill="#9a9a9a" stroke="#000" stroke-width="0.15"/>
+<text x="135.25" y="264.52" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">E</text>
+<circle cx="141.55" cy="261.00" r="1.02" fill="#9a9a9a" stroke="#000" stroke-width="0.15"/>
+<text x="141.55" y="264.52" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">E</text>
+<circle cx="128.95" cy="254.70" r="1.50" fill="#222" stroke="#777" stroke-width="0.15"/>
+<circle cx="147.85" cy="254.70" r="1.50" fill="#222" stroke="#777" stroke-width="0.15"/>
+<text x="138.40" y="268.15" font-size="2.30" text-anchor="middle" font-weight="bold" fill="#111">X2  MIDI OUT A (thru / bypass)</text>
+<text x="138.40" y="272.15" font-size="1.60" text-anchor="middle" font-weight="normal" fill="#444">SDS-50J top view, plug side down</text>
+<rect x="169.00" y="244.24" width="25.20" height="19.91" rx="0.40" fill="#3a3a3a" stroke="#111" stroke-width="0.30"/>
+<rect x="169.00" y="261.88" width="25.20" height="2.27" rx="0.00" fill="#555" stroke="none" stroke-width="0.25"/>
+<circle cx="191.05" cy="248.40" r="1.02" fill="#9a9a9a" stroke="#000" stroke-width="0.15"/>
+<text x="191.05" y="252.08" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">1</text>
+<circle cx="181.60" cy="248.40" r="1.02" fill="#d9d9d9" stroke="#000" stroke-width="0.15"/>
+<text x="181.60" y="252.08" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">2</text>
+<circle cx="172.15" cy="248.40" r="1.02" fill="#9a9a9a" stroke="#000" stroke-width="0.15"/>
+<text x="172.15" y="252.08" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">3</text>
+<circle cx="187.90" cy="245.25" r="1.02" fill="#d9d9d9" stroke="#000" stroke-width="0.15"/>
+<text x="187.90" y="248.93" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">4</text>
+<circle cx="175.30" cy="245.25" r="1.02" fill="#d9d9d9" stroke="#000" stroke-width="0.15"/>
+<text x="175.30" y="248.93" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">5</text>
+<circle cx="178.45" cy="261.00" r="1.02" fill="#9a9a9a" stroke="#000" stroke-width="0.15"/>
+<text x="178.45" y="264.52" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">E</text>
+<circle cx="184.75" cy="261.00" r="1.02" fill="#9a9a9a" stroke="#000" stroke-width="0.15"/>
+<text x="184.75" y="264.52" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">E</text>
+<circle cx="172.15" cy="254.70" r="1.50" fill="#222" stroke="#777" stroke-width="0.15"/>
+<circle cx="191.05" cy="254.70" r="1.50" fill="#222" stroke="#777" stroke-width="0.15"/>
+<text x="181.60" y="268.15" font-size="2.30" text-anchor="middle" font-weight="bold" fill="#111">X3  MIDI OUT B</text>
+<text x="181.60" y="272.15" font-size="1.60" text-anchor="middle" font-weight="normal" fill="#444">SDS-50J top view, plug side down</text>
+<rect x="207.40" y="244.24" width="25.20" height="19.91" rx="0.40" fill="#3a3a3a" stroke="#111" stroke-width="0.30"/>
+<rect x="207.40" y="261.88" width="25.20" height="2.27" rx="0.00" fill="#555" stroke="none" stroke-width="0.25"/>
+<circle cx="229.45" cy="248.40" r="1.02" fill="#9a9a9a" stroke="#000" stroke-width="0.15"/>
+<text x="229.45" y="252.08" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">1</text>
+<circle cx="220.00" cy="248.40" r="1.02" fill="#9a9a9a" stroke="#000" stroke-width="0.15"/>
+<text x="220.00" y="252.08" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">2</text>
+<circle cx="210.55" cy="248.40" r="1.02" fill="#9a9a9a" stroke="#000" stroke-width="0.15"/>
+<text x="210.55" y="252.08" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">3</text>
+<circle cx="226.30" cy="245.25" r="1.02" fill="#d9d9d9" stroke="#000" stroke-width="0.15"/>
+<text x="226.30" y="248.93" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">4</text>
+<circle cx="213.70" cy="245.25" r="1.02" fill="#d9d9d9" stroke="#000" stroke-width="0.15"/>
+<text x="213.70" y="248.93" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">5</text>
+<circle cx="216.85" cy="261.00" r="1.02" fill="#9a9a9a" stroke="#000" stroke-width="0.15"/>
+<text x="216.85" y="264.52" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">E</text>
+<circle cx="223.15" cy="261.00" r="1.02" fill="#9a9a9a" stroke="#000" stroke-width="0.15"/>
+<text x="223.15" y="264.52" font-size="1.30" text-anchor="middle" font-weight="bold" fill="#fff">E</text>
+<circle cx="210.55" cy="254.70" r="1.50" fill="#222" stroke="#777" stroke-width="0.15"/>
+<circle cx="229.45" cy="254.70" r="1.50" fill="#222" stroke="#777" stroke-width="0.15"/>
+<text x="220.00" y="268.15" font-size="2.30" text-anchor="middle" font-weight="bold" fill="#111">X4  MIDI IN B</text>
+<text x="220.00" y="272.15" font-size="1.60" text-anchor="middle" font-weight="normal" fill="#444">SDS-50J top view, plug side down</text>
 <polyline points="58.40,64.20 58.40,56.20" fill="none" stroke="#000" stroke-width="1.28" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.55"/>
 <polyline points="58.40,64.20 58.40,56.20" fill="none" stroke="#d62728" stroke-width="0.86" stroke-linejoin="round" stroke-linecap="round"/>
 <circle cx="58.40" cy="64.20" r="0.77" fill="#d62728" stroke="#000" stroke-width="0.25"/>
@@ -2466,30 +2511,50 @@
 <polyline points="80.90,245.25 79.20,243.40 72.80,237.00 72.80,174.60 87.20,174.60 87.20,176.20" fill="none" stroke="#2ca02c" stroke-width="0.86" stroke-linejoin="round" stroke-linecap="round"/>
 <circle cx="80.90" cy="245.25" r="0.77" fill="#2ca02c" stroke="#000" stroke-width="0.25"/>
 <circle cx="87.20" cy="176.20" r="0.77" fill="#2ca02c" stroke="#000" stroke-width="0.25"/>
-<polyline points="151.10,245.25 152.80,243.40 165.60,230.60 165.60,174.60 144.80,174.60 144.80,176.20" fill="none" stroke="#000" stroke-width="1.28" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.55"/>
-<polyline points="151.10,245.25 152.80,243.40 165.60,230.60 165.60,174.60 144.80,174.60 144.80,176.20" fill="none" stroke="#1f6fd1" stroke-width="0.86" stroke-linejoin="round" stroke-linecap="round"/>
-<circle cx="151.10" cy="245.25" r="0.77" fill="#1f6fd1" stroke="#000" stroke-width="0.25"/>
+<polyline points="144.70,245.25 146.40,243.40 165.60,224.20 165.60,174.60 144.80,174.60 144.80,176.20" fill="none" stroke="#000" stroke-width="1.28" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.55"/>
+<polyline points="144.70,245.25 146.40,243.40 165.60,224.20 165.60,174.60 144.80,174.60 144.80,176.20" fill="none" stroke="#1f6fd1" stroke-width="0.86" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="144.70" cy="245.25" r="0.77" fill="#1f6fd1" stroke="#000" stroke-width="0.25"/>
 <circle cx="144.80" cy="176.20" r="0.77" fill="#1f6fd1" stroke="#000" stroke-width="0.25"/>
-<polyline points="138.50,245.25 140.00,243.40 143.20,240.20 143.20,201.80 144.80,201.80" fill="none" stroke="#000" stroke-width="1.28" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.55"/>
-<polyline points="138.50,245.25 140.00,243.40 143.20,240.20 143.20,201.80 144.80,201.80" fill="none" stroke="#1f6fd1" stroke-width="0.86" stroke-linejoin="round" stroke-linecap="round"/>
-<circle cx="138.50" cy="245.25" r="0.77" fill="#1f6fd1" stroke="#000" stroke-width="0.25"/>
+<polyline points="132.10,245.25 132.00,243.40 132.00,217.80 144.80,205.00 144.80,201.80" fill="none" stroke="#000" stroke-width="1.28" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.55"/>
+<polyline points="132.10,245.25 132.00,243.40 132.00,217.80 144.80,205.00 144.80,201.80" fill="none" stroke="#1f6fd1" stroke-width="0.86" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="132.10" cy="245.25" r="0.77" fill="#1f6fd1" stroke="#000" stroke-width="0.25"/>
 <circle cx="144.80" cy="201.80" r="0.77" fill="#1f6fd1" stroke="#000" stroke-width="0.25"/>
-<polyline points="144.80,248.40 144.80,222.60 151.20,216.20" fill="none" stroke="#777" stroke-width="1.28" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.55"/>
-<polyline points="144.80,248.40 144.80,222.60 151.20,216.20" fill="none" stroke="#1a1a1a" stroke-width="0.86" stroke-linejoin="round" stroke-linecap="round"/>
-<circle cx="144.80" cy="248.40" r="0.77" fill="#1a1a1a" stroke="#000" stroke-width="0.25"/>
+<polyline points="138.40,248.40 138.40,229.00 151.20,216.20" fill="none" stroke="#777" stroke-width="1.28" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.55"/>
+<polyline points="138.40,248.40 138.40,229.00 151.20,216.20" fill="none" stroke="#1a1a1a" stroke-width="0.86" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="138.40" cy="248.40" r="0.77" fill="#1a1a1a" stroke="#000" stroke-width="0.25"/>
 <circle cx="151.20" cy="216.20" r="0.77" fill="#1a1a1a" stroke="#000" stroke-width="0.25"/>
-<polyline points="200.70,245.25 200.80,243.40 200.80,213.00 189.60,201.80" fill="none" stroke="#000" stroke-width="1.28" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.55"/>
-<polyline points="200.70,245.25 200.80,243.40 200.80,213.00 189.60,201.80" fill="none" stroke="#8e44ad" stroke-width="0.86" stroke-linejoin="round" stroke-linecap="round"/>
-<circle cx="200.70" cy="245.25" r="0.77" fill="#8e44ad" stroke="#000" stroke-width="0.25"/>
+<polyline points="187.90,245.25 188.00,243.40 188.00,201.80 189.60,201.80" fill="none" stroke="#000" stroke-width="1.28" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.55"/>
+<polyline points="187.90,245.25 188.00,243.40 188.00,201.80 189.60,201.80" fill="none" stroke="#8e44ad" stroke-width="0.86" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="187.90" cy="245.25" r="0.77" fill="#8e44ad" stroke="#000" stroke-width="0.25"/>
 <circle cx="189.60" cy="201.80" r="0.77" fill="#8e44ad" stroke="#000" stroke-width="0.25"/>
-<polyline points="188.10,245.25 188.00,243.40 188.00,213.00 176.80,201.80" fill="none" stroke="#000" stroke-width="1.28" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.55"/>
-<polyline points="188.10,245.25 188.00,243.40 188.00,213.00 176.80,201.80" fill="none" stroke="#8e44ad" stroke-width="0.86" stroke-linejoin="round" stroke-linecap="round"/>
-<circle cx="188.10" cy="245.25" r="0.77" fill="#8e44ad" stroke="#000" stroke-width="0.25"/>
+<polyline points="175.30,245.25 175.20,243.40 175.20,201.80 176.80,201.80" fill="none" stroke="#000" stroke-width="1.28" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.55"/>
+<polyline points="175.30,245.25 175.20,243.40 175.20,201.80 176.80,201.80" fill="none" stroke="#8e44ad" stroke-width="0.86" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="175.30" cy="245.25" r="0.77" fill="#8e44ad" stroke="#000" stroke-width="0.25"/>
 <circle cx="176.80" cy="201.80" r="0.77" fill="#8e44ad" stroke="#000" stroke-width="0.25"/>
-<polyline points="194.40,248.40 194.40,216.20 196.00,216.20" fill="none" stroke="#777" stroke-width="1.28" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.55"/>
-<polyline points="194.40,248.40 194.40,216.20 196.00,216.20" fill="none" stroke="#1a1a1a" stroke-width="0.86" stroke-linejoin="round" stroke-linecap="round"/>
-<circle cx="194.40" cy="248.40" r="0.77" fill="#1a1a1a" stroke="#000" stroke-width="0.25"/>
-<circle cx="196.00" cy="216.20" r="0.77" fill="#1a1a1a" stroke="#000" stroke-width="0.25"/>
+<polyline points="181.60,248.40 181.60,216.20 183.20,216.20" fill="none" stroke="#777" stroke-width="1.28" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.55"/>
+<polyline points="181.60,248.40 181.60,216.20 183.20,216.20" fill="none" stroke="#1a1a1a" stroke-width="0.86" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="181.60" cy="248.40" r="0.77" fill="#1a1a1a" stroke="#000" stroke-width="0.25"/>
+<circle cx="183.20" cy="216.20" r="0.77" fill="#1a1a1a" stroke="#000" stroke-width="0.25"/>
+<polyline points="64.80,99.40 64.80,109.00 207.20,109.00 207.20,166.60 208.80,166.60" fill="none" stroke="#000" stroke-width="1.28" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.55"/>
+<polyline points="64.80,99.40 64.80,109.00 207.20,109.00 207.20,166.60 208.80,166.60" fill="none" stroke="#f2f2f2" stroke-width="0.86" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="64.80" cy="99.40" r="0.77" fill="#f2f2f2" stroke="#000" stroke-width="0.25"/>
+<circle cx="208.80" cy="166.60" r="0.77" fill="#f2f2f2" stroke="#000" stroke-width="0.25"/>
+<polyline points="202.40,166.60 202.40,158.60" fill="none" stroke="#000" stroke-width="1.28" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.55"/>
+<polyline points="202.40,166.60 202.40,158.60" fill="none" stroke="#d62728" stroke-width="0.86" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="202.40" cy="166.60" r="0.77" fill="#d62728" stroke="#000" stroke-width="0.25"/>
+<circle cx="202.40" cy="158.60" r="0.77" fill="#d62728" stroke="#000" stroke-width="0.25"/>
+<polyline points="205.60,166.60 205.60,155.40 202.40,155.40" fill="none" stroke="#777" stroke-width="1.28" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.55"/>
+<polyline points="205.60,166.60 205.60,155.40 202.40,155.40" fill="none" stroke="#1a1a1a" stroke-width="0.86" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="205.60" cy="166.60" r="0.77" fill="#1a1a1a" stroke="#000" stroke-width="0.25"/>
+<circle cx="202.40" cy="155.40" r="0.77" fill="#1a1a1a" stroke="#000" stroke-width="0.25"/>
+<polyline points="226.30,245.25 224.80,243.40 216.80,235.40 216.80,206.60 212.00,201.80" fill="none" stroke="#000" stroke-width="1.28" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.55"/>
+<polyline points="226.30,245.25 224.80,243.40 216.80,235.40 216.80,206.60 212.00,201.80" fill="none" stroke="#f2f2f2" stroke-width="0.86" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="226.30" cy="245.25" r="0.77" fill="#f2f2f2" stroke="#000" stroke-width="0.25"/>
+<circle cx="212.00" cy="201.80" r="0.77" fill="#f2f2f2" stroke="#000" stroke-width="0.25"/>
+<polyline points="213.70,245.25 213.60,243.40 213.60,209.80 205.60,201.80" fill="none" stroke="#000" stroke-width="1.28" stroke-linejoin="round" stroke-linecap="round" stroke-opacity="0.55"/>
+<polyline points="213.70,245.25 213.60,243.40 213.60,209.80 205.60,201.80" fill="none" stroke="#f2f2f2" stroke-width="0.86" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="213.70" cy="245.25" r="0.77" fill="#f2f2f2" stroke="#000" stroke-width="0.25"/>
+<circle cx="205.60" cy="201.80" r="0.77" fill="#f2f2f2" stroke="#000" stroke-width="0.25"/>
 <rect x="124.00" y="29.32" width="67.20" height="36.48" rx="0.80" fill="#5b8bd6" stroke="#24467a" stroke-width="0.35" fill-opacity="0.10" stroke-dasharray="1.6 0.9"/>
 <rect x="140.64" y="63.24" width="1.92" height="1.92" rx="0.00" fill="#d4af37" stroke="#8a6d1a" stroke-width="0.15"/>
 <text x="141.60" y="61.80" font-size="1.15" text-anchor="middle" font-weight="bold" fill="#13305e" paint-order="stroke" stroke="#fff" stroke-width="0.5">V+</text>
@@ -2634,18 +2699,28 @@
 <text x="88.80" y="221.55" font-size="1.45" text-anchor="middle" font-weight="bold" fill="#111">47</text>
 <rect x="72.03" y="204.95" width="1.54" height="1.70" rx="0.50" fill="#fff" stroke="#000" stroke-width="0.12"/>
 <text x="72.80" y="206.35" font-size="1.45" text-anchor="middle" font-weight="bold" fill="#111">48</text>
-<rect x="164.83" y="201.75" width="1.54" height="1.70" rx="0.50" fill="#fff" stroke="#000" stroke-width="0.12"/>
-<text x="165.60" y="203.15" font-size="1.45" text-anchor="middle" font-weight="bold" fill="#111">49</text>
-<rect x="142.43" y="220.15" width="1.54" height="1.70" rx="0.50" fill="#fff" stroke="#000" stroke-width="0.12"/>
-<text x="143.20" y="221.55" font-size="1.45" text-anchor="middle" font-weight="bold" fill="#111">50</text>
-<rect x="144.03" y="234.65" width="1.54" height="1.70" rx="0.50" fill="#fff" stroke="#000" stroke-width="0.12"/>
-<text x="144.80" y="236.05" font-size="1.45" text-anchor="middle" font-weight="bold" fill="#111">51</text>
-<rect x="200.03" y="227.35" width="1.54" height="1.70" rx="0.50" fill="#fff" stroke="#000" stroke-width="0.12"/>
-<text x="200.80" y="228.75" font-size="1.45" text-anchor="middle" font-weight="bold" fill="#111">52</text>
-<rect x="187.23" y="227.35" width="1.54" height="1.70" rx="0.50" fill="#fff" stroke="#000" stroke-width="0.12"/>
-<text x="188.00" y="228.75" font-size="1.45" text-anchor="middle" font-weight="bold" fill="#111">53</text>
-<rect x="193.63" y="231.45" width="1.54" height="1.70" rx="0.50" fill="#fff" stroke="#000" stroke-width="0.12"/>
-<text x="194.40" y="232.85" font-size="1.45" text-anchor="middle" font-weight="bold" fill="#111">54</text>
+<rect x="164.83" y="198.55" width="1.54" height="1.70" rx="0.50" fill="#fff" stroke="#000" stroke-width="0.12"/>
+<text x="165.60" y="199.95" font-size="1.45" text-anchor="middle" font-weight="bold" fill="#111">49</text>
+<rect x="131.23" y="229.75" width="1.54" height="1.70" rx="0.50" fill="#fff" stroke="#000" stroke-width="0.12"/>
+<text x="132.00" y="231.15" font-size="1.45" text-anchor="middle" font-weight="bold" fill="#111">50</text>
+<rect x="137.63" y="237.85" width="1.54" height="1.70" rx="0.50" fill="#fff" stroke="#000" stroke-width="0.12"/>
+<text x="138.40" y="239.25" font-size="1.45" text-anchor="middle" font-weight="bold" fill="#111">51</text>
+<rect x="187.23" y="221.75" width="1.54" height="1.70" rx="0.50" fill="#fff" stroke="#000" stroke-width="0.12"/>
+<text x="188.00" y="223.15" font-size="1.45" text-anchor="middle" font-weight="bold" fill="#111">52</text>
+<rect x="174.43" y="221.75" width="1.54" height="1.70" rx="0.50" fill="#fff" stroke="#000" stroke-width="0.12"/>
+<text x="175.20" y="223.15" font-size="1.45" text-anchor="middle" font-weight="bold" fill="#111">53</text>
+<rect x="180.83" y="231.45" width="1.54" height="1.70" rx="0.50" fill="#fff" stroke="#000" stroke-width="0.12"/>
+<text x="181.60" y="232.85" font-size="1.45" text-anchor="middle" font-weight="bold" fill="#111">54</text>
+<rect x="135.23" y="108.15" width="1.54" height="1.70" rx="0.50" fill="#fff" stroke="#000" stroke-width="0.12"/>
+<text x="136.00" y="109.55" font-size="1.45" text-anchor="middle" font-weight="bold" fill="#111">55</text>
+<rect x="201.63" y="161.75" width="1.54" height="1.70" rx="0.50" fill="#fff" stroke="#000" stroke-width="0.12"/>
+<text x="202.40" y="163.15" font-size="1.45" text-anchor="middle" font-weight="bold" fill="#111">56</text>
+<rect x="204.83" y="160.15" width="1.54" height="1.70" rx="0.50" fill="#fff" stroke="#000" stroke-width="0.12"/>
+<text x="205.60" y="161.55" font-size="1.45" text-anchor="middle" font-weight="bold" fill="#111">57</text>
+<rect x="216.03" y="220.15" width="1.54" height="1.70" rx="0.50" fill="#fff" stroke="#000" stroke-width="0.12"/>
+<text x="216.80" y="221.55" font-size="1.45" text-anchor="middle" font-weight="bold" fill="#111">58</text>
+<rect x="212.83" y="225.75" width="1.54" height="1.70" rx="0.50" fill="#fff" stroke="#000" stroke-width="0.12"/>
+<text x="213.60" y="227.15" font-size="1.45" text-anchor="middle" font-weight="bold" fill="#111">59</text>
 <text x="104.80" y="196.36" font-size="1.60" text-anchor="middle" font-weight="bold" fill="#000" paint-order="stroke" stroke="#fff" stroke-width="0.7">R1 220Ω</text>
 <text x="118.24" y="165.32" font-size="1.60" text-anchor="start" font-weight="bold" fill="#000" paint-order="stroke" stroke="#fff" stroke-width="0.7">R2 470Ω</text>
 <text x="61.28" y="170.92" font-size="1.60" text-anchor="start" font-weight="bold" fill="#000" paint-order="stroke" stroke="#fff" stroke-width="0.7">R3 1k</text>
@@ -2662,6 +2737,10 @@
 <text x="113.12" y="206.92" font-size="1.60" text-anchor="start" font-weight="bold" fill="#000" paint-order="stroke" stroke="#fff" stroke-width="0.7">D3 1N4148</text>
 <text x="47.20" y="186.76" font-size="1.60" text-anchor="middle" font-weight="bold" fill="#000" paint-order="stroke" stroke="#fff" stroke-width="0.7">Q1 2N3904</text>
 <text x="183.20" y="92.04" font-size="1.60" text-anchor="middle" font-weight="bold" fill="#000" paint-order="stroke" stroke="#fff" stroke-width="0.7">SW1 5-way nav</text>
+<text x="207.20" y="196.36" font-size="1.60" text-anchor="middle" font-weight="bold" fill="#000" paint-order="stroke" stroke="#fff" stroke-width="0.7">R10 220Ω</text>
+<text x="211.68" y="174.28" font-size="1.60" text-anchor="start" font-weight="bold" fill="#000" paint-order="stroke" stroke="#fff" stroke-width="0.7">R11 470Ω</text>
+<text x="197.60" y="171.08" font-size="1.60" text-anchor="end" font-weight="bold" fill="#000" paint-order="stroke" stroke="#fff" stroke-width="0.7">C3 100nF</text>
+<text x="198.56" y="194.12" font-size="1.60" text-anchor="end" font-weight="bold" fill="#000" paint-order="stroke" stroke="#fff" stroke-width="0.7">D4 1N4148</text>
 <rect x="34.40" y="16.52" width="72.00" height="20.16" rx="1.00" fill="#f7f7f7" stroke="#c2185b" stroke-width="0.40"/>
 <text x="70.40" y="21.32" font-size="2.40" text-anchor="middle" font-weight="bold" fill="#111">Raspberry Pi Debug Probe</text>
 <text x="70.40" y="25.32" font-size="1.70" text-anchor="middle" font-weight="normal" fill="#111">&#x27;D&#x27; (SWD) port → Pico 2 SWD header</text>
@@ -2678,109 +2757,127 @@
 <line x1="255.00" y1="26.00" x2="265.00" y2="26.00" stroke="#000" stroke-width="1.28" stroke-linecap="round" stroke-opacity="0.55"/>
 <line x1="255.00" y1="26.00" x2="265.00" y2="26.00" stroke="#d62728" stroke-width="0.86" stroke-linecap="round"/>
 <text x="268.00" y="27.00" font-size="2.60" text-anchor="start" font-weight="normal" fill="#111">3V3</text>
-<line x1="255.00" y1="30.30" x2="265.00" y2="30.30" stroke="#000" stroke-width="1.28" stroke-linecap="round" stroke-opacity="0.55"/>
-<line x1="255.00" y1="30.30" x2="265.00" y2="30.30" stroke="#ff8c00" stroke-width="0.86" stroke-linecap="round"/>
-<text x="268.00" y="31.30" font-size="2.60" text-anchor="start" font-weight="normal" fill="#111">5V (VBUS)</text>
-<line x1="255.00" y1="34.60" x2="265.00" y2="34.60" stroke="#000" stroke-width="1.28" stroke-linecap="round" stroke-opacity="0.55"/>
-<line x1="255.00" y1="34.60" x2="265.00" y2="34.60" stroke="#1a1a1a" stroke-width="0.86" stroke-linecap="round"/>
-<text x="268.00" y="35.60" font-size="2.60" text-anchor="start" font-weight="normal" fill="#111">GND</text>
-<line x1="255.00" y1="38.90" x2="265.00" y2="38.90" stroke="#000" stroke-width="1.28" stroke-linecap="round" stroke-opacity="0.55"/>
-<line x1="255.00" y1="38.90" x2="265.00" y2="38.90" stroke="#2ca02c" stroke-width="0.86" stroke-linecap="round"/>
-<text x="268.00" y="39.90" font-size="2.60" text-anchor="start" font-weight="normal" fill="#111">MIDI IN path (DIN IN, opto, GP1)</text>
-<line x1="255.00" y1="43.20" x2="265.00" y2="43.20" stroke="#000" stroke-width="1.28" stroke-linecap="round" stroke-opacity="0.55"/>
-<line x1="255.00" y1="43.20" x2="265.00" y2="43.20" stroke="#1f6fd1" stroke-width="0.86" stroke-linecap="round"/>
-<text x="268.00" y="44.20" font-size="2.60" text-anchor="start" font-weight="normal" fill="#111">MIDI OUT A (GP0, DIN OUT A)</text>
-<line x1="255.00" y1="47.50" x2="265.00" y2="47.50" stroke="#000" stroke-width="1.28" stroke-linecap="round" stroke-opacity="0.55"/>
-<line x1="255.00" y1="47.50" x2="265.00" y2="47.50" stroke="#8e44ad" stroke-width="0.86" stroke-linecap="round"/>
-<text x="268.00" y="48.50" font-size="2.60" text-anchor="start" font-weight="normal" fill="#111">MIDI OUT B (GP4, DIN OUT B)</text>
-<line x1="255.00" y1="51.80" x2="265.00" y2="51.80" stroke="#000" stroke-width="1.28" stroke-linecap="round" stroke-opacity="0.55"/>
-<line x1="255.00" y1="51.80" x2="265.00" y2="51.80" stroke="#8c564b" stroke-width="0.86" stroke-linecap="round"/>
-<text x="268.00" y="52.80" font-size="2.60" text-anchor="start" font-weight="normal" fill="#111">Bypass links (relay NC to NC)</text>
-<line x1="255.00" y1="56.10" x2="265.00" y2="56.10" stroke="#000" stroke-width="1.28" stroke-linecap="round" stroke-opacity="0.55"/>
-<line x1="255.00" y1="56.10" x2="265.00" y2="56.10" stroke="#e6c200" stroke-width="0.86" stroke-linecap="round"/>
-<text x="268.00" y="57.10" font-size="2.60" text-anchor="start" font-weight="normal" fill="#111">Relay drive (GP2, coil -)</text>
-<line x1="255.00" y1="60.40" x2="265.00" y2="60.40" stroke="#000" stroke-width="1.28" stroke-linecap="round" stroke-opacity="0.55"/>
-<line x1="255.00" y1="60.40" x2="265.00" y2="60.40" stroke="#e377c2" stroke-width="0.86" stroke-linecap="round"/>
-<text x="268.00" y="61.40" font-size="2.60" text-anchor="start" font-weight="normal" fill="#111">I2C1 to OLED (GP6 SDA, GP7 SCL)</text>
-<line x1="255.00" y1="64.70" x2="265.00" y2="64.70" stroke="#000" stroke-width="1.28" stroke-linecap="round" stroke-opacity="0.55"/>
-<line x1="255.00" y1="64.70" x2="265.00" y2="64.70" stroke="#7f7f7f" stroke-width="0.86" stroke-linecap="round"/>
-<text x="268.00" y="65.70" font-size="2.60" text-anchor="start" font-weight="normal" fill="#111">SPI0 / control to TFT</text>
-<line x1="255.00" y1="69.00" x2="265.00" y2="69.00" stroke="#000" stroke-width="1.28" stroke-linecap="round" stroke-opacity="0.55"/>
-<line x1="255.00" y1="69.00" x2="265.00" y2="69.00" stroke="#17becf" stroke-width="0.86" stroke-linecap="round"/>
-<text x="268.00" y="70.00" font-size="2.60" text-anchor="start" font-weight="normal" fill="#111">Joystick (GP8/9/14/15/22)</text>
-<text x="255.00" y="75.30" font-size="3.60" text-anchor="start" font-weight="bold" fill="#111">Symbols</text>
-<rect x="255.00" y="77.70" width="4.00" height="3.00" rx="0.00" fill="#5b8bd6" stroke="#24467a" stroke-width="0.35" fill-opacity="0.10" stroke-dasharray="1.6 0.9"/>
-<text x="268.00" y="80.30" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">Module body on its header (wires may pass under it)</text>
-<circle cx="260.00" cy="83.60" r="0.77" fill="#d62728" stroke="#000" stroke-width="0.25"/>
-<text x="268.00" y="84.60" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">Wire end: plug into this hole. 12 = wire W12 in the netlist</text>
-<text x="268.00" y="88.90" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">Rails: outer = GND (blue), inner = supply (red)</text>
-<text x="268.00" y="92.50" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">B1 inner rails 3V3 · B2 top inner 3V3, bottom inner 5V</text>
-<text x="255.00" y="98.00" font-size="3.60" text-anchor="start" font-weight="bold" fill="#111">Read me first</text>
-<text x="255.00" y="103.00" font-size="2.45" text-anchor="start" font-weight="normal" fill="#111">Board 1 = MCU + UI.  Board 2 = MIDI IN, relays, OUT A/B drivers.</text>
-<text x="255.00" y="106.55" font-size="2.45" text-anchor="start" font-weight="normal" fill="#111">Pico 2: USB end off the left edge of B1, pin 1 (GP0) at h6,</text>
-<text x="255.00" y="110.10" font-size="2.45" text-anchor="start" font-weight="normal" fill="#111">  pin 40 (VBUS) at c6.  Free holes per Pico pin: a/b and i/j.</text>
-<text x="255.00" y="113.65" font-size="2.45" text-anchor="start" font-weight="normal" fill="#111">B2 bottom inner rail is 5 V (VBUS) - relay coils only.</text>
-<text x="255.00" y="117.20" font-size="2.45" text-anchor="start" font-weight="normal" fill="#111">  Everything else runs from 3V3 (Pico pin 36).</text>
-<text x="255.00" y="120.75" font-size="2.45" text-anchor="start" font-weight="normal" fill="#111">Check rail continuity at the middle of each rail with a meter:</text>
-<text x="255.00" y="124.30" font-size="2.45" text-anchor="start" font-weight="normal" fill="#111">  some full-size boards split the rails between rows 31 and 33.</text>
-<text x="255.00" y="127.85" font-size="2.45" text-anchor="start" font-weight="normal" fill="#111">Resistors lie flat over the holes they span (unused holes).</text>
-<text x="255.00" y="131.40" font-size="2.45" text-anchor="start" font-weight="normal" fill="#111">D3 stands upright between j26 (cathode, band) and j27.</text>
-<text x="255.00" y="134.95" font-size="2.45" text-anchor="start" font-weight="normal" fill="#111">Relay pin numbers are the Omron G5V-2 terminal numbers;</text>
-<text x="255.00" y="138.50" font-size="2.45" text-anchor="start" font-weight="normal" fill="#111">  RL2 is rotated 180° (coil end on the right).</text>
-<text x="255.00" y="142.05" font-size="2.45" text-anchor="start" font-weight="normal" fill="#111">DIN sockets: short flying leads soldered to the socket pins.</text>
-<text x="255.00" y="145.60" font-size="2.45" text-anchor="start" font-weight="normal" fill="#111">  IN shell (E) and pins 1, 2, 3 stay unconnected.</text>
-<text x="255.00" y="149.15" font-size="2.45" text-anchor="start" font-weight="normal" fill="#111">OLED DC is tied to GND to force I2C address 0x3C (see sheet 3).</text>
-<text x="255.00" y="152.70" font-size="2.45" text-anchor="start" font-weight="normal" fill="#111">Both displays can stay fitted: firmware uses the OLED if it answers</text>
-<text x="255.00" y="156.25" font-size="2.45" text-anchor="start" font-weight="normal" fill="#111">  at 0x3C, else the TFT.  To test the TFT, pull W25 (OLED Vin).</text>
-<text x="255.00" y="159.80" font-size="2.45" text-anchor="start" font-weight="normal" fill="#111">Joystick: as drawn, push towards board-1 row a = UP.</text>
-<text x="255.00" y="163.35" font-size="2.45" text-anchor="start" font-weight="normal" fill="#111">  Directions follow the ALPS SKQUCA pinout - verify with a meter.</text>
-<text x="255.00" y="166.90" font-size="2.45" text-anchor="start" font-weight="normal" fill="#111">Every connection was machine-checked against docs/wiring.md.</text>
-<text x="255.00" y="172.00" font-size="3.60" text-anchor="start" font-weight="bold" fill="#111">Off-board flying leads (DIN sockets)</text>
-<text x="255.00" y="177.50" font-size="2.50" text-anchor="start" font-weight="bold" fill="#111">Wire</text>
-<text x="268.00" y="177.50" font-size="2.50" text-anchor="start" font-weight="bold" fill="#111">Socket pin</text>
-<text x="301.00" y="177.50" font-size="2.50" text-anchor="start" font-weight="bold" fill="#111">Plugs into</text>
-<text x="339.00" y="177.50" font-size="2.50" text-anchor="start" font-weight="bold" fill="#111">Function</text>
-<line x1="255.00" y1="178.70" x2="407.00" y2="178.70" stroke="#000" stroke-width="0.30"/>
-<line x1="255.00" y1="181.40" x2="260.00" y2="181.40" stroke="#2ca02c" stroke-width="1.20" stroke-linecap="round"/>
-<text x="261.50" y="182.30" font-size="2.40" text-anchor="start" font-weight="bold" fill="#111">47</text>
-<text x="268.00" y="182.30" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">X1 MIDI IN pin 4</text>
-<text x="301.00" y="182.30" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">B2 j19</text>
-<text x="339.00" y="182.30" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">RL1 COM1 (pin 4)</text>
-<line x1="255.00" y1="185.40" x2="260.00" y2="185.40" stroke="#2ca02c" stroke-width="1.20" stroke-linecap="round"/>
-<text x="261.50" y="186.30" font-size="2.40" text-anchor="start" font-weight="bold" fill="#111">48</text>
-<text x="268.00" y="186.30" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">X1 MIDI IN pin 5</text>
-<text x="301.00" y="186.30" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">B2 d19</text>
-<text x="339.00" y="186.30" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">RL1 COM2 (pin 13)</text>
-<line x1="255.00" y1="189.40" x2="260.00" y2="189.40" stroke="#1f6fd1" stroke-width="1.20" stroke-linecap="round"/>
-<text x="261.50" y="190.30" font-size="2.40" text-anchor="start" font-weight="bold" fill="#111">49</text>
-<text x="268.00" y="190.30" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">X2 MIDI OUT A pin 4</text>
-<text x="301.00" y="190.30" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">B2 d37</text>
-<text x="339.00" y="190.30" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">RL2 COM1 (pin 4)</text>
-<line x1="255.00" y1="193.40" x2="260.00" y2="193.40" stroke="#1f6fd1" stroke-width="1.20" stroke-linecap="round"/>
-<text x="261.50" y="194.30" font-size="2.40" text-anchor="start" font-weight="bold" fill="#111">50</text>
-<text x="268.00" y="194.30" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">X2 MIDI OUT A pin 5</text>
-<text x="301.00" y="194.30" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">B2 j37</text>
-<text x="339.00" y="194.30" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">RL2 COM2 (pin 13)</text>
-<line x1="255.00" y1="197.40" x2="260.00" y2="197.40" stroke="#1a1a1a" stroke-width="1.20" stroke-linecap="round"/>
-<text x="261.50" y="198.30" font-size="2.40" text-anchor="start" font-weight="bold" fill="#111">51</text>
-<text x="268.00" y="198.30" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">X2 MIDI OUT A pin 2</text>
-<text x="301.00" y="198.30" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">B2 bottom GND rail @39</text>
-<text x="339.00" y="198.30" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">GND</text>
-<line x1="255.00" y1="201.40" x2="260.00" y2="201.40" stroke="#8e44ad" stroke-width="1.20" stroke-linecap="round"/>
-<text x="261.50" y="202.30" font-size="2.40" text-anchor="start" font-weight="bold" fill="#111">52</text>
-<text x="268.00" y="202.30" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">X3 MIDI OUT B pin 4</text>
-<text x="301.00" y="202.30" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">B2 j51</text>
-<text x="339.00" y="202.30" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">R8 33R</text>
-<line x1="255.00" y1="205.40" x2="260.00" y2="205.40" stroke="#8e44ad" stroke-width="1.20" stroke-linecap="round"/>
-<text x="261.50" y="206.30" font-size="2.40" text-anchor="start" font-weight="bold" fill="#111">53</text>
-<text x="268.00" y="206.30" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">X3 MIDI OUT B pin 5</text>
-<text x="301.00" y="206.30" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">B2 j47</text>
-<text x="339.00" y="206.30" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">R9 10R</text>
-<line x1="255.00" y1="209.40" x2="260.00" y2="209.40" stroke="#1a1a1a" stroke-width="1.20" stroke-linecap="round"/>
-<text x="261.50" y="210.30" font-size="2.40" text-anchor="start" font-weight="bold" fill="#111">54</text>
-<text x="268.00" y="210.30" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">X3 MIDI OUT B pin 2</text>
-<text x="301.00" y="210.30" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">B2 bottom GND rail @53</text>
-<text x="339.00" y="210.30" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">GND</text>
-<text x="255.00" y="215.30" font-size="2.30" text-anchor="start" font-weight="normal" fill="#444">X1 MIDI IN: pins 1, 2, 3 and the shell tabs (E) stay unconnected. X2/X3: pins 1, 3 unconnected.</text>
-<text x="255.00" y="218.90" font-size="2.30" text-anchor="start" font-weight="normal" fill="#444">Pin 2 is the shield pin. Front, top and solder-side views of the socket are on sheet 3.</text>
+<line x1="255.00" y1="29.90" x2="265.00" y2="29.90" stroke="#000" stroke-width="1.28" stroke-linecap="round" stroke-opacity="0.55"/>
+<line x1="255.00" y1="29.90" x2="265.00" y2="29.90" stroke="#ff8c00" stroke-width="0.86" stroke-linecap="round"/>
+<text x="268.00" y="30.90" font-size="2.60" text-anchor="start" font-weight="normal" fill="#111">5V (VBUS)</text>
+<line x1="255.00" y1="33.80" x2="265.00" y2="33.80" stroke="#000" stroke-width="1.28" stroke-linecap="round" stroke-opacity="0.55"/>
+<line x1="255.00" y1="33.80" x2="265.00" y2="33.80" stroke="#1a1a1a" stroke-width="0.86" stroke-linecap="round"/>
+<text x="268.00" y="34.80" font-size="2.60" text-anchor="start" font-weight="normal" fill="#111">GND</text>
+<line x1="255.00" y1="37.70" x2="265.00" y2="37.70" stroke="#000" stroke-width="1.28" stroke-linecap="round" stroke-opacity="0.55"/>
+<line x1="255.00" y1="37.70" x2="265.00" y2="37.70" stroke="#2ca02c" stroke-width="0.86" stroke-linecap="round"/>
+<text x="268.00" y="38.70" font-size="2.60" text-anchor="start" font-weight="normal" fill="#111">MIDI IN A path (DIN IN A, U1, GP1)</text>
+<line x1="255.00" y1="41.60" x2="265.00" y2="41.60" stroke="#000" stroke-width="1.28" stroke-linecap="round" stroke-opacity="0.55"/>
+<line x1="255.00" y1="41.60" x2="265.00" y2="41.60" stroke="#f2f2f2" stroke-width="0.86" stroke-linecap="round"/>
+<text x="268.00" y="42.60" font-size="2.60" text-anchor="start" font-weight="normal" fill="#111">MIDI IN B path (DIN IN B, U2, GP5)</text>
+<line x1="255.00" y1="45.50" x2="265.00" y2="45.50" stroke="#000" stroke-width="1.28" stroke-linecap="round" stroke-opacity="0.55"/>
+<line x1="255.00" y1="45.50" x2="265.00" y2="45.50" stroke="#1f6fd1" stroke-width="0.86" stroke-linecap="round"/>
+<text x="268.00" y="46.50" font-size="2.60" text-anchor="start" font-weight="normal" fill="#111">MIDI OUT A (GP0, DIN OUT A)</text>
+<line x1="255.00" y1="49.40" x2="265.00" y2="49.40" stroke="#000" stroke-width="1.28" stroke-linecap="round" stroke-opacity="0.55"/>
+<line x1="255.00" y1="49.40" x2="265.00" y2="49.40" stroke="#8e44ad" stroke-width="0.86" stroke-linecap="round"/>
+<text x="268.00" y="50.40" font-size="2.60" text-anchor="start" font-weight="normal" fill="#111">MIDI OUT B (GP4, DIN OUT B)</text>
+<line x1="255.00" y1="53.30" x2="265.00" y2="53.30" stroke="#000" stroke-width="1.28" stroke-linecap="round" stroke-opacity="0.55"/>
+<line x1="255.00" y1="53.30" x2="265.00" y2="53.30" stroke="#8c564b" stroke-width="0.86" stroke-linecap="round"/>
+<text x="268.00" y="54.30" font-size="2.60" text-anchor="start" font-weight="normal" fill="#111">Bypass links (relay NC to NC)</text>
+<line x1="255.00" y1="57.20" x2="265.00" y2="57.20" stroke="#000" stroke-width="1.28" stroke-linecap="round" stroke-opacity="0.55"/>
+<line x1="255.00" y1="57.20" x2="265.00" y2="57.20" stroke="#e6c200" stroke-width="0.86" stroke-linecap="round"/>
+<text x="268.00" y="58.20" font-size="2.60" text-anchor="start" font-weight="normal" fill="#111">Relay drive (GP2, coil -)</text>
+<line x1="255.00" y1="61.10" x2="265.00" y2="61.10" stroke="#000" stroke-width="1.28" stroke-linecap="round" stroke-opacity="0.55"/>
+<line x1="255.00" y1="61.10" x2="265.00" y2="61.10" stroke="#e377c2" stroke-width="0.86" stroke-linecap="round"/>
+<text x="268.00" y="62.10" font-size="2.60" text-anchor="start" font-weight="normal" fill="#111">I2C1 to OLED (GP6 SDA, GP7 SCL)</text>
+<line x1="255.00" y1="65.00" x2="265.00" y2="65.00" stroke="#000" stroke-width="1.28" stroke-linecap="round" stroke-opacity="0.55"/>
+<line x1="255.00" y1="65.00" x2="265.00" y2="65.00" stroke="#7f7f7f" stroke-width="0.86" stroke-linecap="round"/>
+<text x="268.00" y="66.00" font-size="2.60" text-anchor="start" font-weight="normal" fill="#111">SPI0 / control to TFT</text>
+<line x1="255.00" y1="68.90" x2="265.00" y2="68.90" stroke="#000" stroke-width="1.28" stroke-linecap="round" stroke-opacity="0.55"/>
+<line x1="255.00" y1="68.90" x2="265.00" y2="68.90" stroke="#17becf" stroke-width="0.86" stroke-linecap="round"/>
+<text x="268.00" y="69.90" font-size="2.60" text-anchor="start" font-weight="normal" fill="#111">Joystick (GP8/9/14/15/22)</text>
+<text x="255.00" y="74.80" font-size="3.60" text-anchor="start" font-weight="bold" fill="#111">Symbols</text>
+<rect x="255.00" y="77.20" width="4.00" height="3.00" rx="0.00" fill="#5b8bd6" stroke="#24467a" stroke-width="0.35" fill-opacity="0.10" stroke-dasharray="1.6 0.9"/>
+<text x="268.00" y="79.80" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">Module body on its header (wires may pass under it)</text>
+<circle cx="260.00" cy="83.10" r="0.77" fill="#d62728" stroke="#000" stroke-width="0.25"/>
+<text x="268.00" y="84.10" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">Wire end: plug into this hole. 12 = wire W12 in the netlist</text>
+<text x="268.00" y="88.40" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">Rails: outer = GND (blue), inner = supply (red)</text>
+<text x="268.00" y="92.00" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">B1 inner rails 3V3 · B2 top inner 3V3, bottom inner 5V</text>
+<text x="255.00" y="99.00" font-size="3.60" text-anchor="start" font-weight="bold" fill="#111">Read me first</text>
+<text x="255.00" y="104.00" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">Rev B: adds MIDI IN B (X4, U2 rows 55-57, GP5), wires W55-W59.</text>
+<text x="255.00" y="107.30" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">  W01-W53 as Rev A; W54 moves to the GND rail @49 (X3 moved).</text>
+<text x="255.00" y="110.60" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">Board 1 = MCU + UI.  Board 2 = MIDI IN A/B, relays, OUT A/B.</text>
+<text x="255.00" y="113.90" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">Pico 2: USB end off the left edge of B1, pin 1 (GP0) at h6,</text>
+<text x="255.00" y="117.20" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">  pin 40 (VBUS) at c6.  Free holes per Pico pin: a/b and i/j.</text>
+<text x="255.00" y="120.50" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">B2 bottom inner rail is 5 V (VBUS) - relay coils only.</text>
+<text x="255.00" y="123.80" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">  Everything else runs from 3V3 (Pico pin 36).</text>
+<text x="255.00" y="127.10" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">Check rail continuity at the middle of each rail with a meter:</text>
+<text x="255.00" y="130.40" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">  some full-size boards split the rails between rows 31 and 33.</text>
+<text x="255.00" y="133.70" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">Resistors lie flat over the holes they span (unused holes).</text>
+<text x="255.00" y="137.00" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">D3 stands upright j26 (cathode, band) / j27; D4 the same, g55 / g56.</text>
+<text x="255.00" y="140.30" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">IN B has no bypass relay: it goes straight to R10 / U2.</text>
+<text x="255.00" y="143.60" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">Relay pin numbers are the Omron G5V-2 terminal numbers;</text>
+<text x="255.00" y="146.90" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">  RL2 is rotated 180° (coil end on the right).</text>
+<text x="255.00" y="150.20" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">DIN sockets: short flying leads soldered to the socket pins.</text>
+<text x="255.00" y="153.50" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">  IN A/B shell (E) and pins 1, 2, 3 stay unconnected.</text>
+<text x="255.00" y="156.80" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">OLED DC is tied to GND to force I2C address 0x3C (see sheet 3).</text>
+<text x="255.00" y="160.10" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">Both displays can stay fitted: firmware uses the OLED if it answers</text>
+<text x="255.00" y="163.40" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">  at 0x3C, else the TFT.  To test the TFT, pull W25 (OLED Vin).</text>
+<text x="255.00" y="166.70" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">Joystick: as drawn, push towards board-1 row a = UP.</text>
+<text x="255.00" y="170.00" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">  Directions follow the ALPS SKQUCA pinout - verify with a meter.</text>
+<text x="255.00" y="173.30" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">Every connection was machine-checked against docs/wiring.md.</text>
+<text x="255.00" y="181.00" font-size="3.60" text-anchor="start" font-weight="bold" fill="#111">Off-board flying leads (DIN sockets)</text>
+<text x="255.00" y="186.50" font-size="2.50" text-anchor="start" font-weight="bold" fill="#111">Wire</text>
+<text x="268.00" y="186.50" font-size="2.50" text-anchor="start" font-weight="bold" fill="#111">Socket pin</text>
+<text x="301.00" y="186.50" font-size="2.50" text-anchor="start" font-weight="bold" fill="#111">Plugs into</text>
+<text x="339.00" y="186.50" font-size="2.50" text-anchor="start" font-weight="bold" fill="#111">Function</text>
+<line x1="255.00" y1="187.70" x2="407.00" y2="187.70" stroke="#000" stroke-width="0.30"/>
+<line x1="255.00" y1="190.40" x2="260.00" y2="190.40" stroke="#2ca02c" stroke-width="1.20" stroke-linecap="round"/>
+<text x="261.50" y="191.30" font-size="2.40" text-anchor="start" font-weight="bold" fill="#111">47</text>
+<text x="268.00" y="191.30" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">X1 MIDI IN A pin 4</text>
+<text x="301.00" y="191.30" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">B2 j19</text>
+<text x="339.00" y="191.30" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">RL1 COM1 (pin 4)</text>
+<line x1="255.00" y1="194.10" x2="260.00" y2="194.10" stroke="#2ca02c" stroke-width="1.20" stroke-linecap="round"/>
+<text x="261.50" y="195.00" font-size="2.40" text-anchor="start" font-weight="bold" fill="#111">48</text>
+<text x="268.00" y="195.00" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">X1 MIDI IN A pin 5</text>
+<text x="301.00" y="195.00" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">B2 d19</text>
+<text x="339.00" y="195.00" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">RL1 COM2 (pin 13)</text>
+<line x1="255.00" y1="197.80" x2="260.00" y2="197.80" stroke="#1f6fd1" stroke-width="1.20" stroke-linecap="round"/>
+<text x="261.50" y="198.70" font-size="2.40" text-anchor="start" font-weight="bold" fill="#111">49</text>
+<text x="268.00" y="198.70" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">X2 MIDI OUT A pin 4</text>
+<text x="301.00" y="198.70" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">B2 d37</text>
+<text x="339.00" y="198.70" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">RL2 COM1 (pin 4)</text>
+<line x1="255.00" y1="201.50" x2="260.00" y2="201.50" stroke="#1f6fd1" stroke-width="1.20" stroke-linecap="round"/>
+<text x="261.50" y="202.40" font-size="2.40" text-anchor="start" font-weight="bold" fill="#111">50</text>
+<text x="268.00" y="202.40" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">X2 MIDI OUT A pin 5</text>
+<text x="301.00" y="202.40" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">B2 j37</text>
+<text x="339.00" y="202.40" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">RL2 COM2 (pin 13)</text>
+<line x1="255.00" y1="205.20" x2="260.00" y2="205.20" stroke="#1a1a1a" stroke-width="1.20" stroke-linecap="round"/>
+<text x="261.50" y="206.10" font-size="2.40" text-anchor="start" font-weight="bold" fill="#111">51</text>
+<text x="268.00" y="206.10" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">X2 MIDI OUT A pin 2</text>
+<text x="301.00" y="206.10" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">B2 bottom GND rail @39</text>
+<text x="339.00" y="206.10" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">GND</text>
+<line x1="255.00" y1="208.90" x2="260.00" y2="208.90" stroke="#8e44ad" stroke-width="1.20" stroke-linecap="round"/>
+<text x="261.50" y="209.80" font-size="2.40" text-anchor="start" font-weight="bold" fill="#111">52</text>
+<text x="268.00" y="209.80" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">X3 MIDI OUT B pin 4</text>
+<text x="301.00" y="209.80" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">B2 j51</text>
+<text x="339.00" y="209.80" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">R8 33R</text>
+<line x1="255.00" y1="212.60" x2="260.00" y2="212.60" stroke="#8e44ad" stroke-width="1.20" stroke-linecap="round"/>
+<text x="261.50" y="213.50" font-size="2.40" text-anchor="start" font-weight="bold" fill="#111">53</text>
+<text x="268.00" y="213.50" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">X3 MIDI OUT B pin 5</text>
+<text x="301.00" y="213.50" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">B2 j47</text>
+<text x="339.00" y="213.50" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">R9 10R</text>
+<line x1="255.00" y1="216.30" x2="260.00" y2="216.30" stroke="#1a1a1a" stroke-width="1.20" stroke-linecap="round"/>
+<text x="261.50" y="217.20" font-size="2.40" text-anchor="start" font-weight="bold" fill="#111">54</text>
+<text x="268.00" y="217.20" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">X3 MIDI OUT B pin 2</text>
+<text x="301.00" y="217.20" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">B2 bottom GND rail @49</text>
+<text x="339.00" y="217.20" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">GND (Rev B: was @53)</text>
+<line x1="255.00" y1="220.00" x2="260.00" y2="220.00" stroke="#555" stroke-width="1.60" stroke-linecap="round"/>
+<line x1="255.00" y1="220.00" x2="260.00" y2="220.00" stroke="#f2f2f2" stroke-width="1.20" stroke-linecap="round"/>
+<text x="261.50" y="220.90" font-size="2.40" text-anchor="start" font-weight="bold" fill="#111">58</text>
+<text x="268.00" y="220.90" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">X4 MIDI IN B pin 4</text>
+<text x="301.00" y="220.90" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">B2 j58</text>
+<text x="339.00" y="220.90" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">R10 220R</text>
+<line x1="255.00" y1="223.70" x2="260.00" y2="223.70" stroke="#555" stroke-width="1.60" stroke-linecap="round"/>
+<line x1="255.00" y1="223.70" x2="260.00" y2="223.70" stroke="#f2f2f2" stroke-width="1.20" stroke-linecap="round"/>
+<text x="261.50" y="224.60" font-size="2.40" text-anchor="start" font-weight="bold" fill="#111">59</text>
+<text x="268.00" y="224.60" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">X4 MIDI IN B pin 5</text>
+<text x="301.00" y="224.60" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">B2 j56</text>
+<text x="339.00" y="224.60" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">H11L1 U2 pin 2</text>
+<text x="255.00" y="229.30" font-size="2.30" text-anchor="start" font-weight="normal" fill="#444">X1/X4 MIDI IN A/B: pins 1, 2, 3 and the shell tabs (E) stay unconnected. X2/X3: pins 1, 3 unconnected.</text>
+<text x="255.00" y="232.90" font-size="2.30" text-anchor="start" font-weight="normal" fill="#444">Pin 2 is the shield pin. Front, top and solder-side views of the socket are on sheet 3.</text>
 </svg>

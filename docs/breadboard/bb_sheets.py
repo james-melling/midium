@@ -26,10 +26,12 @@ GROUPS = {
     "W23": "OLED (DS1)",
     "W28": "Pico signals to board 2",
     "W32": "Relay drive",
-    "W41": "MIDI IN opto (U1)",
+    "W41": "MIDI IN A opto (U1)",
     "W44": "Bypass links (relay NC to NC)",
     "W46": "MIDI OUT B source",
     "W47": "DIN flying leads (off-board)",
+    "W55": "MIDI IN B opto (U2, GP5) · Rev B",
+    "W58": "MIDI IN B flying leads (off-board) · Rev B",
 }
 
 
@@ -53,7 +55,7 @@ def sheet2():
         s.text(xx, y, h, size=2.6, weight="bold")
     s.line(12, y + 1.3, 238, y + 1.3, sw=0.35)
     y += 4.6
-    pitch = 3.62
+    pitch = 3.3
     for w in WIRES:
         if w["id"] in GROUPS:
             s.text(x[1], y + 0.2, GROUPS[w["id"]], size=2.45, weight="bold",
@@ -65,10 +67,13 @@ def sheet2():
         s.text(x[2], y, hole_label(w["a"]), size=2.35)
         s.text(x[3], y, hole_label(w["b"]), size=2.35)
         s.text(x[4] + 5, y, f"{_len_mm(w):.0f}", size=2.35, anchor="end")
+        if w["col"] == "midiinb":   # white wire: outline it
+            s.line(x[5], y - 0.8, x[5] + 4.5, y - 0.8, stroke="#555", sw=1.9,
+                   extra=' stroke-linecap="round"')
         s.line(x[5], y - 0.8, x[5] + 4.5, y - 0.8, stroke=col, sw=1.5,
                extra=' stroke-linecap="round"')
         short = {"3v3": "red", "5v": "orange", "gnd": "black",
-                 "midiin": "green", "outa": "blue", "outb": "violet",
+                 "midiin": "green", "midiinb": "white", "outa": "blue", "outb": "violet",
                  "bypass": "brown", "relay": "yellow", "i2c": "pink",
                  "tft": "grey", "joy": "cyan"}[w["col"]]
         s.text(x[5] + 6.5, y, short, size=2.2, fill="#333")
@@ -86,7 +91,7 @@ def sheet2():
     s.line(X0, y + 1.3, PAGE_W - 8, y + 1.3, sw=0.35)
     y += 4.6
     order = ["A1", "R3", "R4", "Q1", "D1", "RL1", "RL2", "D2", "U1", "R1",
-             "D3", "C1", "R2", "R6", "R7", "R9", "R8", "DS1", "R5", "C2",
+             "D3", "C1", "R2", "U2", "R10", "D4", "C3", "R11", "R6", "R7", "R9", "R8", "DS1", "R5", "C2",
              "DS2", "SW1"]
     for ref in order:
         p = PARTS[ref]
@@ -217,7 +222,7 @@ def sheet3():
 
     # ---------------------------------------------------------------- DIN
     X, Y, W, H = 12, 19, 244, 92
-    panel(s, X, Y, W, H, "5-pin DIN sockets X1-X3 · Same Sky SDS-50J "
+    panel(s, X, Y, W, H, "5-pin DIN sockets X1-X4 · Same Sky SDS-50J "
           "(female, right-angle PCB)")
     s.text(X + 3, Y + 10, "MIDI numbering runs 1-4-2-5-3 around the arc. "
            "Pin 2 (centre) = shield.  Viewed from the front of a socket, "
@@ -235,33 +240,38 @@ def sheet3():
     # connection table
     tx, ty = X + 182, Y + 22
     s.text(tx, ty, "Lead per pin", size=2.7, weight="bold")
-    rows = [("X1 MIDI IN", [("4", "green", "B2 j19 (RL1 COM1)", "#2ca02c"),
-                            ("5", "green", "B2 d19 (RL1 COM2)", "#2ca02c"),
-                            ("2", "-", "NOT connected", None),
-                            ("1,3,E", "-", "NOT connected", None)]),
+    rows = [("X1 MIDI IN A", [("4", "green", "B2 j19 (RL1 COM1)", "#2ca02c"),
+                              ("5", "green", "B2 d19 (RL1 COM2)", "#2ca02c"),
+                              ("2,1,3,E", "-", "NOT connected", None)]),
             ("X2 OUT A", [("4", "blue", "B2 d37 (RL2 COM1)", "#1f6fd1"),
                           ("5", "blue", "B2 j37 (RL2 COM2)", "#1f6fd1"),
                           ("2", "black", "B2 GND rail @39", "#1a1a1a"),
                           ("1,3", "-", "NOT connected", None)]),
             ("X3 OUT B", [("4", "violet", "B2 j51 (R8 33Ω)", "#8e44ad"),
                           ("5", "violet", "B2 j47 (R9 10Ω)", "#8e44ad"),
-                          ("2", "black", "B2 GND rail @53", "#1a1a1a"),
-                          ("1,3", "-", "NOT connected", None)])]
+                          ("2", "black", "B2 GND rail @49", "#1a1a1a"),
+                          ("1,3", "-", "NOT connected", None)]),
+            ("X4 MIDI IN B", [("4", "white", "B2 j58 (R10 220Ω)", "#f2f2f2"),
+                              ("5", "white", "B2 j56 (U2 pin 2)", "#f2f2f2"),
+                              ("2,1,3,E", "-", "NOT connected", None)])]
     y = ty + 4.5
     for name, rs in rows:
         s.text(tx, y, name, size=2.4, weight="bold")
-        y += 3.4
+        y += 3.0
         for pin, cname, dest, col in rs:
             if col:
+                if cname == "white":
+                    s.line(tx + 1, y - 0.8, tx + 5, y - 0.8, stroke="#555",
+                           sw=1.7, extra=' stroke-linecap="round"')
                 s.line(tx + 1, y - 0.8, tx + 5, y - 0.8, stroke=col, sw=1.3,
                        extra=' stroke-linecap="round"')
             s.text(tx + 7, y, f"pin {pin}", size=2.2)
             s.text(tx + 20, y, dest, size=2.2)
-            y += 3.1
-        y += 1.2
+            y += 2.75
+        y += 0.8
     s.text(X + 3, Y + H - 4.5, "The shell tabs (E) are not used on the "
-           "breadboard. Never ground the MIDI IN shell or pin 2: the IN side "
-           "must stay isolated (wiring.md section 2).", size=2.2, fill="#444")
+           "breadboard. Never ground a MIDI IN (A or B) shell or pin 2: the IN "
+           "side must stay isolated (wiring.md section 2).", size=2.2, fill="#444")
     s.text(X + 3, Y + H - 1.6, "Socket pins are on a 2.5/5 mm grid, not 0.1\": "
            "solder short (~15 cm) solid-core leads, sleeve each joint, "
            "label the socket.", size=2.2, fill="#444")
@@ -329,7 +339,7 @@ def sheet3():
     s.text(X + 72, ty, "RL2 (OUT A side, rotated 180°)", size=2.3,
            weight="bold")
     rows = [("1/16", "1 = +5V (j16), 16 = COIL-", "16 = +5V (j40), 1 = COIL-"),
-            ("4 / 13", "COM: IN DIN 4 / IN DIN 5", "COM: OUT A DIN 4 / DIN 5"),
+            ("4 / 13", "COM: IN A DIN 4 / DIN 5", "COM: OUT A DIN 4 / DIN 5"),
             ("6 / 11", "NC: to RL2 6 / RL2 11", "NC: to RL1 6 / RL1 11"),
             ("8 / 9", "NO: R1 220Ω / opto pin 2", "NO: R6 33Ω / R7 10Ω")]
     for k, (a, b, c) in enumerate(rows):
@@ -340,8 +350,8 @@ def sheet3():
 
     # ---------------------------------------------------------------- H11L1
     X, Y, W, H = 12, 114, 78, 62
-    panel(s, X, Y, W, H, "U1 · H11L1M opto (DIP-6, top view)")
-    ox, oy = X + 22, Y + 16
+    panel(s, X, Y, W, H, "U1 (IN A), U2 (IN B) · H11L1M, top view")
+    ox, oy = X + 22, Y + 14.5
     s.rect(ox, oy, 34, 22, fill="#2b2b2b", stroke="#000", sw=0.3, rx=0.6)
     s.path(f"M {ox} {oy+8} A 3 3 0 0 1 {ox} {oy+14}", fill="#888")
     s.circle(ox + 4, oy + 18, 1.0, fill="#bbb")
@@ -360,12 +370,12 @@ def sheet3():
                weight="bold")
         s.text(cx, oy - 4.2, nm, size=2.0, anchor="middle")
     for k, t in enumerate([
-            "Notch (and pin-1 dot) to the LEFT on board 2 (rows 26-28).",
-            "1 ← 220Ω ← RL1 NO1;  2 ← RL1 NO2;  "
-            "D3 1N4148: K→1, A→2",
-            "4 → GP1 + 470Ω pull-up to 3V3;  6 = 3V3 + 100nF to 5;  "
-            "3 open"]):
-        s.text(X + 3, Y + 50 + k * 3.6, t, size=2.15)
+            "Notch (pin-1 dot) LEFT. B2 rows: U1 26-28, U2 55-57.",
+            "U1: 1 ← R1 220Ω ← RL1 NO1; 2 ← RL1 NO2; D3 K→1",
+            "U2: 1 ← R10 220Ω ← X4 pin 4; 2 ← X4 pin 5; D4 K→1",
+            "4 → GP1 (U1) / GP5 (U2) + 470Ω (R2 / R11) to 3V3",
+            "6 = 3V3 + 100nF (C1 / C3) to 5 = GND; 3 open"]):
+        s.text(X + 3, Y + 47.3 + k * 3.15, t, size=2.1)
 
     # ---------------------------------------------------------------- 2N3904
     X, Y, W, H = 93, 114, 52, 62
@@ -439,12 +449,13 @@ def sheet3():
     s.text(dx + 30, dy + 8.5, "K (cathode, band)", size=2.1, anchor="end")
     for k, t in enumerate([
             "D1, D2 flyback: band (K) to +5V, i.e. B2 bottom half (g13, g42).",
-            "D3 opto protection: band (K) in j26 (opto pin 1), stand upright."]):
+            "D3 opto A protection: band (K) in j26 (U1 pin 1), stand upright.",
+            "D4 opto B protection: band (K) in g55 (U2 pin 1), stand upright."]):
         s.text(X + 42, Y + 13 + k * 3.6, t, size=2.15)
     rows = [("10 Ω", "R7, R9", "brown black black"),
             ("33 Ω", "R6, R8", "orange orange black"),
-            ("220 Ω", "R1", "red red brown"),
-            ("470 Ω", "R2", "yellow violet brown"),
+            ("220 Ω", "R1, R10", "red red brown"),
+            ("470 Ω", "R2, R11", "yellow violet brown"),
             ("1 kΩ", "R3", "brown black red"),
             ("10 kΩ", "R4, R5", "brown black orange"),
             ("4.7 kΩ", "(spare: I2C pull-ups)", "yellow violet red")]
@@ -530,9 +541,10 @@ def sheet3():
     X, Y, W, H = 256, 179, 152, 58
     panel(s, X, Y, W, H, "A1 · Pico 2 pins used + Debug Probe")
     used = [("1", "GP0", "UART0 TX → OUT A", "h6"),
-            ("2", "GP1", "UART0 RX ← opto", "h7"),
+            ("2", "GP1", "UART0 RX ← opto A", "h7"),
             ("4", "GP2", "relay drive", "h9"),
             ("6", "GP4", "UART1 TX → OUT B", "h11"),
+            ("7", "GP5", "UART1 RX ← opto B", "h12"),
             ("9/10", "GP6/7", "I2C1 SDA/SCL", "h14/15"),
             ("11/12", "GP8/9", "joy UP/DOWN", "h16/17"),
             ("19/20", "GP14/15", "joy LEFT/RIGHT", "h24/25"),
@@ -543,7 +555,7 @@ def sheet3():
             ("36", "3V3(OUT)", "3.3 V supply", "c10"),
             ("40", "VBUS", "5 V for relay coils", "c6")]
     for k, r in enumerate(used):
-        yy = Y + 11 + k * 3.35
+        yy = Y + 10.5 + k * 3.2
         for xx, v in zip((3, 15, 32, 66), r):
             s.text(X + xx, yy, v, size=2.1)
     px = X + 82
@@ -557,7 +569,7 @@ def sheet3():
             "USB plugged in or the relays never pull in.",
             "Leave the 'U' port unconnected: UART0 is MIDI.",
             "Reserved, not fitted: GP10-13 (microSD),",
-            "GP26-28 (XRC/GPI), free: GP3, GP5."]):
+            "GP26-28 (XRC/GPI), free: GP3."]):
         s.text(px, Y + 11 + k * 3.6, t, size=2.05)
     return s.render()
 
@@ -582,12 +594,15 @@ def sheet4():
          "bottom inner 5 V, outer rails GND."),
         ("Relay drive", "R3, R4, Q1, D1, D2, RL1, RL2 (stripes as drawn), "
          "W28, W32-W40. No coil current yet (GP2 low)."),
-        ("MIDI IN", "U1 (notch left), R1, D3 upright, C1, R2, W29, W41-W43."),
-        ("OUT A + bypass", "R6, R7, W30, W44, W45. Meter, unpowered: IN DIN 4 "
+        ("MIDI IN A", "U1 (notch left), R1, D3 upright, C1, R2, W29, W41-W43."),
+        ("OUT A + bypass", "R6, R7, W30, W44, W45. Meter, unpowered: IN A DIN 4 "
          "↔ OUT A DIN 4 and 5 ↔ 5 read ~0 Ω once leads are on."),
         ("OUT B", "R8, R9 across the channel, W31, W46."),
-        ("DIN sockets", "Solder and sleeve the leads, then W47-W54. X1 pin 2 "
-         "and shell stay free."),
+        ("MIDI IN B", "U2 (notch left, rows 55-57), R10, D4 upright (band in "
+         "g55), C3, R11, W55-W57. No relay: IN B goes straight to U2."),
+        ("DIN sockets", "Solder and sleeve the leads, then W47-W54 and W58-W59 "
+         "(X4 IN B). X1/X4 pin 2 and shells stay free. Rev A builds: move W54 "
+         "to the GND rail @49."),
         ("OLED", "Check J1/J2, then R5, C2, DS1, W23-W27."),
         ("TFT + joystick", "DS2, W09-W16; SW1 (meter-check directions), "
          "W17-W22."),
@@ -609,15 +624,17 @@ def sheet4():
     for i, ln in enumerate(wrap("Needs: USB-MIDI interface (1 in / 1 out), a "
                                 "MIDI monitor + sender on the laptop, two DIN "
                                 "cables; a second interface or a synth on OUT A "
-                                "helps for step 3.", 110)):
+                                "helps for step 3; step 8 needs a second MIDI "
+                                "source for IN B.", 110)):
         s.text(X, y + 4.8 + i * 3.4, ln, size=2.5, fill="#444")
     y += 3.4
     tests = [
-        ("Unpowered. Laptop OUT → IN, OUT A → 2nd interface/synth. "
-         "Send notes.", "Notes arrive at OUT A through the relays (bypass)."),
+        ("Unpowered. Laptop OUT → IN A, OUT A → 2nd interface/synth. "
+         "Send notes.", "Notes arrive at OUT A through the relays (passive "
+         "bypass)."),
         ("Power from USB. Watch relays and screen.",
          "Relays click ~1 s after power-up, splash, then 'MIDIum  A:on B:on'."),
-        ("Laptop OUT → IN, OUT A → interface 2, OUT B → laptop IN. "
+        ("Laptop OUT → IN A, OUT A → interface 2, OUT B → laptop IN. "
          "Send notes, CC, PC, bend, sysex.",
          "Shown on screen, LED blinks, same data on A and B; sysex "
          "byte-identical on B."),
@@ -627,12 +644,16 @@ def sheet4():
          "Laptop sees each on OUT B; MSC GO = F0 7F 7F 02 7F 01 F7."),
         ("Generate > Clock BPM 120 > Clock out on.",
          "120.0 BPM measured (24 ppqn, 20.833 ms per clock)."),
-        ("Dense stream 60 s: running-status CC sweep + 1 kB sysex; Note sweep "
-         "+ Clock out running.",
+        ("Dense stream 60 s on IN A: running-status CC sweep + 1 kB sysex; "
+         "Note sweep + Clock out running.",
          "Every byte on OUT B; Drops A/B = 0, UART errors = 0, Thru orphans "
          "= 0 (Mon overflow allowed)."),
+        ("Second source into IN B. Menu > Routing > A+B to both outputs. "
+         "Send from both at once, incl. sysex on each.",
+         "Both streams merged on OUT A and OUT B, every message intact "
+         "(sysex never interleaved). Monitor tags each line A or B."),
         ("Pull USB power mid-stream.",
-         "Relays drop out; IN is hard-wired to OUT A again."),
+         "Relays drop out; IN A hard-wired to OUT A again. IN B stops."),
     ]
     y += 11
     s.text(X + 5, y, "#", size=2.7, weight="bold")
@@ -684,11 +705,11 @@ def sheet4():
           ["TFT / joystick / OLED", "(milestone 1)"], col="#e8eefb",
           stroke="#24467a", dashed=False)
     mini_board(bx, by + 42, "Board 2 (as built)")
-    block(bx + 2 * k, by + 42 + 6 * k, 50 * k, 10 * k,
-          ["MIDI IN, relays, OUT A/B", "(milestone 1, rows 1-53)"],
+    block(bx + 2 * k, by + 42 + 6 * k, 55 * k, 10 * k,
+          ["MIDI IN A/B, relays, OUT A/B", "(milestone 1, rows 1-58)"],
           col="#e8eefb", stroke="#24467a", dashed=False)
-    block(bx + 54 * k, by + 42 + 2 * k, 11 * k, 18 * k,
-          ["free", "54-63"], col="#fff", stroke="#999")
+    block(bx + 59 * k, by + 42 + 2 * k, 6 * k, 18 * k,
+          ["free", "59-", "63"], col="#fff", stroke="#999")
     mini_board(bx, by + 82, "Board 3 (LATER, half-size is enough)", rows=30)
     block(bx + 1 * k, by + 82 + 1.5 * k, 15 * k, 19 * k,
           ["RTC", "RV-3028-C8", "eval board", "I2C 0x52"])

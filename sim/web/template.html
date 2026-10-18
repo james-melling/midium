@@ -1,0 +1,877 @@
+<title>MIDIum Simulator</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: test bench. Left, the MT-1 top face with its live screen and joystick;
+   right, the signal generator (IN A / IN B) feeding it and the capture of OUT A / OUT B.
+   Stacks to one column on narrow screens. */
+:root {
+  --bg: #e7eaed;
+  --panel: #f7f8f9;
+  --panel-2: #eef1f3;
+  --ink: #15191d;
+  --muted: #59626c;
+  --line: #cdd3d9;
+  --accent: #b86200;
+  --accent-ink: #ffffff;
+  --focus: #1f63c6;
+  /* message colour classes (firmware msg_class_t), tuned per theme */
+  --c-note: #157a27;
+  --c-cc: #08739a;
+  --c-pc: #8a6400;
+  --c-sysex: #a3239a;
+  --c-rt: #66707a;
+  --c-err: #c42525;
+  --c-dim: #7c858e;
+  /* the device itself stays anodised black in both themes */
+  --anod: #1f2023;
+  --anod-hi: #2b2c30;
+  --anod-edge: #121315;
+  --etch: #e9eaec;
+  --led-midi: #67f08f;
+  --led-chg: #ffd23a;
+  --f-label: "Questrial", "Century Gothic", "Didact Gothic", "Avenir Next", "Segoe UI", sans-serif;
+  --f-mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1113; --panel: #171a1d; --panel-2: #1d2125; --ink: #e6e9ec; --muted: #939ca6;
+    --line: #2c3237; --accent: #ffa020; --accent-ink: #1c1100; --focus: #6aa8ff;
+    --c-note: #5fe36a; --c-cc: #4fd8f5; --c-pc: #f3d543; --c-sysex: #f46cf0; --c-rt: #9aa1a8;
+    --c-err: #ff6464; --c-dim: #7d858d;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1113; --panel: #171a1d; --panel-2: #1d2125; --ink: #e6e9ec; --muted: #939ca6;
+  --line: #2c3237; --accent: #ffa020; --accent-ink: #1c1100; --focus: #6aa8ff;
+  --c-note: #5fe36a; --c-cc: #4fd8f5; --c-pc: #f3d543; --c-sysex: #f46cf0; --c-rt: #9aa1a8;
+  --c-err: #ff6464; --c-dim: #7d858d;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.45 var(--f-label); }
+button, select, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.wrap {
+  max-width: 1320px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 40px;
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px;
+}
+
+/* ---------- top bar ---------- */
+.top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px; }
+.top h1 { margin: 0; font-size: 1.6rem; font-weight: 400; letter-spacing: 0.01em; text-wrap: balance; }
+.top h1 span { color: var(--muted); }
+.top p { margin: 4px 0 0; color: var(--muted); max-width: 62ch; font-size: 0.92rem; }
+.top-ctl { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--panel); }
+.seg button { border: 0; background: transparent; padding: 7px 12px; cursor: pointer; font-size: 0.86rem; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.btn {
+  border: 1px solid var(--line); background: var(--panel); border-radius: 6px;
+  padding: 7px 12px; cursor: pointer; font-size: 0.86rem; line-height: 1.2;
+}
+.btn:hover { border-color: var(--muted); }
+.btn:active { transform: translateY(1px); }
+.btn[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+/* ---------- main grid ---------- */
+.layout { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.col { display: grid; gap: 20px; min-width: 0; }
+@media (max-width: 1000px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  /* phone / tablet: device, then inputs, outputs, and the controls legend last */
+  .col { display: contents; }
+  .bench { order: 1; } #p-in { order: 2; } #p-out { order: 3; } #p-ctl { order: 4; }
+}
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; min-width: 0; }
+.panel h2 { margin: 0 0 10px; font-size: 0.78rem; font-weight: 400; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.panel h2 b { color: var(--ink); font-weight: 400; }
+.panel .sub { margin: -4px 0 12px; color: var(--muted); font-size: 0.86rem; }
+
+/* ---------- the device ---------- */
+.bench { container-type: inline-size; }
+.device {
+  position: relative; border-radius: 10px; padding: 4.5% 5.5% 4%;
+  background:
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.012) 0 1px, rgba(0,0,0,0) 1px 3px),
+    linear-gradient(180deg, var(--anod-hi), var(--anod) 22%, var(--anod) 80%, #1a1b1e);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 -1px 0 rgba(0,0,0,0.5) inset, 0 14px 28px -12px rgba(0,0,0,0.45), 0 2px 4px rgba(0,0,0,0.25);
+  color: var(--etch);
+  display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 0.6fr);
+  grid-template-areas: "screen leds" "screen joy" "word model";
+  column-gap: 5%; row-gap: 3cqw;
+  user-select: none; -webkit-user-select: none; touch-action: manipulation;
+}
+/* end plates with screws */
+.device::before, .device::after {
+  content: ""; position: absolute; top: 0; bottom: 0; width: 2.2%;
+  background: linear-gradient(90deg, var(--anod-edge), #26272b 60%, var(--anod-edge));
+}
+.device::before { left: 0; border-radius: 10px 0 0 10px; }
+.device::after { right: 0; border-radius: 0 10px 10px 0; }
+.screw { position: absolute; width: 1.6cqw; height: 1.6cqw; min-width: 7px; min-height: 7px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #3a3b40, #0c0c0e 70%); z-index: 1; }
+.screw.tl { left: 0.3%; top: 3%; } .screw.tr { right: 0.3%; top: 3%; }
+.screw.bl { left: 0.3%; bottom: 3%; } .screw.br { right: 0.3%; bottom: 3%; }
+
+.screen { grid-area: screen; align-self: center; border: 2px solid #c8ccd2; padding: 3.2%; background: #0b0c0e; }
+.screen .glass { background: #000; padding: 2.6% 2.8%; box-shadow: inset 0 0 0 1px #000, inset 0 2px 8px rgba(0,0,0,0.9); }
+.screen canvas { display: block; width: 100%; height: auto; aspect-ratio: 320 / 170; image-rendering: pixelated; transition: filter 120ms linear; }
+.screen canvas.oled { aspect-ratio: 2 / 1; }
+
+.leds { grid-area: leds; display: flex; gap: 9%; justify-content: center; align-items: center; font-size: clamp(11px, 2.6cqw, 17px); letter-spacing: 0.02em; }
+.led { display: inline-flex; align-items: center; gap: 0.45em; }
+.led i { width: 1.05em; height: 1.05em; border-radius: 50%; display: inline-block; background: #2b322e; box-shadow: inset 0 1px 2px rgba(0,0,0,0.7); }
+.led.midi.on i { background: var(--led-midi); box-shadow: 0 0 0.7em var(--led-midi), inset 0 0 2px #fff; }
+.led.chg i { background: #4a4026; }
+
+.joy { grid-area: joy; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
+  width: min(100%, 24cqw); aspect-ratio: 1; justify-self: center; align-self: center; }
+.jb { border: 0; background: transparent; color: var(--etch); padding: 0; cursor: pointer; display: grid; place-items: center; border-radius: 6px; -webkit-tap-highlight-color: transparent; }
+.jb svg { width: 46%; height: 46%; fill: currentColor; transition: transform 80ms; }
+.jb:hover svg { color: #fff; }
+.jb.down svg { transform: scale(0.82); }
+.jb.up { grid-area: 1 / 2; } .jb.dn { grid-area: 3 / 2; } .jb.lt { grid-area: 2 / 1; } .jb.rt { grid-area: 2 / 3; }
+.jb.press { grid-area: 2 / 2; border-radius: 50%; width: 118%; height: 118%; justify-self: center; align-self: center;
+  border: 0.35cqw solid #d9dce0; background: radial-gradient(circle at 50% 45%, #141416, #050506 70%); box-shadow: 0 0 0 0.5cqw #121315, 0 2px 6px rgba(0,0,0,0.7); }
+.jb.press .cap { width: 62%; height: 62%; border-radius: 50%; display: block;
+  background: radial-gradient(circle at 46% 40%, #3a3b40 0 18%, #202124 45%, #0d0d0f 100%);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.8), inset 0 1px 1px rgba(255,255,255,0.08); transition: transform 80ms; }
+.jb.press.down .cap { transform: scale(0.92); }
+.jb.press[data-tilt="0"] .cap { transform: translateY(-9%); }
+.jb.press[data-tilt="1"] .cap { transform: translateY(9%); }
+.jb.press[data-tilt="2"] .cap { transform: translateX(-9%); }
+.jb.press[data-tilt="3"] .cap { transform: translateX(9%); }
+
+.word { grid-area: word; align-self: end; font-size: 10.5cqw; line-height: 0.9; letter-spacing: -0.01em; font-weight: 400; color: #fff;
+  -webkit-text-stroke: 0.25cqw #fff; }
+.model { grid-area: model; align-self: end; justify-self: end; text-align: right; display: grid; gap: 0.6cqw; padding-bottom: 0.6cqw; }
+.model .brand { font-size: 3cqw; letter-spacing: 0.08em; }
+.model .mt { font-size: 2.9cqw; letter-spacing: 0.04em; font-weight: 400; -webkit-text-stroke: 0.08cqw #fff; color: #fff; }
+
+@container (max-width: 560px) {
+  .device { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "screen screen" "joy leds" "word model"; padding: 6% 6.5% 5%; row-gap: 5cqw; }
+  .joy { width: min(100%, 40cqw); }
+  .leds { flex-direction: column; align-items: flex-start; gap: 1em; font-size: 14px; }
+  .word { font-size: 13cqw; }
+  .model .brand { font-size: 3.6cqw; } .model .mt { font-size: 3.8cqw; }
+  .jb.press { border-width: 0.5cqw; box-shadow: 0 0 0 0.7cqw #121315, 0 2px 6px rgba(0,0,0,0.7); }
+}
+
+.devbar { display: flex; flex-wrap: wrap; gap: 6px 18px; justify-content: space-between; margin-top: 10px; color: var(--muted); font-size: 0.82rem; }
+.devbar span b { color: var(--ink); font-weight: 400; font-family: var(--f-mono); font-size: 0.78rem; }
+
+/* ---------- controls legend ---------- */
+.keys { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 10px; font-size: 0.85rem; color: var(--muted); }
+kbd { font-family: var(--f-mono); font-size: 0.74rem; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; background: var(--panel-2); color: var(--ink); }
+.tbl { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 0.84rem; }
+th, td { text-align: left; padding: 6px 8px; border-top: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 400; color: var(--muted); font-size: 0.74rem; letter-spacing: 0.08em; text-transform: uppercase; border-top: 0; }
+td:first-child { white-space: nowrap; }
+
+/* ---------- inputs ---------- */
+.ins { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 620px) { .ins { grid-template-columns: minmax(0, 1fr); } }
+.port { border: 1px solid var(--line); border-radius: 6px; padding: 10px; background: var(--panel-2); display: grid; gap: 9px; min-width: 0; }
+.port-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.port-h strong { font-weight: 400; font-size: 1.05rem; letter-spacing: 0.04em; display: inline-flex; align-items: center; gap: 8px; }
+.act { width: 9px; height: 9px; border-radius: 50%; background: var(--line); display: inline-block; }
+.act.on { background: var(--c-note); }
+.port-h label { font-size: 0.8rem; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
+.port-h select, .bpm input { border: 1px solid var(--line); background: var(--panel); border-radius: 4px; padding: 2px 4px; font-family: var(--f-mono); font-size: 0.8rem; }
+.grp { display: grid; gap: 5px; }
+.grp > span { font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.grp > div { display: flex; flex-wrap: wrap; gap: 5px; }
+.grp .btn { padding: 5px 8px; font-size: 0.8rem; background: var(--panel); }
+.grp .btn[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.bpm { display: inline-flex; align-items: center; gap: 4px; font-size: 0.78rem; color: var(--muted); }
+.bpm input { width: 4.2em; }
+.wire { font-family: var(--f-mono); font-size: 0.72rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.meter { height: 3px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.meter i { display: block; height: 100%; width: 0; background: var(--accent); }
+
+/* ---------- outputs ---------- */
+.outs { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.out-h { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; margin-bottom: 6px; }
+.out-h strong { font-weight: 400; font-size: 1.05rem; letter-spacing: 0.04em; }
+.route { display: inline-flex; align-items: center; gap: 4px; font-size: 0.76rem; color: var(--muted); }
+.chip { font-family: var(--f-mono); font-size: 0.7rem; padding: 1px 6px; border-radius: 10px; border: 1px solid var(--line); color: var(--c-dim); }
+.chip.on { border-color: var(--accent); color: var(--ink); background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.counts { font-family: var(--f-mono); font-size: 0.72rem; color: var(--muted); font-variant-numeric: tabular-nums; display: flex; gap: 10px; flex-wrap: wrap; }
+.counts b { color: var(--ink); font-weight: 400; }
+.counts .bad { color: var(--c-err); }
+.log { height: 190px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); font-family: var(--f-mono); font-size: 12px; line-height: 1.5; padding: 4px 0; }
+.row { display: grid; grid-template-columns: 7.2em max-content max-content; gap: 1.2em; padding: 0 10px; white-space: nowrap; width: max-content; min-width: 100%; }
+.row .t { color: var(--c-dim); font-variant-numeric: tabular-nums; }
+.row .hx { color: var(--ink); }
+.row .hx .rs { color: var(--c-dim); }
+.row .lb { font-family: var(--f-label); font-size: 12.5px; }
+.empty { color: var(--muted); padding: 6px 10px; font-family: var(--f-label); font-size: 0.85rem; }
+.k-note { color: var(--c-note); } .k-cc { color: var(--c-cc); } .k-pc { color: var(--c-pc); }
+.k-sysex { color: var(--c-sysex); } .k-rt { color: var(--c-rt); } .k-err { color: var(--c-err); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 0.76rem; margin-top: 2px; }
+.legend span::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 2px; background: currentColor; margin-right: 5px; vertical-align: 0; }
+
+.foot { color: var(--muted); font-size: 0.8rem; max-width: 80ch; }
+.boot-err { color: var(--c-err); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Questrial&display=swap">
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>MIDIum <span>NSK MT-1 simulator</span></h1>
+      <p>The screen, menus, monitor, generator and thru / merge engine below are the real v0.3 firmware, compiled to WebAssembly. Inject traffic on IN A and IN B, drive the joystick, and watch what leaves OUT A and OUT B.</p>
+    </div>
+    <div class="top-ctl">
+      <div class="seg" role="group" aria-label="Display fitted">
+        <button type="button" id="d-tft" aria-pressed="true">TFT 1.9" colour</button>
+        <button type="button" id="d-oled" aria-pressed="false">OLED 1.3" mono</button>
+      </div>
+      <button type="button" class="btn" id="power">Power cycle</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <div class="col">
+      <section class="bench" aria-label="MT-1 top face">
+        <div class="device" id="device">
+          <i class="screw tl"></i><i class="screw tr"></i><i class="screw bl"></i><i class="screw br"></i>
+          <div class="screen"><div class="glass"><canvas id="lcd" width="320" height="170" aria-label="Device screen"></canvas></div></div>
+          <div class="leds">
+            <span class="led midi" id="led-midi" title="MIDI activity (blinks on every input byte)"><i></i>MIDI</span>
+            <span class="led chg" title="Charge (battery arrives in M2)"><i></i>CHG</span>
+          </div>
+          <div class="joy" role="group" aria-label="5-way joystick">
+            <button type="button" class="jb up" data-k="0" aria-label="Joystick up"><svg viewBox="0 0 10 10" aria-hidden="true"><polygon points="5,1.5 9,8 1,8"/></svg></button>
+            <button type="button" class="jb lt" data-k="2" aria-label="Joystick left"><svg viewBox="0 0 10 10" aria-hidden="true"><polygon points="1.5,5 8,1 8,9"/></svg></button>
+            <button type="button" class="jb press" data-k="4" id="cap" aria-label="Joystick press"><span class="cap"></span></button>
+            <button type="button" class="jb rt" data-k="3" aria-label="Joystick right"><svg viewBox="0 0 10 10" aria-hidden="true"><polygon points="8.5,5 2,1 2,9"/></svg></button>
+            <button type="button" class="jb dn" data-k="1" aria-label="Joystick down"><svg viewBox="0 0 10 10" aria-hidden="true"><polygon points="5,8.5 9,2 1,2"/></svg></button>
+          </div>
+          <div class="word">MIDIum</div>
+          <div class="model"><span class="mt">NSK MT-1</span></div>
+        </div>
+        <div class="devbar">
+          <span>Display <b id="st-disp">-</b></span>
+          <span>Uptime <b id="st-up">0:00:00</b></span>
+          <span>Monitor <b id="st-msgs">0</b> msgs</span>
+        </div>
+      </section>
+
+      <section class="panel" id="p-ctl" aria-labelledby="h-ctl">
+        <h2 id="h-ctl">Controls</h2>
+        <div class="keys">
+          <span><kbd>&uarr;</kbd> <kbd>&darr;</kbd> <kbd>&larr;</kbd> <kbd>&rarr;</kbd> or <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> joystick</span>
+          <span><kbd>Enter</kbd> / <kbd>Space</kbd> press</span>
+          <span>Hold up / down to auto-repeat</span>
+        </div>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>Where</th><th>Up / Down</th><th>Left</th><th>Right</th><th>Press</th></tr></thead>
+            <tbody>
+              <tr><td>Monitor</td><td>scroll history (pauses, header shows PAUSED)</td><td>back to live</td><td>time column on / off</td><td>open menu; on a highlighted MSC / sysex line, open its detail page</td></tr>
+              <tr><td>Detail page</td><td>scroll</td><td>back to monitor</td><td>next page</td><td>next page</td></tr>
+              <tr><td>Menu</td><td>move (wraps)</td><td>back</td><td>select / toggle / edit</td><td>select / toggle / edit</td></tr>
+              <tr><td>Editing a value</td><td>change value</td><td>done</td><td>done</td><td>done</td></tr>
+              <tr><td>Editing MSC cue</td><td>change the part in &lt; &gt;</td><td>integer part, or done</td><td>decimal part, or done</td><td>done</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <div class="col">
+      <section class="panel" id="p-in" aria-labelledby="h-in">
+        <h2 id="h-in">Inputs</h2>
+        <p class="sub">Each button sends real traffic into IN A or IN B at MIDI wire speed: 31,250 baud, 320&nbsp;&micro;s per byte.</p>
+        <div class="ins" id="ins"></div>
+      </section>
+
+      <section class="panel" id="p-out" aria-labelledby="h-out">
+        <h2 id="h-out">Outputs</h2>
+        <p class="sub">Every byte the engine sends, timestamped as it starts on the wire, grouped into messages. Newest first.</p>
+        <div class="legend">
+          <span class="k-note">note</span><span class="k-cc">CC / bend / aftertouch</span><span class="k-pc">program / system common</span>
+          <span class="k-sysex">sysex / MSC / MTC full</span><span class="k-rt">realtime / quarter frame</span>
+        </div>
+        <div class="outs" id="outs"></div>
+      </section>
+    </div>
+  </div>
+
+  <p class="foot" id="foot">Default routing is the firmware default: IN A goes to both outputs and IN B is monitored only. Change it on the device under Menu &gt; Routing. Settings live in RAM, as on the M1 hardware, so a power cycle or display change resets them.</p>
+</div>
+
+<script>/*__MIDIUM_SIM_JS__*/</script>
+<script>
+(function () {
+  "use strict";
+  var M = null, booting = false, kind = 2;
+  var canvas = document.getElementById("lcd"), ctx = canvas.getContext("2d");
+  var img = null, fbVer = -1, fbPtr = 0, fbW = 0, fbH = 0;
+  var outBuf = 0, outTimes = 0;
+  var lastFrame = 0;
+
+  function lsGet(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k, v) { try { window.localStorage.setItem(k, v); } catch (e) { /* ignore */ } }
+
+  /* ---------------- time helpers ---------------- */
+  function now() { return M ? M._sim_now_us() : 0; }
+  function fmtTime(us) {
+    var ms = Math.floor(us / 1000), m = Math.floor(ms / 60000), s = Math.floor(ms / 1000) % 60, r = ms % 1000;
+    return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s + "." + ("00" + r).slice(-3);
+  }
+  function hex(b) { return (b < 16 ? "0" : "") + b.toString(16).toUpperCase(); }
+
+  /* ---------------- input scheduling (sim time) ---------------- */
+  var events = [];            // {t, port, bytes}
+  function at(port, bytes, delayMs, base) {
+    var t = (base == null ? now() : base) + (delayMs || 0) * 1000;
+    events.push({ t: t, port: port, bytes: bytes });
+  }
+  function flushEvents(horizon) {
+    if (!events.length) return;
+    events.sort(function (a, b) { return a.t - b.t; });
+    var i = 0;
+    while (i < events.length && events[i].t <= horizon) {
+      var e = events[i++];
+      for (var j = 0; j < e.bytes.length; j++) M._sim_midi_in_at(e.port, e.bytes[j], e.t);
+    }
+    events.splice(0, i);
+  }
+
+  /* ---------------- traffic ---------------- */
+  var ports = [mkPort(0), mkPort(1)];
+  function mkPort(p) {
+    return { p: p, ch: p, note: 0, prog: 0, mal: 0, bpm: 120, streams: {} };
+  }
+  var MELODY = [60, 64, 67, 72, 69, 65, 62, 59];
+  var NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+  function noteName(n) { return NOTE_NAMES[n % 12] + (Math.floor(n / 12) - 1); }
+  function ascii(s) { var a = []; for (var i = 0; i < s.length; i++) a.push(s.charCodeAt(i)); return a; }
+  function msc(dev, fmt, cmd, data) { return [0xF0, 0x7F, dev, 0x02, fmt, cmd].concat(data || [], [0xF7]); }
+
+  var ACTIONS = {
+    note: function (P) {
+      var n = MELODY[P.note++ % MELODY.length];
+      at(P.p, [0x90 | P.ch, n, 100]);
+      at(P.p, [0x80 | P.ch, n, 64], 300);
+    },
+    cc: function (P) {
+      var t0 = now(), vals = [];
+      for (var v = 0; v < 127; v += 6) vals.push(v);
+      vals.push(127);
+      vals.forEach(function (x, i) {
+        at(P.p, i === 0 ? [0xB0 | P.ch, 7, x] : [7, x], i * 18, t0);   // running status after the first
+      });
+    },
+    pc: function (P) { at(P.p, [0xC0 | P.ch, (P.prog = (P.prog + 1) % 128)]); },
+    pb: function (P) {
+      var t0 = now(), steps = 40;
+      for (var i = 0; i <= steps; i++) {
+        var x = i / steps, v = Math.round(Math.sin(x * Math.PI * 2) * 8191) + 8192;
+        if (i === steps) v = 8192;
+        at(P.p, i === 0 ? [0xE0 | P.ch, v & 0x7F, v >> 7] : [v & 0x7F, v >> 7], i * 15, t0);
+      }
+    },
+    mscgo: function (P) { at(P.p, msc(0x01, 0x01, 0x01, ascii("12.5"))); },
+    mscstop: function (P) { at(P.p, msc(0x01, 0x10, 0x02)); },
+    msclist: function (P) { at(P.p, msc(0x01, 0x01, 0x01, ascii("7").concat([0], ascii("2"), [0], ascii("3")))); },
+    msctgo: function (P) { at(P.p, msc(0x01, 0x01, 0x04, [0x21, 0x02, 0x03, 0x00, 0x00].concat(ascii("4")))); },
+    mscbad: function (P) {
+      var v = [
+        msc(0x01, 0x01, 0x01, ascii("12..5")),           // '..' in Q number
+        msc(0x01, 0x01, 0x55, [0x01]),                   // unknown command
+        msc(0x01, 0x01, 0x01, [0x00].concat(ascii("2"))), // list without cue
+        msc(0x01, 0x01, 0x01, ascii("1A"))               // non-numeric Q
+      ];
+      at(P.p, v[P.mal++ % v.length]);
+    },
+    sysex: function (P) {
+      var d = [0xF0, 0x43, 0x00 | P.ch, 0x7E, 0x01, 0x40], sum = 0;
+      var seed = 7 + P.p * 13;
+      while (d.length < 198) { seed = (seed * 1103515245 + 12345) & 0x7fffffff; var b = (seed >> 16) & 0x7F; d.push(b); sum += b; }
+      d.push((128 - (sum & 0x7F)) & 0x7F, 0xF7);
+      at(P.p, d);
+    }
+  };
+
+  /* Continuous streams, generated a little ahead of sim time. */
+  var STREAMS = {
+    clock: {
+      start: function (P, s) { at(P.p, [0xFA]); s.next = now() + 1000; },
+      stop: function (P) { at(P.p, [0xFC]); },
+      fill: function (P, s, horizon) {
+        var per = 60e6 / (Math.max(30, Math.min(300, P.bpm)) * 24);
+        while (s.next <= horizon) { at(P.p, [0xF8], 0, s.next); s.next += per; }
+      }
+    },
+    as: {
+      start: function (P, s) { s.next = now(); },
+      fill: function (P, s, horizon) { while (s.next <= horizon) { at(P.p, [0xFE], 0, s.next); s.next += 300000; } }
+    },
+    mtc: {
+      start: function (P, s) {
+        s.h = 1; s.m = 0; s.sec = 0; s.f = 0; s.q = 0; s.next = now() + 2000;
+        at(P.p, [0xF0, 0x7F, 0x7F, 0x01, 0x01, 0x20 | s.h, s.m, s.sec, s.f, 0xF7]);   // full frame, 25 fps
+      },
+      fill: function (P, s, horizon) {
+        while (s.next <= horizon) {
+          var q = s.q, v;
+          switch (q) {
+            case 0: v = s.f & 15; break; case 1: v = s.f >> 4; break;
+            case 2: v = s.sec & 15; break; case 3: v = s.sec >> 4; break;
+            case 4: v = s.m & 15; break; case 5: v = s.m >> 4; break;
+            case 6: v = s.h & 15; break; default: v = ((s.h >> 4) & 1) | (1 << 1); break;  // rate bits 01 = 25 fps
+          }
+          at(P.p, [0xF1, (q << 4) | v], 0, s.next);
+          s.next += 10000;     // 25 fps x 4 quarter frames per frame = 100 per second
+          if (++s.q === 8) {
+            s.q = 0; s.f += 2;
+            if (s.f >= 25) { s.f -= 25; if (++s.sec === 60) { s.sec = 0; if (++s.m === 60) { s.m = 0; s.h++; } } }
+          }
+        }
+      }
+    },
+    dense: {
+      start: function (P, s) { s.next = now(); s.i = 0; s.on = []; },
+      stop: function (P, s) { s.on.forEach(function (n) { at(P.p, [0x80 | P.ch, n, 0]); }); },
+      fill: function (P, s, horizon) {
+        // ~70% of line capacity: notes, CC with running status, channel aftertouch
+        while (s.next <= horizon) {
+          var m, k = s.i++ % 10;
+          if (k < 4) {
+            if (s.on.length > 3 || (k === 3 && s.on.length)) { var off = s.on.shift(); m = [0x80 | P.ch, off, 0]; }
+            else { var n = 48 + ((s.i * 7) % 36); s.on.push(n); m = [0x90 | P.ch, n, 70 + (s.i % 50)]; }
+          } else if (k < 8) m = [0xB0 | P.ch, 1 + (k & 1) * 10, (s.i * 5) & 0x7F];
+          else m = [0xD0 | P.ch, (s.i * 3) & 0x7F];
+          at(P.p, m, 0, s.next);
+          s.next += m.length * 320 / 0.7;
+        }
+      }
+    }
+  };
+
+  function streamToggle(P, name, btn) {
+    var s = P.streams[name];
+    if (s) { if (STREAMS[name].stop) STREAMS[name].stop(P, s); delete P.streams[name]; }
+    else { s = P.streams[name] = {}; STREAMS[name].start(P, s); }
+    if (btn) btn.setAttribute("aria-pressed", P.streams[name] ? "true" : "false");
+  }
+  function fillStreams(horizon) {
+    ports.forEach(function (P) {
+      for (var k in P.streams) STREAMS[k].fill(P, P.streams[k], horizon);
+    });
+  }
+
+  /* ---------------- input panel UI ---------------- */
+  var GROUPS = [
+    ["Channel voice", [["note", "Note on / off"], ["cc", "CC 7 sweep"], ["pc", "Program change"], ["pb", "Pitch bend sweep"]]],
+    ["Show control (MSC, device 1)", [["mscgo", "GO Q12.5 lighting"], ["mscstop", "STOP sound"], ["msclist", "GO Q7 L2 P3"], ["msctgo", "TIMED_GO Q4"], ["mscbad", "Malformed MSC"]]],
+    ["System", [["sysex", "SysEx dump 200 B"], ["~mtc", "MTC 25 fps"], ["~clock", "Clock"], ["~as", "Active sensing"], ["~dense", "Dense stream"]]]
+  ];
+  var inUi = [];
+  function buildInputs() {
+    var host = document.getElementById("ins");
+    host.innerHTML = "";
+    ports.forEach(function (P) {
+      var L = P.p ? "B" : "A";
+      var el = document.createElement("div");
+      el.className = "port";
+      var h = '<div class="port-h"><strong><span class="act" id="act-' + L + '"></span>IN ' + L + '</strong>' +
+        '<label for="ch-' + L + '">Channel <select id="ch-' + L + '">';
+      for (var c = 1; c <= 16; c++) h += '<option value="' + (c - 1) + '"' + (c - 1 === P.ch ? " selected" : "") + ">" + c + "</option>";
+      h += "</select></label></div>";
+      GROUPS.forEach(function (g) {
+        h += '<div class="grp"><span>' + g[0] + "</span><div>";
+        g[1].forEach(function (b) {
+          var tog = b[0][0] === "~", id = tog ? b[0].slice(1) : b[0];
+          h += '<button type="button" class="btn" id="b-' + L + "-" + id + '" data-a="' + id + '"' + (tog ? ' data-tog="1" aria-pressed="false"' : "") + ">" + b[1] + "</button>";
+          if (id === "clock") h += '<label class="bpm" for="bpm-' + L + '"><input id="bpm-' + L + '" type="number" min="30" max="300" value="' + P.bpm + '"> BPM</label>';
+        });
+        h += "</div></div>";
+      });
+      h += '<div class="meter" aria-hidden="true"><i id="mt-' + L + '"></i></div><div class="wire" id="wire-' + L + '">0 bytes in</div>';
+      el.innerHTML = h;
+      host.appendChild(el);
+      el.addEventListener("click", function (ev) {
+        var b = ev.target.closest("button[data-a]");
+        if (!b || !M) return;
+        if (b.dataset.tog) streamToggle(P, b.dataset.a, b);
+        else ACTIONS[b.dataset.a](P);
+      });
+      el.querySelector("#ch-" + L).addEventListener("change", function (ev) { P.ch = +ev.target.value; });
+      el.querySelector("#bpm-" + L).addEventListener("change", function (ev) {
+        var v = Math.max(30, Math.min(300, Math.round(+ev.target.value || 120)));
+        ev.target.value = v; P.bpm = v;
+      });
+      inUi[P.p] = { act: el.querySelector("#act-" + L), wire: el.querySelector("#wire-" + L), meter: el.querySelector("#mt-" + L), hist: [] };
+    });
+  }
+
+  /* ---------------- output capture: parse into messages ---------------- */
+  var outs = [mkOut(0), mkOut(1)];
+  function mkOut(o) { return { o: o, cur: null, need: 0, run: 0, rows: [], msgs: 0, byteBase: 0, dropBase: 0, last: null, el: null }; }
+  function dataLen(s) {
+    if (s < 0xF0) { var h = s & 0xF0; return (h === 0xC0 || h === 0xD0) ? 1 : 2; }
+    if (s === 0xF1 || s === 0xF3) return 1;
+    if (s === 0xF2) return 2;
+    return 0;
+  }
+  function feedOut(O, b, t) {
+    if (b >= 0xF8) { emit(O, [b], t, false, false); return; }
+    if (b & 0x80) {
+      if (O.cur && b !== 0xF7) { emit(O, O.cur.b, O.cur.t, O.cur.rs, true); O.cur = null; }
+      if (b === 0xF0) { O.cur = { b: [b], t: t, sx: true }; O.run = 0; return; }
+      if (b === 0xF7) {
+        if (O.cur && O.cur.sx) { O.cur.b.push(b); emit(O, O.cur.b, O.cur.t, false, false); }
+        else emit(O, [b], t, false, true);
+        O.cur = null; return;
+      }
+      if (b < 0xF0) O.run = b; else O.run = 0;
+      var n = dataLen(b);
+      if (n === 0) { emit(O, [b], t, false, false); return; }
+      O.cur = { b: [b], t: t, need: n }; return;
+    }
+    if (O.cur) {
+      O.cur.b.push(b);
+      if (O.cur.sx) { if (O.cur.b.length > 4096) { emit(O, O.cur.b, O.cur.t, false, true); O.cur = null; } return; }
+      if (O.cur.b.length - (O.cur.rs ? 0 : 1) >= O.cur.need) { emit(O, O.cur.b, O.cur.t, O.cur.rs, false); O.cur = null; }
+      return;
+    }
+    if (O.run) { O.cur = { b: [b], t: t, need: dataLen(O.run), rs: true, st: O.run }; if (O.cur.need === 1) { emit(O, O.cur.b, t, true, false); O.cur = null; } return; }
+    emit(O, [b], t, false, true);
+  }
+
+  var MSC_FMT = { 1: "LTG", 2: "MOV", 0x10: "SND", 0x11: "MUS", 0x20: "MACH", 0x30: "VID", 0x40: "PROJ", 0x50: "PROC", 0x60: "PYRO", 0x7F: "ALL" };
+  var MSC_CMD = { 1: "GO", 2: "STOP", 3: "RESUME", 4: "TIMED_GO", 5: "LOAD", 6: "SET", 7: "FIRE", 8: "ALL_OFF", 9: "RESTORE", 10: "RESET", 11: "GO_OFF" };
+  function label(bytes, rs, broken, st) {
+    var s = rs ? st : bytes[0], d = rs ? bytes : bytes.slice(1), ch = (s & 15) + 1;
+    if (broken) return ["incomplete / stray", "k-err"];
+    switch (s & 0xF0) {
+      case 0x80: return ["Note off  ch " + ch + "  " + noteName(d[0]) + "  " + d[1], "k-note"];
+      case 0x90: return [(d[1] ? "Note on   ch " : "Note off  ch ") + ch + "  " + noteName(d[0]) + "  " + d[1], "k-note"];
+      case 0xA0: return ["Poly AT  ch " + ch + "  " + noteName(d[0]) + "  " + d[1], "k-note"];
+      case 0xB0: return ["CC  ch " + ch + "  #" + d[0] + " = " + d[1], "k-cc"];
+      case 0xC0: return ["Program  ch " + ch + "  " + d[0], "k-pc"];
+      case 0xD0: return ["Chan AT  ch " + ch + "  " + d[0], "k-cc"];
+      case 0xE0: return ["Pitch bend  ch " + ch + "  " + ((d[0] | (d[1] << 7)) - 8192), "k-cc"];
+    }
+    switch (s) {
+      case 0xF0:
+        var n = bytes.length;
+        if (bytes[1] === 0x7F && bytes[3] === 0x02) {
+          var f = MSC_FMT[bytes[4]] || ("fmt " + hex(bytes[4] || 0)), c = MSC_CMD[bytes[5]] || ("cmd " + hex(bytes[5] || 0));
+          return ["MSC  " + f + "  " + c + "  dev " + bytes[2], "k-sysex"];
+        }
+        if (bytes[1] === 0x7F && bytes[3] === 0x01 && bytes[4] === 0x01)
+          return ["MTC full frame  " + [bytes[5] & 31, bytes[6], bytes[7], bytes[8]].map(function (x) { return ("0" + x).slice(-2); }).join(":"), "k-sysex"];
+        if (bytes[1] === 0x7F && bytes[3] === 0x06) return ["MMC", "k-sysex"];
+        return ["SysEx  " + n + " bytes  ID " + hex(bytes[1] || 0), "k-sysex"];
+      case 0xF1: return ["MTC quarter frame  " + (d[0] >> 4) + ":" + (d[0] & 15), "k-rt"];
+      case 0xF2: return ["Song position", "k-pc"];
+      case 0xF3: return ["Song select", "k-pc"];
+      case 0xF6: return ["Tune request", "k-pc"];
+      case 0xF8: return ["Clock", "k-rt"];
+      case 0xFA: return ["Start", "k-rt"];
+      case 0xFB: return ["Continue", "k-rt"];
+      case 0xFC: return ["Stop", "k-rt"];
+      case 0xFE: return ["Active sensing", "k-rt"];
+      case 0xFF: return ["System reset", "k-rt"];
+    }
+    return ["?", "k-err"];
+  }
+
+  var MAX_ROWS = 160;
+  function emit(O, bytes, t, rs, broken) {
+    O.msgs++;
+    var st = rs ? O.run : 0;
+    var b0 = bytes[0];
+    // collapse runs of clock / active sensing / quarter frames into one row
+    if (!rs && !broken && (b0 === 0xF8 || b0 === 0xFE || b0 === 0xF1) && O.last && O.last.b0 === b0 && O.last.el.isConnected) {
+      O.last.n++;
+      O.last.el.children[0].textContent = fmtTime(t);
+      if (b0 === 0xF1) O.last.el.children[1].textContent = bytes.map(hex).join(" ");
+      O.last.el.children[2].textContent = label(bytes, false, false, 0)[0] + "  ×" + O.last.n;
+      return;
+    }
+    var lb = label(bytes, rs, broken, st);
+    var row = document.createElement("div");
+    row.className = "row";
+    var hx;
+    if (bytes.length > 14) hx = bytes.slice(0, 10).map(hex).join(" ") + " … " + hex(bytes[bytes.length - 1]);
+    else hx = bytes.map(hex).join(" ");
+    var t1 = document.createElement("span"); t1.className = "t"; t1.textContent = fmtTime(t);
+    var t2 = document.createElement("span"); t2.className = "hx";
+    if (rs) { var r = document.createElement("span"); r.className = "rs"; r.textContent = "(" + hex(st) + ") "; r.title = "running status: status byte not re-sent"; t2.appendChild(r); }
+    t2.appendChild(document.createTextNode(hx));
+    var t3 = document.createElement("span"); t3.className = "lb " + lb[1]; t3.textContent = lb[0];
+    row.appendChild(t1); row.appendChild(t2); row.appendChild(t3);
+    var log = O.log;
+    if (O.emptyEl) { O.emptyEl.remove(); O.emptyEl = null; }
+    log.insertBefore(row, log.firstChild);
+    while (log.childElementCount > MAX_ROWS) log.removeChild(log.lastChild);
+    O.last = { b0: (!rs && !broken) ? b0 : -1, n: 1, el: row };
+  }
+
+  function buildOutputs() {
+    var host = document.getElementById("outs");
+    host.innerHTML = "";
+    outs.forEach(function (O) {
+      var L = O.o ? "B" : "A";
+      var el = document.createElement("div");
+      el.innerHTML =
+        '<div class="out-h"><strong>OUT ' + L + '</strong>' +
+        '<span class="route" aria-label="Sources routed to OUT ' + L + '">&larr; <span class="chip" id="r-' + L + '-0">IN A</span><span class="chip" id="r-' + L + '-1">IN B</span><span class="chip" id="r-' + L + '-2">GEN</span></span>' +
+        '<span class="counts"><span><b id="c-' + L + '-b">0</b> bytes</span><span><b id="c-' + L + '-m">0</b> msgs</span><span id="c-' + L + '-dw"><b id="c-' + L + '-d">0</b> merge drops</span></span>' +
+        '<button type="button" class="btn" id="clr-' + L + '">Clear</button></div>' +
+        '<div class="log" id="log-' + L + '" tabindex="0" aria-label="OUT ' + L + ' byte log, newest first"><div class="empty">Nothing sent yet.</div></div>';
+      host.appendChild(el);
+      O.log = el.querySelector("#log-" + L);
+      O.emptyEl = O.log.firstChild;
+      O.cb = el.querySelector("#c-" + L + "-b"); O.cm = el.querySelector("#c-" + L + "-m");
+      O.cd = el.querySelector("#c-" + L + "-d"); O.cdw = el.querySelector("#c-" + L + "-dw");
+      O.chips = [0, 1, 2].map(function (s) { return el.querySelector("#r-" + L + "-" + s); });
+      el.querySelector("#clr-" + L).addEventListener("click", function () { clearOut(O); });
+    });
+  }
+  function clearOut(O) {
+    O.log.innerHTML = '<div class="empty">Cleared.</div>';
+    O.emptyEl = O.log.firstChild;
+    O.msgs = 0; O.last = null;
+    if (M) { O.byteBase = M._sim_stat(2 + O.o); O.dropBase = M._sim_stat(4 + O.o); }
+  }
+  function resetOut(O) {
+    O.cur = null; O.run = 0; O.byteBase = 0; O.dropBase = 0;
+    clearOut(O); O.byteBase = 0; O.dropBase = 0;
+    O.log.innerHTML = '<div class="empty">Nothing sent yet.</div>'; O.emptyEl = O.log.firstChild;
+  }
+
+  /* ---------------- joystick ---------------- */
+  var keyDownAt = [null, null, null, null, null], keyRelease = [false, false, false, false, false];
+  var jbs = Array.prototype.slice.call(document.querySelectorAll(".jb"));
+  var cap = document.getElementById("cap");
+  function keyDown(k) {
+    if (!M || keyDownAt[k] !== null) { keyRelease[k] = false; return; }
+    M._sim_key(k, 1);
+    keyDownAt[k] = now(); keyRelease[k] = false;
+    document.querySelector('.jb[data-k="' + k + '"]').classList.add("down");
+    if (k < 4) cap.setAttribute("data-tilt", String(k)); else cap.classList.add("down");
+  }
+  function keyUp(k) { if (keyDownAt[k] !== null) keyRelease[k] = true; }
+  function serviceKeys() {
+    // The firmware debounces for 10 ms of samples: hold each contact at least 30 ms of sim time.
+    for (var k = 0; k < 5; k++) {
+      if (keyRelease[k] && keyDownAt[k] !== null && now() - keyDownAt[k] >= 30000) {
+        M._sim_key(k, 0); keyDownAt[k] = null; keyRelease[k] = false;
+        document.querySelector('.jb[data-k="' + k + '"]').classList.remove("down");
+        if (k < 4) { if (cap.getAttribute("data-tilt") === String(k)) cap.removeAttribute("data-tilt"); }
+        else cap.classList.remove("down");
+      }
+    }
+  }
+  jbs.forEach(function (b) {
+    var k = +b.dataset.k;
+    b.addEventListener("pointerdown", function (e) { e.preventDefault(); try { b.setPointerCapture(e.pointerId); } catch (x) {} keyDown(k); });
+    b.addEventListener("pointerup", function () { keyUp(k); });
+    b.addEventListener("pointercancel", function () { keyUp(k); });
+    b.addEventListener("lostpointercapture", function () { keyUp(k); });
+    b.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+    b.addEventListener("keydown", function (e) {
+      if ((e.key === "Enter" || e.key === " ") && !e.repeat) { e.preventDefault(); e.stopPropagation(); keyDown(k); }
+    });
+    b.addEventListener("keyup", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); keyUp(k); }
+    });
+  });
+  var KEYMAP = { ArrowUp: 0, ArrowDown: 1, ArrowLeft: 2, ArrowRight: 3, w: 0, s: 1, a: 2, d: 3, W: 0, S: 1, A: 2, D: 3, Enter: 4, " ": 4 };
+  function formTarget(t) { return t && (t.tagName === "INPUT" || t.tagName === "SELECT" || t.tagName === "TEXTAREA" || t.isContentEditable); }
+  document.addEventListener("keydown", function (e) {
+    if (e.ctrlKey || e.metaKey || e.altKey || formTarget(e.target)) return;
+    var k = KEYMAP[e.key];
+    if (k === undefined) return;
+    // Enter / Space on a page button keep their normal meaning
+    if (k === 4 && e.target && e.target !== document.body && e.target.closest && !e.target.closest("#device")) return;
+    if (k < 4 && e.target && e.target.classList && e.target.classList.contains("log")) return;
+    e.preventDefault();
+    if (!e.repeat) keyDown(k);   // the firmware does its own auto-repeat
+  });
+  document.addEventListener("keyup", function (e) {
+    var k = KEYMAP[e.key];
+    if (k !== undefined) keyUp(k);
+  });
+  window.addEventListener("blur", function () { for (var k = 0; k < 5; k++) keyUp(k); });
+
+  /* ---------------- display ---------------- */
+  var fbCanvas = document.createElement("canvas"), fbCtx = fbCanvas.getContext("2d"), scale = 1;
+  function setupDisplay() {
+    fbW = M._sim_fb_w(); fbH = M._sim_fb_h(); fbPtr = M._sim_framebuffer();
+    fbCanvas.width = fbW; fbCanvas.height = fbH;
+    img = fbCtx.createImageData(fbW, fbH);
+    canvas.classList.toggle("oled", fbW === 128);
+    sizeCanvas();
+  }
+  /* Draw at a whole-number multiple of the panel resolution that covers the
+     on-screen size, so every panel pixel is the same size and stays sharp. */
+  function sizeCanvas() {
+    if (!fbW) return;
+    var css = canvas.getBoundingClientRect().width || fbW;
+    var k = Math.max(1, Math.ceil(css * (window.devicePixelRatio || 1) / fbW));
+    if (k !== scale || canvas.width !== fbW * k) {
+      scale = k; canvas.width = fbW * k; canvas.height = fbH * k;
+    }
+    fbVer = -1;
+  }
+  if (window.ResizeObserver) new ResizeObserver(sizeCanvas).observe(canvas);
+  else window.addEventListener("resize", sizeCanvas);
+  function drawDisplay() {
+    var v = M._sim_fb_version();
+    if (v !== fbVer) {
+      fbVer = v;
+      img.data.set(M.HEAPU8.subarray(fbPtr, fbPtr + fbW * fbH * 4));
+      fbCtx.putImageData(img, 0, 0);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(fbCanvas, 0, 0, canvas.width, canvas.height);
+      var on = M._sim_display_on(), pct = M._sim_brightness();
+      canvas.style.filter = (!on || pct <= 0) ? "brightness(0)" : "brightness(" + (0.35 + 0.65 * pct / 100).toFixed(3) + ")";
+    }
+  }
+
+  /* ---------------- status ---------------- */
+  var ledEl = document.getElementById("led-midi");
+  var stUp = document.getElementById("st-up"), stMsgs = document.getElementById("st-msgs"), stDisp = document.getElementById("st-disp");
+  var lastBits = -1, lastRx = [0, 0], statT = 0;
+  function updateStatus(dtMs) {
+    ledEl.classList.toggle("on", !!M._sim_led());
+    var bits = M._sim_route_bits();
+    if (bits !== lastBits) {
+      lastBits = bits;
+      outs.forEach(function (O) { O.chips.forEach(function (c, s) { c.classList.toggle("on", !!(bits & (1 << (O.o * 3 + s)))); }); });
+    }
+    statT += dtMs;
+    if (statT < 120) return;
+    var span = statT; statT = 0;
+    var s = Math.floor(now() / 1e6);
+    stUp.textContent = Math.floor(s / 3600) + ":" + ("0" + Math.floor(s / 60) % 60).slice(-2) + ":" + ("0" + s % 60).slice(-2);
+    stMsgs.textContent = M._sim_stat(6);
+    for (var p = 0; p < 2; p++) {
+      var tot = M._sim_stat(p), d = tot - lastRx[p]; lastRx[p] = tot;
+      var load = Math.min(100, d * 320 / (span * 10));   // % of line capacity
+      var pend = M._sim_rx_pending(p);
+      var ui = inUi[p];
+      ui.act.classList.toggle("on", d > 0);
+      ui.meter.style.width = load.toFixed(0) + "%";
+      ui.wire.textContent = tot + " bytes in · line " + load.toFixed(0) + "% busy" + (pend > 32 ? " · " + pend + " waiting" : "");
+    }
+    outs.forEach(function (O) {
+      O.cb.textContent = M._sim_stat(2 + O.o) - O.byteBase;
+      O.cm.textContent = O.msgs;
+      var dr = M._sim_stat(4 + O.o) - O.dropBase;
+      O.cd.textContent = dr; O.cdw.classList.toggle("bad", dr > 0);
+    });
+  }
+
+  /* ---------------- main loop ---------------- */
+  function frame(ts) {
+    requestAnimationFrame(frame);
+    if (!M || booting) { lastFrame = ts; return; }
+    var dt = lastFrame ? Math.min(100, ts - lastFrame) : 16;
+    lastFrame = ts;
+    var horizon = now() + (dt + 30) * 1000;
+    fillStreams(horizon);
+    flushEvents(horizon);
+    // run in slices so key releases land on time
+    var left = dt;
+    while (left > 0) {
+      var step = Math.min(8, left);
+      M._sim_tick(step);
+      serviceKeys();
+      left -= step;
+    }
+    for (var o = 0; o < 2; o++) {
+      var n;
+      do {
+        n = M._sim_out_read(o, outBuf, outTimes, 4096);
+        for (var i = 0; i < n; i++) feedOut(outs[o], M.HEAPU8[outBuf + i], M.HEAPF64[(outTimes >> 3) + i]);
+      } while (n === 4096);
+    }
+    drawDisplay();
+    updateStatus(dt);
+  }
+
+  function demo() {
+    // A short scripted burst so the monitor and the outputs start with something on them.
+    var t0 = now() + 900000;   // just after the 700 ms splash
+    var A = 0, B = 1;
+    at(A, [0x90, 60, 100], 0, t0);
+    at(A, [0xB0, 7, 100], 120, t0);
+    at(A, [0xC0, 5], 260, t0);
+    at(B, msc(0x01, 0x01, 0x01, ascii("12.5")), 380, t0);
+    at(A, [0x80, 60, 64], 520, t0);
+    at(A, [0xE0, 0x00, 0x50], 640, t0);
+    at(A, [0x00, 0x40], 700, t0);
+    at(B, msc(0x01, 0x10, 0x02), 820, t0);
+    at(A, msc(0x7F, 0x01, 0x01, ascii("3")), 960, t0);
+    at(A, [0x90, 64, 90], 1100, t0);
+    at(A, [0x80, 64, 0], 1400, t0);
+  }
+
+  function boot(k) {
+    if (booting) return;
+    booting = true;
+    kind = k;
+    document.getElementById("d-tft").setAttribute("aria-pressed", k === 2 ? "true" : "false");
+    document.getElementById("d-oled").setAttribute("aria-pressed", k === 1 ? "true" : "false");
+    // stop streams, forget queued traffic: this is a power cycle
+    events = [];
+    ports.forEach(function (P) { P.streams = {}; });
+    document.querySelectorAll("button[data-tog]").forEach(function (b) { b.setAttribute("aria-pressed", "false"); });
+    for (var i = 0; i < 5; i++) { keyDownAt[i] = null; keyRelease[i] = false; }
+    jbs.forEach(function (b) { b.classList.remove("down"); }); cap.removeAttribute("data-tilt");
+    ctx.fillStyle = "#000"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    MidiumSim().then(function (mod) {
+      M = mod;
+      outBuf = M._malloc(4096);
+      outTimes = M._malloc(4096 * 8);
+      M._sim_init(k);
+      setupDisplay();
+      stDisp.textContent = M.UTF8ToString(M._sim_display_name());
+      outs.forEach(resetOut);
+      lastBits = -1; lastRx = [0, 0];
+      demo();
+      booting = false;
+    }).catch(function (err) {
+      booting = false;
+      var f = document.getElementById("foot");
+      f.className = "foot boot-err";
+      f.textContent = "The simulator failed to start: " + (err && err.message ? err.message : err) + ". Reload the page to try again.";
+    });
+  }
+
+  document.getElementById("d-tft").addEventListener("click", function () { lsSet("midium-disp", "2"); boot(2); });
+  document.getElementById("d-oled").addEventListener("click", function () { lsSet("midium-disp", "1"); boot(1); });
+  document.getElementById("power").addEventListener("click", function () { boot(kind); });
+
+  buildInputs();
+  buildOutputs();
+  var saved = lsGet("midium-disp");
+  boot(saved === "1" ? 1 : 2);
+  requestAnimationFrame(frame);
+
+})();
+</script>

@@ -1,0 +1,879 @@
+<title>MIDIum Simulator</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: test bench. Left, the MT-1 top face with its live screen and joystick;
+   right, the signal generator (IN A / IN B) feeding it and the capture of OUT A / OUT B.
+   Stacks to one column on narrow screens. */
+:root {
+  --bg: #e7eaed;
+  --panel: #f7f8f9;
+  --panel-2: #eef1f3;
+  --ink: #15191d;
+  --muted: #59626c;
+  --line: #cdd3d9;
+  --accent: #b86200;
+  --accent-ink: #ffffff;
+  --focus: #1f63c6;
+  /* message colour classes (firmware msg_class_t), tuned per theme */
+  --c-note: #157a27;
+  --c-cc: #08739a;
+  --c-pc: #8a6400;
+  --c-sysex: #a3239a;
+  --c-rt: #66707a;
+  --c-err: #c42525;
+  --c-dim: #7c858e;
+  /* the device itself stays anodised black in both themes */
+  --anod: #1f2023;
+  --anod-hi: #2b2c30;
+  --anod-edge: #121315;
+  --etch: #e9eaec;
+  --led-midi: #67f08f;
+  --led-chg: #ffd23a;
+  --f-label: "Questrial", "Century Gothic", "Didact Gothic", "Avenir Next", "Segoe UI", sans-serif;
+  --f-mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1113; --panel: #171a1d; --panel-2: #1d2125; --ink: #e6e9ec; --muted: #939ca6;
+    --line: #2c3237; --accent: #ffa020; --accent-ink: #1c1100; --focus: #6aa8ff;
+    --c-note: #5fe36a; --c-cc: #4fd8f5; --c-pc: #f3d543; --c-sysex: #f46cf0; --c-rt: #9aa1a8;
+    --c-err: #ff6464; --c-dim: #7d858d;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1113; --panel: #171a1d; --panel-2: #1d2125; --ink: #e6e9ec; --muted: #939ca6;
+  --line: #2c3237; --accent: #ffa020; --accent-ink: #1c1100; --focus: #6aa8ff;
+  --c-note: #5fe36a; --c-cc: #4fd8f5; --c-pc: #f3d543; --c-sysex: #f46cf0; --c-rt: #9aa1a8;
+  --c-err: #ff6464; --c-dim: #7d858d;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.45 var(--f-label); }
+button, select, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.wrap {
+  max-width: 1320px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 40px;
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px;
+}
+
+/* ---------- top bar ---------- */
+.top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px; }
+.top h1 { margin: 0; font-size: 1.6rem; font-weight: 400; letter-spacing: 0.01em; text-wrap: balance; }
+.top h1 span { color: var(--muted); }
+.top p { margin: 4px 0 0; color: var(--muted); max-width: 62ch; font-size: 0.92rem; }
+.top-ctl { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--panel); }
+.seg button { border: 0; background: transparent; padding: 7px 12px; cursor: pointer; font-size: 0.86rem; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.btn {
+  border: 1px solid var(--line); background: var(--panel); border-radius: 6px;
+  padding: 7px 12px; cursor: pointer; font-size: 0.86rem; line-height: 1.2;
+}
+.btn:hover { border-color: var(--muted); }
+.btn:active { transform: translateY(1px); }
+.btn[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+/* ---------- main grid ---------- */
+.layout { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.col { display: grid; gap: 20px; min-width: 0; }
+@media (max-width: 1000px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  /* phone / tablet: device, then inputs, outputs, and the controls legend last */
+  .col { display: contents; }
+  .bench { order: 1; } #p-in { order: 2; } #p-out { order: 3; } #p-ctl { order: 4; }
+}
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; min-width: 0; }
+.panel h2 { margin: 0 0 10px; font-size: 0.78rem; font-weight: 400; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.panel h2 b { color: var(--ink); font-weight: 400; }
+.panel .sub { margin: -4px 0 12px; color: var(--muted); font-size: 0.86rem; }
+
+/* ---------- the device ---------- */
+.bench { container-type: inline-size; }
+.device {
+  position: relative; border-radius: 10px; padding: 4.5% 5.5% 4%;
+  background:
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.012) 0 1px, rgba(0,0,0,0) 1px 3px),
+    linear-gradient(180deg, var(--anod-hi), var(--anod) 22%, var(--anod) 80%, #1a1b1e);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 -1px 0 rgba(0,0,0,0.5) inset, 0 14px 28px -12px rgba(0,0,0,0.45), 0 2px 4px rgba(0,0,0,0.25);
+  color: var(--etch);
+  display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 0.6fr);
+  grid-template-areas: "screen leds" "screen joy" "word model";
+  column-gap: 5%; row-gap: 3cqw;
+  user-select: none; -webkit-user-select: none; touch-action: manipulation;
+}
+/* end plates with screws */
+.device::before, .device::after {
+  content: ""; position: absolute; top: 0; bottom: 0; width: 2.2%;
+  background: linear-gradient(90deg, var(--anod-edge), #26272b 60%, var(--anod-edge));
+}
+.device::before { left: 0; border-radius: 10px 0 0 10px; }
+.device::after { right: 0; border-radius: 0 10px 10px 0; }
+.screw { position: absolute; width: 1.6cqw; height: 1.6cqw; min-width: 7px; min-height: 7px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #3a3b40, #0c0c0e 70%); z-index: 1; }
+.screw.tl { left: 0.3%; top: 3%; } .screw.tr { right: 0.3%; top: 3%; }
+.screw.bl { left: 0.3%; bottom: 3%; } .screw.br { right: 0.3%; bottom: 3%; }
+
+.screen { grid-area: screen; align-self: center; border: 2px solid #c8ccd2; padding: 3.2%; background: #0b0c0e; }
+.screen .glass { background: #000; padding: 2.6% 2.8%; box-shadow: inset 0 0 0 1px #000, inset 0 2px 8px rgba(0,0,0,0.9); }
+.screen canvas { display: block; width: 100%; height: auto; aspect-ratio: 320 / 170; image-rendering: pixelated; transition: filter 120ms linear; }
+.screen canvas.oled { aspect-ratio: 2 / 1; }
+
+.leds { grid-area: leds; display: flex; gap: 9%; justify-content: center; align-items: center; font-size: clamp(11px, 2.6cqw, 17px); letter-spacing: 0.02em; }
+.led { display: inline-flex; align-items: center; gap: 0.45em; }
+.led i { width: 1.05em; height: 1.05em; border-radius: 50%; display: inline-block; background: #2b322e; box-shadow: inset 0 1px 2px rgba(0,0,0,0.7); }
+.led.midi.on i { background: var(--led-midi); box-shadow: 0 0 0.7em var(--led-midi), inset 0 0 2px #fff; }
+.led.chg i { background: #4a4026; }
+
+.joy { grid-area: joy; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
+  width: min(100%, 24cqw); aspect-ratio: 1; justify-self: center; align-self: center; }
+.jb { border: 0; background: transparent; color: var(--etch); padding: 0; cursor: pointer; display: grid; place-items: center; border-radius: 6px; -webkit-tap-highlight-color: transparent; }
+.jb svg { width: 46%; height: 46%; fill: currentColor; transition: transform 80ms; }
+.jb:hover svg { color: #fff; }
+.jb.down svg { transform: scale(0.82); }
+.jb.up { grid-area: 1 / 2; } .jb.dn { grid-area: 3 / 2; } .jb.lt { grid-area: 2 / 1; } .jb.rt { grid-area: 2 / 3; }
+.jb.press { grid-area: 2 / 2; border-radius: 50%; width: 118%; height: 118%; justify-self: center; align-self: center;
+  border: 0.35cqw solid #d9dce0; background: radial-gradient(circle at 50% 45%, #141416, #050506 70%); box-shadow: 0 0 0 0.5cqw #121315, 0 2px 6px rgba(0,0,0,0.7); }
+.jb.press .cap { width: 62%; height: 62%; border-radius: 50%; display: block;
+  background: radial-gradient(circle at 46% 40%, #3a3b40 0 18%, #202124 45%, #0d0d0f 100%);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.8), inset 0 1px 1px rgba(255,255,255,0.08); transition: transform 80ms; }
+.jb.press.down .cap { transform: scale(0.92); }
+.jb.press[data-tilt="0"] .cap { transform: translateY(-9%); }
+.jb.press[data-tilt="1"] .cap { transform: translateY(9%); }
+.jb.press[data-tilt="2"] .cap { transform: translateX(-9%); }
+.jb.press[data-tilt="3"] .cap { transform: translateX(9%); }
+
+.word { grid-area: word; align-self: end; font-size: 10.5cqw; line-height: 0.9; letter-spacing: -0.01em; font-weight: 400; color: #fff;
+  -webkit-text-stroke: 0.25cqw #fff; }
+.model { grid-area: model; align-self: end; justify-self: end; text-align: right; display: grid; gap: 0.6cqw; padding-bottom: 0.6cqw; }
+.model .brand { font-size: 3cqw; letter-spacing: 0.08em; }
+.model .mt { font-size: 2.9cqw; letter-spacing: 0.04em; font-weight: 400; -webkit-text-stroke: 0.08cqw #fff; color: #fff; }
+
+@container (max-width: 560px) {
+  .device { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "screen screen" "joy leds" "word model"; padding: 6% 6.5% 5%; row-gap: 5cqw; }
+  .joy { width: min(100%, 40cqw); }
+  .leds { flex-direction: column; align-items: flex-start; gap: 1em; font-size: 14px; }
+  .word { font-size: 13cqw; }
+  .model .brand { font-size: 3.6cqw; } .model .mt { font-size: 3.8cqw; }
+  .jb.press { border-width: 0.5cqw; box-shadow: 0 0 0 0.7cqw #121315, 0 2px 6px rgba(0,0,0,0.7); }
+}
+
+.devbar { display: flex; flex-wrap: wrap; gap: 6px 18px; justify-content: space-between; margin-top: 10px; color: var(--muted); font-size: 0.82rem; }
+.devbar span b { color: var(--ink); font-weight: 400; font-family: var(--f-mono); font-size: 0.78rem; }
+
+/* ---------- controls legend ---------- */
+.keys { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 10px; font-size: 0.85rem; color: var(--muted); }
+kbd { font-family: var(--f-mono); font-size: 0.74rem; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; background: var(--panel-2); color: var(--ink); }
+.tbl { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 0.84rem; }
+th, td { text-align: left; padding: 6px 8px; border-top: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 400; color: var(--muted); font-size: 0.74rem; letter-spacing: 0.08em; text-transform: uppercase; border-top: 0; }
+td:first-child { white-space: nowrap; }
+
+/* ---------- inputs ---------- */
+.ins { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 620px) { .ins { grid-template-columns: minmax(0, 1fr); } }
+.port { border: 1px solid var(--line); border-radius: 6px; padding: 10px; background: var(--panel-2); display: grid; gap: 9px; min-width: 0; }
+.port-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.port-h strong { font-weight: 400; font-size: 1.05rem; letter-spacing: 0.04em; display: inline-flex; align-items: center; gap: 8px; }
+.act { width: 9px; height: 9px; border-radius: 50%; background: var(--line); display: inline-block; }
+.act.on { background: var(--c-note); }
+.port-h label { font-size: 0.8rem; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
+.port-h select, .bpm input { border: 1px solid var(--line); background: var(--panel); border-radius: 4px; padding: 2px 4px; font-family: var(--f-mono); font-size: 0.8rem; }
+.grp { display: grid; gap: 5px; }
+.grp > span { font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.grp > div { display: flex; flex-wrap: wrap; gap: 5px; }
+.grp .btn { padding: 5px 8px; font-size: 0.8rem; background: var(--panel); }
+.grp .btn[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.bpm { display: inline-flex; align-items: center; gap: 4px; font-size: 0.78rem; color: var(--muted); }
+.bpm input { width: 4.2em; }
+.wire { font-family: var(--f-mono); font-size: 0.72rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.meter { height: 3px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.meter i { display: block; height: 100%; width: 0; background: var(--accent); }
+
+/* ---------- outputs ---------- */
+.outs { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.out-h { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; margin-bottom: 6px; }
+.out-h strong { font-weight: 400; font-size: 1.05rem; letter-spacing: 0.04em; }
+.route { display: inline-flex; align-items: center; gap: 4px; font-size: 0.76rem; color: var(--muted); }
+.chip { font-family: var(--f-mono); font-size: 0.7rem; padding: 1px 6px; border-radius: 10px; border: 1px solid var(--line); color: var(--c-dim); }
+.chip.on { border-color: var(--accent); color: var(--ink); background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.counts { font-family: var(--f-mono); font-size: 0.72rem; color: var(--muted); font-variant-numeric: tabular-nums; display: flex; gap: 10px; flex-wrap: wrap; }
+.counts b { color: var(--ink); font-weight: 400; }
+.counts .bad { color: var(--c-err); }
+.log { height: 190px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--panel-2); font-family: var(--f-mono); font-size: 12px; line-height: 1.5; padding: 4px 0; }
+.row { display: grid; grid-template-columns: 7.2em max-content max-content; gap: 1.2em; padding: 0 10px; white-space: nowrap; width: max-content; min-width: 100%; }
+.row .t { color: var(--c-dim); font-variant-numeric: tabular-nums; }
+.row .hx { color: var(--ink); }
+.row .hx .rs { color: var(--c-dim); }
+.row .lb { font-family: var(--f-label); font-size: 12.5px; }
+.empty { color: var(--muted); padding: 6px 10px; font-family: var(--f-label); font-size: 0.85rem; }
+.k-note { color: var(--c-note); } .k-cc { color: var(--c-cc); } .k-pc { color: var(--c-pc); }
+.k-sysex { color: var(--c-sysex); } .k-rt { color: var(--c-rt); } .k-err { color: var(--c-err); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 0.76rem; margin-top: 2px; }
+.legend span::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 2px; background: currentColor; margin-right: 5px; vertical-align: 0; }
+
+.foot { color: var(--muted); font-size: 0.8rem; max-width: 80ch; }
+.boot-err { color: var(--c-err); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Questrial&display=swap">
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>MIDIum <span>NSK MT-1 simulator</span></h1>
+      <p>The screen, menus, monitor, generator and thru / merge engine below are the real v0.3 firmware, compiled to WebAssembly. Inject traffic on IN A and IN B, drive the joystick, and watch what leaves OUT A and OUT B.</p>
+    </div>
+    <div class="top-ctl">
+      <div class="seg" role="group" aria-label="Display fitted">
+        <button type="button" id="d-tft" aria-pressed="true">TFT 1.9" colour</button>
+        <button type="button" id="d-oled" aria-pressed="false">OLED 1.3" mono</button>
+      </div>
+      <button type="button" class="btn" id="power">Power cycle</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <div class="col">
+      <section class="bench" aria-label="MT-1 top face">
+        <div class="device" id="device">
+          <i class="screw tl"></i><i class="screw tr"></i><i class="screw bl"></i><i class="screw br"></i>
+          <div class="screen"><div class="glass"><canvas id="lcd" width="320" height="170" aria-label="Device screen"></canvas></div></div>
+          <div class="leds">
+            <span class="led midi" id="led-midi" title="MIDI activity (blinks on every input byte)"><i></i>MIDI</span>
+            <span class="led chg" title="Charge (battery arrives in M2)"><i></i>CHG</span>
+          </div>
+          <div class="joy" role="group" aria-label="5-way joystick">
+            <button type="button" class="jb up" data-k="0" aria-label="Joystick up"><svg viewBox="0 0 10 10" aria-hidden="true"><polygon points="5,1.5 9,8 1,8"/></svg></button>
+            <button type="button" class="jb lt" data-k="2" aria-label="Joystick left"><svg viewBox="0 0 10 10" aria-hidden="true"><polygon points="1.5,5 8,1 8,9"/></svg></button>
+            <button type="button" class="jb press" data-k="4" id="cap" aria-label="Joystick press"><span class="cap"></span></button>
+            <button type="button" class="jb rt" data-k="3" aria-label="Joystick right"><svg viewBox="0 0 10 10" aria-hidden="true"><polygon points="8.5,5 2,1 2,9"/></svg></button>
+            <button type="button" class="jb dn" data-k="1" aria-label="Joystick down"><svg viewBox="0 0 10 10" aria-hidden="true"><polygon points="5,8.5 9,2 1,2"/></svg></button>
+          </div>
+          <div class="word">MIDIum</div>
+          <div class="model"><span class="mt">NSK MT-1</span></div>
+        </div>
+        <div class="devbar">
+          <span>Display <b id="st-disp">-</b></span>
+          <span>Uptime <b id="st-up">0:00:00</b></span>
+          <span>Monitor <b id="st-msgs">0</b> msgs</span>
+        </div>
+      </section>
+
+      <section class="panel" id="p-ctl" aria-labelledby="h-ctl">
+        <h2 id="h-ctl">Controls</h2>
+        <div class="keys">
+          <span><kbd>&uarr;</kbd> <kbd>&darr;</kbd> <kbd>&larr;</kbd> <kbd>&rarr;</kbd> or <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> joystick</span>
+          <span><kbd>Enter</kbd> / <kbd>Space</kbd> press</span>
+          <span>Hold up / down to auto-repeat</span>
+        </div>
+        <div class="tbl">
+          <table>
+            <thead><tr><th>Where</th><th>Up / Down</th><th>Left</th><th>Right</th><th>Press</th></tr></thead>
+            <tbody>
+              <tr><td>Monitor</td><td>scroll history (pauses, header shows PAUSED)</td><td>back to live</td><td>time column on / off</td><td>open menu; on a highlighted MSC / sysex line, open its detail page</td></tr>
+              <tr><td>Detail page</td><td>scroll</td><td>back to monitor</td><td>next page</td><td>next page</td></tr>
+              <tr><td>Menu</td><td>move (wraps)</td><td>back</td><td>select / toggle / edit</td><td>select / toggle / edit</td></tr>
+              <tr><td>Editing a value</td><td>change value</td><td>done</td><td>done</td><td>done</td></tr>
+              <tr><td>Editing MSC cue</td><td>change the part in &lt; &gt;</td><td>integer part, or done</td><td>decimal part, or done</td><td>done</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <div class="col">
+      <section class="panel" id="p-in" aria-labelledby="h-in">
+        <h2 id="h-in">Inputs</h2>
+        <p class="sub">Each button sends real traffic into IN A or IN B at MIDI wire speed: 31,250 baud, 320&nbsp;&micro;s per byte.</p>
+        <div class="ins" id="ins"></div>
+      </section>
+
+      <section class="panel" id="p-out" aria-labelledby="h-out">
+        <h2 id="h-out">Outputs</h2>
+        <p class="sub">Every byte the engine sends, timestamped as it starts on the wire, grouped into messages. Newest first.</p>
+        <div class="legend">
+          <span class="k-note">note</span><span class="k-cc">CC / bend / aftertouch</span><span class="k-pc">program / system common</span>
+          <span class="k-sysex">sysex / MSC / MTC full</span><span class="k-rt">realtime / quarter frame</span>
+        </div>
+        <div class="outs" id="outs"></div>
+      </section>
+    </div>
+  </div>
+
+  <p class="foot" id="foot">Default routing is the firmware default: IN A goes to both outputs and IN B is monitored only. Change it on the device under Menu &gt; Routing. Settings live in RAM, as on the M1 hardware, so a power cycle or display change resets them.</p>
+</div>
+
+<script>var MidiumSim=(()=>{var _scriptName=globalThis.document?.currentScript?.src;return async function(moduleArg={}){var Module=moduleArg;var ENVIRONMENT_IS_WEB=true;var ENVIRONMENT_IS_WORKER=false;var programArgs=[];var thisProgram="./this.program";var scriptDirectory="";var readAsync;if(ENVIRONMENT_IS_WEB||ENVIRONMENT_IS_WORKER){try{scriptDirectory=new URL(".",_scriptName).href}catch{}{readAsync=async url=>{var response=await fetch(url,{credentials:"same-origin"});if(response.ok){return response.arrayBuffer()}throw new Error(response.status+" : "+response.url)}}}else{}var out=console.log.bind(console);var err=console.error.bind(console);var wasmBinary;var ABORT=false;class EmscriptenEH{}class EmscriptenSjLj extends EmscriptenEH{}function binaryDecode(bin){for(var i=0,l=bin.length,o=new Uint8Array(l),c;i<l;++i){c=bin.charCodeAt(i);o[i]=~c>>8&c}return o}var runtimeInitialized=false;function updateMemoryViews(){var b=wasmMemory.buffer;Module["HEAPU8"]=HEAPU8=new Uint8Array(b);HEAPU32=new Uint32Array(b);Module["HEAPF64"]=HEAPF64=new Float64Array(b)}function preRun(){var preRun=Module["preRun"];if(preRun){if(typeof preRun=="function")preRun=[preRun];onPreRuns.push(...preRun)}callRuntimeCallbacks(onPreRuns)}function initRuntime(){runtimeInitialized=true;wasmExports["__wasm_call_ctors"]()}function postRun(){var postRun=Module["postRun"];if(postRun){if(typeof postRun=="function")postRun=[postRun];onPostRuns.push(...postRun)}callRuntimeCallbacks(onPostRuns)}function abort(what){Module["onAbort"]?.(what);what=`Aborted(${what})`;err(what);ABORT=true;what+=". Build with -sASSERTIONS for more info.";var e=new WebAssembly.RuntimeError(what);throw e}var wasmBinaryFile;function findWasmBinary(){return binaryDecode(' asm   ` ` ` ` `  ```` ` ``~ `~ `|`|`~ `~ `~`| `|` |`~~`||``~@wasi_snapshot_preview1fd_write \nenvemscripten_resize_heap ÑÏ\n\n			                                        \r\n         \r		 pqq	AÐ²·ømemory __wasm_call_ctors __indirect_function_table sim_init ¡sim_tick ¢sim_key £sim_midi_in ¤sim_midi_in_at ¥sim_rx_free_at ¦sim_rx_pending §sim_rx_flush ¨sim_out_read ©\nsim_now_us ªsim_framebuffer «sim_fb_w ¬sim_fb_h ­sim_fb_version ®sim_brightness ¯sim_display_on °sim_led ±sim_display_name ²sim_route_bits ³sim_clock_running @sim_stat ´malloc Ëfree ÌsetThrew Ð_emscripten_stack_restore Í_emscripten_stack_alloc Îemscripten_stack_get_current Ï	 Ap$%-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~¸·¹ÄÅÇ\nÇßÏ4 A¸¥§AÐ²·6 A ¥§A*6 A¼¥§A6 AÀ¥§Aðû ( 6  Aq!@  A0lA¬j"- AG\r  - \r   AlA¬j"Aj! A!j( ! @  6@  (kAO@A©½-    F@Aø¼( "Aü¼( kAO@AÄßAÄß( Aj6  AÿqAø¬j :  Aø¼ Aj6   (6 A:   AtAÐßj" ( Aj6   AÿqAtj ;   Aj6A  @ - AG\r  - \r   AlA¬j"AôÃ j! AôÓ j( ! @  6@  (kAÿM@  AÿqAtj ;   Aj6Að-    G@  (6 A:   AtA°j" ( Aj6 AØï( "AÜï( kAÿM@ AÿqAØßj :  AØï Aj6 A¤A¤( Aj6 A ¯  Aà2lA¬j"A¤1j!\n Aj!	 Aà j!  At! - "!@@  Aÿq"AÿF\r @@ 	 Alj"(" ("F\r @  AÿqAtj/ "Aq\r  Aj"6@ (" (kAO@  (Ì2Aj6Ì2  Aÿqj :    Aj6 AqE@  F\r AÿqA÷G\r A : °Aÿ AÿqAÿF\r  Aÿq"A0lA¬j")}BÀ=B  - X\r@ (Ä2 (È2G\r  @ (´  (¸ G\r AF\r (¼0 (À0F\r   jA:  - \r  A:   (,Aj6,AÄ£AÄ£( Aj6  Aÿ: ±Aÿ!@ (È2" (Ä2F\r  (" \n Aÿqj-  "j ("\rkAK\r   Aj"6È2Aÿ!A !  \n Aÿqj-  "A  AðI: ° ! E\r@@  \rkAO@  (Ì2Aj6Ì2  Aÿqj \n Aÿqj-  :    Aj"6  Aj"6È2 Aj"Aÿq I\r A!@ 	 - ²"Aq"Alj"( ("G@ A0lA¬j"- E@ - AG\r   j(G\r !  )}BéT\r 	 AsAq"Alj"( ("G@ A0lA¬j"- E@ - AG\r   j(G\r  )}BéT\r   A H! "A H\r (" (kAK\r   As: ² 	 Alj" ("AÿqAtj/ !  Aj6@ Aq@ - ° AÿqF\r  Aÿqj :    Aj6Aÿ!  A  AÿqAðI: ° ! Aq\r  : ± ! !  Aà2lA¬j"Aà j!  Aj(  Aj( "G@    Aqj- :      (¬Aj6¬A  ("  (G    Aÿqj-  :      (Aj6AA 4   Aà2lA¬j" Aàj(   Aj( j  Aäj(   Aj( jkG @  AøI\r Aè¢( Aä¢( kA@F\r Aä¢( A?qA¬j  : ÔvAä¢Aä¢( Aj6    A A°ü   A 6´   6°°# Ak"$ @ AøO@ A :  A ;\n  7   : 	 B¤´ððÁ AtA@k­Bø<   - ¬! A ;  : \r   (´  (°   - ! ÀA H@ Aq@ A÷F@@@  /&"Aÿ M@   jA÷: (    - $Ar: $ AÿÿF\r   Aj;&  A :   Aj  (´  (°   A :     - $Ar: $  Aj  (´  (°   A :   A :  AðF@  A:   A :    A jA Aü   Aà;    7  Að: (  A;&    - ¬: % AðO@  A :   Aj"AÿqAO@ A :  A ;\n  : 	@ AvAk"AI\r A! AðI\r  AjAÿq- !  :   7   - ¬! A ;  : \r   (´  (°    7   :   A AtAøqv:    7   :    :    AA AàqAÀF:  Aq@@  /&"Aÿ M@   j : (    - $Ar: $ AÿÿF\r   Aj;&    - "@  - !  -   -  "E@    (¨Aj6¨   :    7   AvAk"AO@A  Aj"AÿqAO\rA AtAøqvB  At­Bø§": A "Aj":   Aj" Aÿqj :   Aÿq AÿqI\r @ AvAk"AI\r A! AðI\r  AjAÿq- ! -  !A ! AÿqAO@  - !  )! A :   :   : \n  : 	  :   7   - ¬! A ;  : \r   (´  (°   A :   A :  Aj$ P# Ak"$    BèBè>   BÀ=B<>   BÎ§Aä p6  AAÒ	 ¶ Aj$ Ö # A k"$   - 	"Aq! A~A -  A!\n Aj!@@@@@@@@@@@@@@@@@@@@@@  -  	\n\r  \n  - \n"An"j6   AlkAÿqAt(À36 AèjAA% Aj¶   - 6  6   Aèj6  A\n ¶A  \n  - \n"An"j64   AlkAÿqAt(À360 AèjAA% A0j¶   - 6(  6   Aèj6$  Aá	 A j¶A  \n  - \n"An"j6T   AlkAÿqAt(À36P AèjAA% AÐ j¶   - 6H  6@  Aèj6D  Aö	 A@k¶A  - \n!   - 6h  6d  6`  Aæ\n Aà j¶A   - \n6t  6p  A Að j¶A   - \n6  6  A Aj¶A  - \n!  - !   6    AtrA@j6  A% Aj¶A  - "A A!  - !\n  AjA  /" AO  Aèj@ Aèj!	A !# Ak"$ @ E\r  E\r  B 7È 	(´!\r@ 	- E@ A?;Ø 	- ! @@@ Al"- ;  F\r  - ;  F\r  - ;  F\r  - ¤;  F\r  Aj"A8G\rA ! @@@@@ Al"- ;  F\r A;j! - ;  F\r - ;  F\r - ¤;  F\r Aj"A8G\r A  A;j A$j Aj Aj" AjA   6à AØjAAÉ Aàj¶  E@ AÅ°Ñ6Ø   6ð AØjAAÒ& Aðj¶ Ak! Ak!@ 	- E@ A?;Ð 	- ! @ 	- E\r A !@@ Al"- À4  F\r  - Ì4  F\r  - Ø4  F\r  Aj"A!G\rA ! @@@@ Al"- À4  F\r AÀ4j! - Ì4  F\r - Ø4  F\r Aj"A!G\r A  AÀ4j Aj Aj(6Ð AÐjAAÉ AÐj¶   6À AÐjAAØ& AÀj¶  I! @ 	- "Aÿ F\r  AÀ : È AÈjAr! Að O@  Aï k6  AAâ\n A j¶  6° AAÜ A°j¶    !A3A±3 \r!\r Aðj!\nA !@@ A j Aà lj"A :  @ 	- AG\r  	- E\r A !  	- !@@   Al"- À4G@   Aj"Al"- À4F@ AÀ4j!   Aj"Al"- À4F@ AÀ4j!  Aj" A!G\r AÀ4j!  !@@@@@@ - Ak\r  	   	  @ 	- AG\r  	/!   	/6   6 AàjA Aî\n Aj¶ - àE\r  A±36p  Aàj6t Aà AÛ Að j 	   	- AG\r  	- 6  AàjA AÞ\n A j¶ - àE\r A±36  Aàj6 Aà AÛ Aj 	A  AF  AG\r@ 	- ¦AG\r   	/¨6 AàjA A Aj¶ - àE\r  A±36  Aàj6 Aà AÛ Aj AkAM@ 	- ¯AG\r  	/°6À AàjA AÏ AÀj¶ - àE\r A3A±3 -  6°  Aàj6´ Aà AÛ A°j 	   \r 	- AG\r 	- !  	- ! 	- ! 	- ! \n 	- 6   6ì  6è  6ä A©/A±3  6à AjA A­\n Aàj¶ - E\r A3A±3 -  6Ð  Aj6Ô Aà AÛ AÐj 	   Aj"AG\r Aj! Aàj!\nA ! @@  Al", 4!A !@@  AkAK\r  "-  !@ \n"-  "E\r   G\r @ - ! - "E\r Aj! Aj!  F\r   k"A G!  AG\r  E\r A4j! A :  AjA A³,A @  	- AGAÖ-@ - AG\r  - ØE\r  A3A±3 - 6`  AØj6d AjA AÛ Aà j - ÐE\r AÐj6T A3A±3 - 6P AjA AÛ AÐ j A j Aà lj"-  @  6D A3A±3 - 6@ AjA AÛ A@k@ - AG\r  - ÈE\r  A3A±3 - 60  AÈj64 AjA AÛ A0j  \r6$ AA±3 6  AjA AÛ A j Ajº M\r  Aj" AG\r  " AO@ 	(´A GAs  j!    Ajº"   I"  AjjA :  @  E\r @   j- ÿA G\r  Ak"  AjjA :    \r  AI\r   \r6 AjA A« Aj  Aj6   AÉ ¶ Aj$ AA3A±3 \nAq!@@ AO@@  - "\nAÿ G\r @@  - Ak A·(!@@@@@@@@@@@@@@@@  - " AkG 	\n\rA±&!\rA­&!Aþ+!A,!\nAó+!	Aö\'!Aº+!A¾+!A(!AÑ+!A(!A¤+!A³+!Aë+!  6ä  6à  A× Aàj¶A  6Ô   6Ð  Aó AÐj¶A A	I\r   - AG\r   - !  - !\n  - !  - !   6   6ü  6ø  \n6ô  Aq6ð  A¯ Aðj¶A A ;à B 7Ø A ;à B 7Ø AI\r  - !\n \nAÿq!\n@ AI\r  \n\r   - !   - 6¸  6´ A 6° AØjA\nAÂ& A°j¶ \nA÷F\r   \n6À AØjA\nAº& AÀj¶  /!   6¨   6   AØj6¤  AÉ A j¶A   - \n" Aq6   AvAq6  A\' Aj¶A\r   - \n  - Atr6   AÀ A j¶A   - \n6°  AÓ A°j¶A  AÏ\'A ¶A\n  Aý)A ¶A	  Aâ\'A ¶A  A+A ¶A  A·(A ¶A  AÄ+A ¶A  A(A ¶A  6À  A\' AÀj¶A@@@@@  - \n" Ak   AÈ*A ¶  A*A ¶  Aê(A ¶  A¼(A ¶   6Ð  AÌ AÐj¶  AÖ-A ¶A!  A j$   f# A k"$ @  Aÿ F@  A¿)A ¶  Að O@   Aï k6   Aâ\n ¶   6  AÜ Aj¶ A j$ 0@ AI\r   -  AðG\r   - Aÿ G\r   - AF! ©@ AI\r   - ! AF@ At  !A!  -  Atr" At r ! AM\r @   j-  !A !   Ar"K@   j-  ! At r At r j! Aj" I\r    - jAÿþq\r@@@ AI\r   E\r  E\r   -  AðG\r   - Aÿ G\r   - AG\r  A A¸ü  Aÿÿ    I"	" AÿÿO;    - :   	AA   jAk-  A÷F\rA"6´A !	 AO@  Ar"6´  	k"AM@  Ar6´A A:    - ": @ @A !@@ Al"- ; F\r - ; F\r - ; F\r - ¤; F\r Aj"A8G\r   Ar"6´ AG\r  AÀ r"6´ AF\r A:    - : A A:    - ": @ @A !  AÀ r6´A@@  Al"- À4G@  Aj"Al"- À4F@ AÀ4j!  Aj"Al"- À4F@ AÀ4j! Aj"A!G\r AÀ4j! ! Ak!  Aj!A!@@@@@@@@@@@ - " 	\n\n\n\n\n   Aô3AA   Aô3A - \r	  (´Ar6´A AM@  Ar6´A  Aj A´jA   Aj AkAô3AA AM@  Ar6´A A:    - Aÿ q  - Aÿ qAtr;   - Aÿ q  - 	Aÿ qAtr; A	O@  A\nj Aj A´j" A A	F\r    ( Ar6 A AF\r  Ar6´A E@  Ar6´A A:   -  :  AF\r  Ar6´A E\r  Ar6´A   A4AA   A4A - \r  (´Ar6´A   A4A - 	\r  (´Ar6´A AM@  Ar6´A  Aj A´jA    Aj AkA4AA A:  AO@ A:   /  ;¢A!@@@@@@ A\nk   A! AI\r A: ¯   - 	A	t  - Atj;° AI\r A: ¦   - \nAÿ q  - Aÿ qAtr;¨ AF\r  Ar6´A	!@ AI\r  A: ¦   - Aÿ q  - 	Aÿ qAtr;¨@ AI\r  AF AFrE\r  A: ª   ( \n6 « A	I\r  AG\r   A\nj Aj A´jA @  I\r    j  kAô3A@ A\nk   - \r   (´Ar6´  O\r  (´Ar6´A!@ - ¦AG\r  /¨\r   (´Ar6´ 	 - qE\r  A:     A ";¤   /¢"F":  \r    A F@ A; A  (´Ar6´   A r6´A  Ar6´A¢A Aj" AM!\rA !@@@  M\r   j-  E\r  Aj!@  	K@A  F\r \nAq@    (´Ar6´  k!  AA	  	Atj( "AF"A jA:    A3AÜ  A\n j!  j!A !A !A !@  j-  "A.F" A:kAÿqAöIG@    (´Ar6´ As A.GrAqE@    (´Ar6´@ A\'M@  jA?  A kAÿqAß O:   Aj!    (´A r6´ ! Aj" G\r   jA :    F\r     (´Ar6´ \n! 	Aj!	 Aj"! !\n  \rG\r ¡   - :    (  6  A:     -  AvAq":    -  Aq":    - AvAq:    - A?q":    - A?q":    - AvAq:    - AvAq"	:    - Aq"\n:   - Av!  - !  	@   : \n   AqA Gr r   : 	  AÿqAã K r! @@ AK\r  A;K\r  A;K\r  - ð3 \nM  rAqE\r  ( AÀ r6 Î# Ak"$ @  - AG\r    A\nj6P Aà jA+A AÐ j¶ - `E\r  A3A±3 -  6@  Aà j6D Aà AÛ A@k@@  - AG\r  AN@  - \r   A3j60 Aà jA+A A0j¶ - `E\r  A3A±3 -  6   Aà j6$ Aà AÛ A j  - 	AG\r  @  - \r  - \r   AÜ j6 Aà jA+A Aj¶ - `E\r  A3A±3 -  6   Aà j6 Aà AÛ  Aj$ ó# Aà k"$ @ AF\r   - AqE\r A©/A±3  - !  - !  - !  - !@ @  6<  68  64  60 A@kA A\n A0j¶   - 6   6  6  6  6 A@kA A­\n Aj¶ - @E\r  A3A±3 -  6   A@k6 Aà AÛ  Aà j$ <# Ak"$    º"AjK@  6   j  k  Æ Aj$ T# A°k"$   6 AjA   Æ  6  AjAA3 ¶   Aj AjA  A°j$ ì# A°k"$  º!A!@@ º"A  ("	   Aq"\n"k  	O"M\r  ! E@A !@  j-  A F\r Ak"\r  !@ \n@  6  6  6 A0jA=A¤ Aj¶  6,  6( A±36$  6  A0jA=A A j¶  A0j6  Að jA=AÉ ¶ Að jº  ("K@ Að j jA :    ( "@ Að j   (      (Aj6  j!@ -  "A G@A ! \r A°j$  Aj!¥# Aðk"$ A©/A±3 - ! - ! - ! - ! - !@ - E@  - 	6  6  6  6  6  6 AÐjAAÃ\n Aj¶  6p  6l  6h  6d  6` AÐjAA­\n Aà j¶  AÐj6P   AAÉ AÐ j - ! A A±3 - 6D  AqAt(ð:6@  AìAAÛ A@k - AF@ B 7È B 7À B 7¸ B 7° B 7¨ B 7  - \n"AÀ q@ AÌ!64 A±360 A jA0AÛ A0j - \n! A q A!6$ A3A±3 -  6  A jA0AÛ A j - \n Aq@ AÂ.6 A3A±3 -  6 A jA0AÛ Aj  A jA¦ -  6   AÅAAÉ  Aðj$ ý@ ("E\r  -  "E\r   (!  (!@@  I@   Aj6  (  j Aÿ q:    (!  (!  A :  Aj"-  "\r @@ ("@ -  \r ("E\r -  E\r@  ("  (I@   Aj6  (  jA :   (!  A :  E\r  -  "E\r   (!  (!@@  I@   Aj6  (  j Aÿ q:    (!  (!  A :  Aj"-  "\r @ ("E\r  -  E\r @  ("  (O@  A :    Aj6  (  jA :   ("E\r -  "E\r   (!  (!@@  I@   Aj6  (  j Aÿ q:    (!  (!  A :  Aj"-  "\r ø	# Ak! @ - A?q - Atr! - AtAà q - Aqr! - Aq! - At! - A?q! -  B 7 B 7  !A !@@@  ("  (I@ A\nA	 Aq"	j-  !\n   Aj6  (  j :    ("  (I\r  A :    Aj6  (  j :    ("  (O\r    Aj6  (  j :    ("  (O\r    Aj6  (  j At r r:    ("  (I\r  A :    Aj6  (  j \nAð Aÿ  	q:  ×@  AM@  - ¥4!   Ak!@@@ Al"- ;" A/M@@  Ak   AG\r@  A0k @  AÐ k   Aÿ F\r E\r Ak!@@ - ;" A/M@@  Ak   AG\r@  A0k @  AÐ k   Aÿ F\r E\r Ak!@@ - ;" A/M@@  Ak   AG\r@  A0k @  AÐ k   Aÿ F\r E\r Ak!@@ - ¤;" A/M@@  Ak   AG\r@  A0k @  AÐ k   Aÿ F\r E\r Ak! Aj"A8G\r Aÿ !   AÿqA!  A\nM  - ­4 ¯@  AK\r   At"AàÂ j!  - àB"AF@Aý A:    - "AF@Aý A:    - "AF@Aý A:    - " AF@Aý A:   E@Aý A :   E@Aý A :   E@Aý A :    \r Aý A :  ` A   AK\r @  At" - àBAý -  G\r   AàÂ j" - Aý -  G\r   - Aý -  G\r A  - Aý -  F\rA n  AlAý j" -  "As"AqE@ Aá :  A!  - AF@  jAâ :   Aj AsAq Aq\r  A-:  A jA :    - "AM@ At" (ÀAj6ÀA´A´( Aj6   - \r"AM@ At" (¸Aj6¸# Að k"$ @Aý -  AG\r  Að j$ @@@@Aý -  Ak   - \rE\r  - \rAG\rAý -  AF@  - "AF AFr\r@Aý -  "E@Aý . A H\r@@  - Ak\r   AjA  /" AO\rE@Aý -  E\rAý . "A H\r  - " AÿqF\r Aÿ F\r \rA°( "Aÿ qAlA j  Aü\n  AA:  A° Aj6 A°( " Ak"A    OC  A°( "I   Ak"A   OOq"@   Aÿ qAlA jAü\n   £# Ak"$ @ AÁ kAÿqAÀI\r AÀ( A¼( kA`F\r A¼( AqAÁ lA¬j! @ A­æ j   ü\n    : ¬fA!A¼A¼( Aj6 @ E@A§A»)(  6  A A´))  7 A¨AAàA :   E\r @A¨   j-  B 	 Aj" G\r Aà-  E\r A A>:   A:  Aý -  : Aè AjA¡AAAÿ) 7  Aj$  y# Ak"$   A¨AAàA :  A¨  B 	Aà-  @A A>:   A:  Aý -  : Aè AjA¡AAAÿ) 7  Aj$  Aè  Aü\n  AàA:  JAô-  "AF@AøA Að( A ( j"Aèn"Axl j6   B  ­}7  7# Ak"$  A÷:    :  Aðÿý36 \n A\njA" Aj$  Aü( !Aø( !@@ @   - O\rA  t!  A4lAj!A !@  - A M\r@  Atj"-  A F@ - E\r A ; Aü  r"6  Aj!    Aj" A\nG\r Aø( " E@A  - Aø( " E@A\n  - ¨@Aø( " - A\nE\r  -  "E\r Aü( !@ !  - A  L\r@  A H\r    AtAj"-  F@ - AF\r A:   :  Aü Ar"6  Aj!  Aj!  - "\r ´@  A H\r Aø( " - A\n  M\r Aü( !@ E@A  t!A  t! -  "E\r   A4lAj!	@  - A M\r@ 	 Atj"-   AÿqF@ -  F\r  :   :  Aü  r"6  Aj! - ! Aj! \r   A4lAj!@  - A M\r@  Atj"-  A F@ -  F\r  :  A :  Aü  r"6  Aj!  ¥@  A H\r @@Aø( "@   - I\r  A	K\rAü( !@ E@A  t!A  t! -  "E\r   A4lAj!\n@  - A M\r@ \n Atj"	-   AÿqF@ 	-  F\r 	 :  	 :  Aü  r"6  Aj! - ! Aj! \r   A4lAj!@@@ @  - O\r AK\r@  Atj"-  A F@ -  F\r  :  A :  Aü  r"6  Aj!A!A! º!A\n º! - !A ! -   M\r  -  "E\r   k!A  t!\n  A4lAj! Aü( !	@ !A!   -  L\r@ A H\r    Atj"-   AÿqF@ -  F\r  :   :  Aü 	 \nr"	6  Aj! Aj! - "\r [# Ak"$ AÀ( "Aß M@   6  AlAÐjAAÉ ¶AÀ( "  : ð®AÀ  Aj6  Aj$  AÜû A6 Aè¯A :  AA 6 	 Aý -   Aý   :  Â# Ak" $ AÄ-  @AÅ-  !AÆ-  !  A :   A<A  :    Ar: \n  A\njA"AÆA:  AÅAý -  "AkA  AkAÿqAðO":    A¼È;    Ar: \r  A\rjA"@AÄA:  AÈAÿ) B¡|7   Aj$ ³# Ak" $ @AÐ-  @AÐA :  AÀ( "A N@AÑ-  !  A :    :    Ar: \r  A\rjA"AÀA6 AÐA:  AÀA6 AÑAý -  "AkA  AkAÿqAðO:  AØAÿ) 7   Aj$ 	 AÐ-  	 A ý -   A ý   :  	 A¡ý -   A¡ý   :  j# Ak" $ Aý -  !A ý -  !  A¡ý -  Aÿ q:    Aÿ q:   A° AkA°r AkAÿqAðI: \r  A\rjA"  Aj$ 	 A¢ý -   A¢ý   :  U# Ak" $ Aý -  !  A¢ý -  Aÿ q:   A@ AkAÀr AkAÿqAðI:   AjA"  Aj$ ¡# Ak" $ @Aà-  @AàA :  Aá-  !  A;    Aàr: \r  A\rjA"AàA:  AÐû A6 AáAý -  "AkA  AkAÿqAðO:  AäA 6 AèAÿ) 7   Aj$ 	 Aà-  	 A¤ý / ; A¤ý   ; AðB°ÂßA¬AA¤ý / "   AM"   A¬OAl­> 	 Aô-  ~Aô-    EsE@# Ak"$ @Aô-  AF@AôA :  @AÿAÿ( AøF\r AÿAÿ( AøF\r AÿAÿ( AøF\r AÿAÿ( AøF\r A ÿA ÿ( AøF\r A¤ÿA¤ÿ( AøF\r A¨ÿA¨ÿ( AøF\r A¬ÿ( AøG\rA¬ÿA 6 AA :  A§A+(  6  A A+)  7 AðB°ÂßA¬AA¤ý / "   AM"   A¬OAl­> AôA:  A A 6 AA6 AA 6 AøBx7 Aÿ) !	AA:  A 	Bè|7 @Aÿ( "AøF\r Aÿ( " AøF\r Aÿ( "AøF\r Aÿ( "AøF\r A ÿ( "AøF\r A¤ÿ( "AøF\r A¨ÿ( "AøF\r A¬ÿ( "AøF\r Aÿ E\r Aÿ  E\r Aÿ E\r Aÿ E\r A ÿ E\r A¤ÿ E\r A¨ÿ E\r  \rA¬ÿAø6  A¤ý / 6 A AA) ¶AAÿ) 7  Aj$  Aú# Aü# Aû# A& A&/ AÀA6 AÐA :  AÄA :  AàA :  AÔû A 6 ðA¨ý -  !# AÐ k"	$  	A§ý -  : @A¦ý -  !  	A : C 	 : B 	  : A 	A : O 	Aªý / ;D 	A¬ý ) 7F 	A´ý -  : N# Að k"$  A ;` A 6\\ 	" A@k"- !@@@ /"\r  \r  A : d@ E@  6 Aä jAAÜ Aj¶  6$  6  Aä jAAý\n A j¶ - dE\r  - "@  6  AÜ jAAÜ ¶ - !A  - "AF\r A 6 X B 7 Q A; L  /"An: N  A<n"A<p: O   A<lk: P A 6H B 7@ B 78 B 70 B 7(  -  Aÿ q: ( - !  Aÿ q: *  Aÿ q: )  AÜ j60  Aä j6,  /\nAÿÿ q;<  /Aÿÿ q;>  - Aÿ q: @@@@ AÿqAk  AÿÿqE\r  AÌ j68AÀ !# Ak"$  A ; \r A:  AÀ 6   "6  A :  A6  Að:   A6  Aÿ : A! A(j"-  ! A6   Aÿ q:  A6  A:  - ! A"6   Aÿ q: @ AÀ I@ - !  Aj" 6  j Aÿ q:  A ! A :  ! A ! - !@@@@@@ Al"- À4 F\r AÀ4j!\n - Ì4 F\r - Ø4 F\r Aj"A!G\r A !A!\n AÀ4j \nAj \nAj!A !\n@@@@@@@@@@@@@@@@@@@@@@ -   	\n\n    (    AÀ I@ /!   Aj"6   j Aÿ q:   AÀ I\r\n !  A :   AÀ I@   j - Aÿ q:    Aj!  A :  ("E\r -  "E\r@@  AÀ O@A !   j Aÿ q:    Aj!  Aj"-  "\r  ("E\r -  "E\r @@  AÀ O@A !   j Aÿ q:    Aj!  Aj"-  "\r   :    6  ( ("E\r - ! (! -  "@ ( ! (! @@   M@A !  j Aÿ q:   Aj! Aj"-  "\r   :   6  AÀ I@   jA :    Aj"AÀ I\r ! A ! A :   AÀ I@   Aj"6   jA :   AÀ I\r !  A : 	  AÀ I@   Aj"6   jA :   AÀ I\r !  A :   AÀ I@   Aj"6   jA :   AÀ I\r !  A :    Aj" 6  j AvAÿ q:    jA :    Aj!    Aj" 6  jA :     Aj" 6  jA :     Aj" 6  jA :  @  AÀ I@ / !   Aj"6   j AvAÿ q:   A :   !@ AÀ I@ / !   Aj"6  j  A	v:   A :  !@ AÀ O\r  /!  Aj" 6  j Aÿ q:    AÀ O\r    j AvAÿ q:   Aj!  A : @  AÀ O\r  /!   Aj"6   j Aÿ q:   AÀ O\r    Aj6  j AvAÿ q:     A :   @@  AÀ O\r  /!   Aj"6   j Aÿ q:   AÀ O\r    Aj6  j AvAÿ q:   A :   (  @  AÀ O@A ! /!   Aj"6   j Aÿ q:   AÀ O@A ! !   j AvAÿ q:    Aj! @  AÀ O@A !   j - Aÿ q:    Aj! @  AÀ O@A !   j - Aÿ q:    Aj! @  AÀ O@A !   j - Aÿ q:    Aj! @  AÀ O@A !   j - Aÿ q:    Aj!   :    6  @@  AÀ O\r  /!   Aj"6   j Aÿ q:   AÀ O\r    Aj6  j AvAÿ q:   A :  ("E\r    (! (! A !@   O\r    jA÷:    Aj! \n - As  Aÿ Kr"rAq@A   Aq! - A\nI\r A !@  AI\r  - !  AF@ Aÿq!A! Aÿq At - Atrr!  A	I\r   A	k"\rAv"@ AjA~q!A !\n@  j"-  !    Ar"K  j-  AtA  rj! - !A !   Ar"K@  j-  At! Aj!  r j! \nAj"\n G\r  \rAq\r  j-  !\n   Ar"K  j-  AtA  \nr j!   - j"Aÿ q:   AvAÿ q:  Aj$  ! Að j$ @ " E@A AAÎAç" AFA ¶AAÿ) 7  	  Aÿq" 	AÐ j$ 	 A¨ý -   A¨ý   :  # Ak"$    !@@@@ Al" - À4 F\r  AÀ4j!  - Ì4 F\r  - Ø4 F\r Aj"A!G\r A   AÀ4j( ( (6   AÉ ¶ Aj$ 	 A¦ý -   A¦ý   :  ¶# Ak"$   ! @@@@@ Al"- ;  F\r A;j! - ;  F\r - ;  F\r - ¤;  F\r Aj"A8G\r A  A;j A$j Aj Aj"AjA  !   6  6   AÞ& ¶ Aj$ 	 A§ý -   A§ý   :     Aÿq  	 A­ý -   A­ý   :  =# Ak"$ @  @   6   A% ¶  AÙA ¶ Aj$ 	 A®ý /  A®ý   ; 9# Ak"$    A<m"6     A<lk6  Aÿ$ ¶ Aj$ 	 A°ý /  A°ý   ; 	 A²ý /  A²ý   ; 	 A´ý -   A´ý   :   A  A .# Ak"$  AÊ/A±3  6   AÉ ¶ Aj$  A A A A A A	 Aý -   Aý   A G:  	 Aý -   Aý   A G:  	 Aý -   Aý   A G:  	 Aý -   Aý   A G:  	 Aý -   Aý   A G:  	 Aý -   Aý   A G:  	 Aý -   Aý   A G:  	 Aý -   Aý   A G:  .# Ak"$  AÙ.AÓ.  6   AÉ ¶ Aj$ 	 Aý -   Aý   A G:  	 Aý -  1Aý   :  @Aø( "E\r  ("E\r   Aÿq  \'# Ak"$    6   Aò2 ¶ Aj$ 	 Aý -   Aý   A G:  	 Aý -   Aý   :  :# Ak"$  A§A Aß,  AF  AF6   AÉ ¶ Aj$ 	 Aý -   Aý   A G:  	 Aý .  Aý   ; #   A H@  AòA ¶  Aÿq  M A¸B 7 A´A 6 A°A 6 AÀA AÐ ü AA:  A A 6 Aèþ A 6 A¨A :  Ò# Ak"$ @@@@@@@@@@  Ak 				A´( !AÄß( !A¤( !A¼£( !AÀ£( !AÈß( A¨( j!AÄ£( !A ( Aèþ ( j!AÌß( A¬( j!  6   AÎ	 ¶ Aj$ È# Ak"$   Am"A0lA¬j!@@@@@@@@   Atk  (! AM At(¸A ! ($! ((! AtA¬j" A¸3j(   Aæ j( j! ( ! (,!  6   AÎ	 ¶ Aj$ :# Ak"$    AM  At(ÀA 6   AÎ	 ¶ Aj$ T# Ak" $   Aÿ) BÀ=§"An6    A<n"A<p6    A<lk6  A¾	  ¶  Aj$ Ø# Aà k"$ @@@@@@@@    AÊ.6   AÉ ¶ Aë.6  AÉ Aj¶ A.6   AÉ A j¶ Aû-60  AÉ A0j¶ AØû ( 6@  AÉ A@k¶ A¨6P  AÉ AÐ j¶ A :   Aà j$ ÄA°ÿ( As!@ Al"A°°j! @ - °°A - ´bt q"E"G@    - Aj":  AÿqA\nI\r  A 6  A :    :   \rAð¯( Aì¯( kApG@Aì¯( Aq At(Àb:  °Aì¯Aì¯( Aj6   A6  A :  \r  AK\r     (Aj"6   (I\r Að¯( Aì¯( kApG@Aì¯( Aq AtAÀâ j( :  °Aì¯Aì¯( Aj6     (AÐ j6 Aj"AG\r A½# A k" $ AAAAAAAì°A6 Að°A6   Aj"Aà÷ ( 6 AØ÷ ) 7   AjAÀ 6  AjAç6Aìû Aì°( 6 Að°( Aì°( A AAA A\nAAAø   A: AA AA   AjAAAA  A: AA AA   AjAAAAø   AÕ :   A:: AA AA   AjAAA  AjAAA  Aà :   A6: AA AA   AjAAA  AjAAA  A!: AA AA   AjAAA  A: AA AA   AjAAAA A A¿A©A±A AÎ ü   A,: AA AA   AjAAAA±AÎ A±AÎ A±AÎ A±AÎ A±AÎ A±AÎ A±AÎ A±AÎ A±AÎ A±AÎ A±AÆ AA  A): AA AA   AjAAAA\n  A j$ AÊ# Ak"$   : \r A:    :  A : \n  A#j": 	  Av:   A#j":   Av:  A*: AA AA  AjAAA A\njAAA A+: AA AA  AjAAA AjAAA Aj$ á# Ak"$ @A  \nAtj"- "Aq"A  A	IAt/ðb AqAF"AþqAv!	 \nAl!\rAÅ A  ÀA H"Av! -  Al"- c! - c! - c! - c! - c!A !@ A¸l \rjAt" : ±  : ±  : ±  : ±   A Avt" q"": ±  	  ": ±  : ±  : ±     q"": ±  	  ": ±  : ±  : ±     q"": ±  	  ": ±  : ±  : ±     q"": ±  	  ": ±  : ±  : ±     q"": ±  	  ": ±  : ±  : ± Aj"AG\r  \nAj"\nAG\r A  At"ArAõÿqA» AjAôÿq A,: AA AA  AjAAAA±AÎ AA Aj$ *Aì°( !Að°( ! Aä     Aä OA\nld# Ak"$ Aÿ-  E@AÿA:  A<! A< AjAG@A=! A A= AjAG\rAàû   :  A!  Aj$   û# A°k" $ Aÿ-  E@AÿA:    A :    A°í ) 7   A¸í ) 7 	  AÀí ) 7 Aàû -    AAF@  A Aü   AÀ :  @  A ;  A :    A°r: Aàû -    AjAAàû -    A Aÿq! Aj! AI\r   AÞ;Aàû -    AjAAF!  A°j$  # A°k"$  A Aü  AÀ :   Ar!@  Atj"-  !  Alj" , Au":   Al"- Ôm s:   - Óm s:   - Òm s:   - Ñm s:   - Ðm s:   Aj"AG\r  , A H@ Aÿ:  , )A H@ Aÿ:  A ; A :    AqA°r: Aàû -   AjAAàû -   A A°j$ G# A k"$  A;  Aä     Aä OAÿ lA2nAj: Aàû -   A A j$  Aÿ  7  Aÿ)   ­Bè~| Í@ E\r AÌ£-  AqE\r AÍ£-  !AÀ£( !Aè£-  Aq!	@   j-  !@ AqE@A !AÎ£ :  Aå£A :  AÔ£A 6 @@@ A(k Aà£AØ£/ ; Aâ£AÜ£/ ; AÈ£A:  AÀ£ Aj"6 AÀ£ Aj"6 AÈ£A :  A!@@AÎ£-  A*k  AÔ£( "ALAÔ£ Aj6  AÏ£j :  AÍ£-  !AÔ£(  AG\rAÑ£/  "At Avr!AÏ£/  "At Avr!AÎ£-  A*F@AÚ£ ; AØ£ ; AÞ£ ; AÜ£ ; Aå£-  E@Aå£A:  Aä£ :  Aâ£/ !@Aà£/ "A¿K\r  AÍkAÿÿqAÖþI\r  	\r Aä£-  !  AÀljAt"AÃ!jAÿ:   AÂ!j AvAq Atr:   AÀ!j Aøq Avr:   AÁ!j AvAq At rAvAüqr:  Aà£ Aj"; @AÚ£/  AÿÿqO\r Aâ£ Aj"; Aà£AØ£/ ; AÞ£/  AÿÿqO\r Aâ£AÜ£/ ; A!AÀ£ Aj"6 Aå£A :   Aj" G\r 9 @@@  Ak AÌ£ As:   E\rAå£A :  AÍ£ :  : @  Aìû ( G\r Aè£-  Aq\r AÄ£ A\nn6 AÀ£AÀ£( Aj6 ,A!@  A<G\r Aè£-  AqE\r  A :  A! ðA!@ E\r   A<G\r Aè£-  AqE\r @ -  "@ AÀ G\r@ AI\r A! A¬-  ! AG@ Ak" Aq!  A~q!A! @A¬ Aÿq"AMA¬-  Al j   j-  : ì£A¬-   Aj":  A¬ Aÿq"AMA¬-  Al j   j- : ì£A¬-   Aj":    Aj!  Aj" G\r  E\rA¬ Aÿq"AMA¬-  Al j   j-  : ì£A¬-   Aj:  A¬-  A! AI\rA¬( ! A¬-  !A¬-  !@  j-  !@  @ AÿqAF@AÀ£AÀ£( Aj6 AÄ£ Aä lAä kÁAþmAÿÿq6 A¬  Ak" 6  AøqA°F@A ! A¬ Aq:  @ AM@ Apq r! AM@ Aq Atr!A ! @@@@@@ Ak[  A G\rA¬ :  A! A¬A6  !AÀ£AÀ£( Aj6 AÈ£A :  A¬A :  AÈ£A:  A¬A:  AÀ£AÀ£( Aj6 A¬A :  A A¬A:  A " AAAAAAAA ! A¬ :   Aj" G\r  ! ñ  At"AÀj! AÀj! AÀj! AÀj!	 AÀj!\n AÀj! AÀj! AÀÿj!\r  AlAì£j!A¬-  ! @  j-  ! \r At"j"Aÿ:  AA  Aq  G":  AtA  :  AnA  :    j"Aÿ:  AA  AvAq  G":  AtA  :  AnA  :    j"Aÿ:  AA  AvAq  G":  AtA  :  AnA  :    \nj"Aÿ:  AA  AvAq  G":  AtA  :  AnA  :    	j"Aÿ:  AA  AvAq  G":  AtA  :  AnA  :    j"Aÿ:  AA  AvAq  G":  AtA  :  AnA  :    j"Aÿ:  AA  AvAq  G":  AtA  :  AnA  :    j"Aÿ:  AA  Av  G":  AtA  :  AnA  :   Aj"AG\r AÀ£AÀ£( Aj6 ~@  AK\r   At"(È£ (Ð£kAÿÿK\r Aÿ) !  At AÈ£j"( "AÿÿqAtr" : è¤     V"7à¤A!  Aj6   At"    )ð£"  VBÀ|7ð£    AtA°¤j( %~|# Ak"$   Aÿ) "V@@Aÿ( "~ )B!Aÿ( "@ )"\r   \rV!Aÿ( "@ )"\r   \rV!Aÿ( "@ )"\r   \rV!A ÿ( "@ )"\r   \rV!A¤ÿ( "@ )"\r   \rV!A¨ÿ( "@ )"\r   \rV!A¬ÿ( "@ )"\r   \rV!      V    V!@AÐ¤-  @AØ¤) " Z\r@AØ¤ B(|"   T"\r7  \r@B!B!AÐ£( "AÈ£( G@ AÿÿqAt)à¤"Aà£) "  VBÀ|!AÔ£( "AÌ£( G@ AÿÿqAt)à¤U"Aè£) "  VBÀ|! \r    V"Z@  T"At At"(Ð£"AÿÿqAtr- è¤!  Aj6Ð£ At 7à£  (¸¤Aj6¸¤ "A0lA¬j" 7  (Aj6@ "AøO@@A¸(  j"-  AG\r Aø¼( Aü¼( kAO@AÌßAÌß( Aj6 A ½( "A¤½( kA O@AÄßAÄß( Aj6  AqA¬j : èA ½ Aj6  - AG\rAØï( AÜï( kAM@Að( "Að( kAM@ AqA¬j : ÈCAð Aj6 A¤A¤( Aj6 A¬A¬( Aj6  ÀA H@@ A÷G\r  - AG\r  A :  A÷  A ;A¸(  j"-  ! A :   :  - ! A :   :  Ar! AðF@ A ;  A:     AðO@  :  A :   Aj"AÿqAM@ A :  A AtAøqv:     A :  A ;   Ar  A :   :   :   AA AàqAÀF:     - AF@   @ - E\r  - " - "O\r   Aj":    AÿqM A :  Ar   -  "@ A : A¸(  j"-  !	 A :   	:  - ! A :   :   : A!	@@@@ Av"AM@A t"Aq\r Aà q\r Añk  A;A !	 A:   	:  A :  Ar!  A\nr      ( Aj6 A t!@A°£( A¬£( kA`F@ A0lA¬j" ((Aj6(A¸£A¸£-   r:  A¬£( AÿqAtA¬j" : ªw  : ¨w  7 w A¸£-  " vAq: ©wA¸£  Asq:  A¬£A¬£( Aj6 AÈ¤ B°ê|7 AÀ¤ Bè> Aä¢( Aè¢( G@@Aè¢( "A?qAì¢j-  !Aè¢ Aj6 @A¸( "- AG\r Aø¼( Aü¼( kAO@AÈßAÈß( Aj6 A ½( "A¤½( kA O@AÄßAÄß( Aj6  AqA½j :  A ½ Aj6 @ - AG\r AØï( AÜï( kAM@Að( "Að( kAM@ AqAàïj :  Að Aj6 A¤A¤( Aj6 A¨A¨( Aj6 AÀ£AÀ£( Aj6 Aä¢( Aè¢( G\r @A¼( AÀ( F\r @@@@@AÀ( AqAÁ lAÄj"-  "AÁ kAÿqAÀI\r  , A N\r A! AjAÿq!A¸( "\n- @A¼ß(  jAÀß( kAI! \n- AG\rA(  jA ( kAI q\rAÀAÀ( Aj6  E\r Aj! \n- @A¼ß( "AÿqA¼Ýj :   Aq! Aj!A !@@ AkAÿqAI@A ! Aü q!A !A !	@ AÿqA¼Ýj  j"-  :   AjAÿqA¼Ýj - :   AjAÿqA¼Ýj - :   AjAÿqA¼Ýj - :   Aj! Aj! 	Aj"	 G\r  E\r@ AÿqA¼Ýj  j-  :   Aj! Aj! Aj" G\r A¼ß 6  \n- AF@A( "AÿqAj :   Aq! Aj!A !@@ AkAÿqAI@A ! Aü q!A !A !	@ AÿqAj  j"-  :   AjAÿqAj - :   AjAÿqAj - :   AjAÿqAj - :   Aj! Aj! 	Aj"	 G\r  E\r@ AÿqAj  j-  :   Aj! Aj! Aj" G\r A 6 AÀAÀ( Aj6 A¼£A¼£( Aj6 A¼( AÀ( G\r A  \rA \r@A¤-  AF@A¤) " \rV\rA¤Aà¤§) "   T"BÀ|7 A¤A :  A ¤( "Aÿÿ q"Að¤§-  : à¤ At º9à¤A ¤ Aj"6  A¨¤( kAO@A¨¤ Aÿÿ k6 A°¤A°¤( Aj6 A  AjE\r Að¤§ - ":  Aà¤§ \r7 A¤A:  A¤)  \rV\r A¤ \rBÀ|"7 A¤A :  A ¤( "Aÿÿ q" : à¤ At \rº"9à¤A ¤ Aj"6  A¨¤( kAO@A¨¤ Aÿÿ k6 A°¤A°¤( Aj6 A  AjE\r Að¤§ - ":  Aà¤§ \r7 A¤A:  A¤)  \rV\r A¤ 7 A¤A :  A ¤( "Aÿÿ q" : à¤ At 9à¤A ¤ Aj"6  A¨¤( kAO@A¨¤ Aÿÿ k6 A°¤A°¤( Aj6 A  AjE\r Að¤§ - ":  Aà¤§ \r7 A¤A:  A¤)  \rV\r A¤ 7 A¤A :  A ¤( "Aÿÿ q" : à¤ At 9à¤A ¤ Aj"6  A¨¤( kAO@A¨¤ Aÿÿ k6 A°¤A°¤( Aj6 A  AjE\r Að¤§ - :  Aà¤§ \r7 A¤A:  @A¤-  AF@A¤) " \rV\rA¤Aè¤§) "   T"BÀ|7 A¤A :  A¤¤( "Aÿÿ q"Añ¤§-  : à¤ At º9à¤A¤¤ Aj"6  A¬¤( kAO@A¬¤ Aÿÿ k6 A´¤A´¤( Aj6 A AjE\r Añ¤§ - ":  Aè¤§ \r7 A¤A:  A¤)  \rV\r A¤ \rBÀ|"7 A¤A :  A¤¤( "Aÿÿ q" : à¤ At \rº"9à¤A¤¤ Aj"6  A¬¤( kAO@A¬¤ Aÿÿ k6 A´¤A´¤( Aj6 A AjE\r Añ¤§ - ":  Aè¤§ \r7 A¤A:  A¤)  \rV\r A¤ 7 A¤A :  A¤¤( "Aÿÿ q" : à¤ At 9à¤A¤¤ Aj"6  A¬¤( kAO@A¬¤ Aÿÿ k6 A´¤A´¤( Aj6 A AjE\r Añ¤§ - ":  Aè¤§ \r7 A¤A:  A¤)  \rV\r A¤ 7 A¤A :  A¤¤( "Aÿÿ q" : à¤ At 9à¤A¤¤ Aj"6  A¬¤( kAO@A¬¤ Aÿÿ k6 A´¤A´¤( Aj6 A AjE\r Añ¤§ - :  Aè¤§ \r7 A¤A:  AØ¤) " T\r AØ¤ 7  A !@@ At"(ÿ"E\r  Aÿj!A !@ - AG\r )"\r V\r AÀ F\r \rAÿ) "V@Aÿ \r7   ( !Aÿ 7 @ @ - \rAÿ Aÿ( F\r Aÿ Aÿ( F\r Aÿ Aÿ( F\r Aÿ Aÿ( F\r A ÿ A ÿ( F\r A¤ÿ A¤ÿ( F\r A¨ÿ A¨ÿ( F\r A¬ÿ(  G\rA¬ÿA 6  A :  Aj!  ) " B?" } \r|7 ( "\r  Aj"AG\r    V\r  Aj$ ~Aô¤§AA  AF" 6 A¨ÿB 7 A ÿB 7 AÿB 7 AÿB 7 AÌ£B 7 AÔ£B 7 AÜ£B 7 Aä£A 6 Aì£A A¬ü AÀÿA A¤\rü A!@ Aÿ: Üÿ Aÿ: Øÿ Aÿ: Ôÿ Aÿ: Ðÿ Aÿ: Ìÿ Aÿ: Èÿ Aÿ: Äÿ Aÿ: Àÿ Aà£\rI! A j! \r AÿB 7 Aäû AAÀ  6 Aè£  A G:  Aèû AÀ Aª  6 AÀ£AÀ£( Aj6 AÄ£A 6 AÈ£A :  A°ÿA 6 Aø¤§A :  AA Aý A:  Aý A:  Aý A :  Aý A :  Aý A:  A´ý A:  A²ý Aÿ; Aªý BÐ 7 A¨ý A :  A¤ý Aøø6 A¢ý A :  Aý A 6 Aý B@7 Aý A:  A¬A A°÷ü A¬£B 7 Aä¢B 7 A¼B 7 AðAÿ:  A©½Aÿ:  A¸Aý 6 AÐ£B 7 AÈ£B 7 Aà£B 7 Aè£B 7 Að£B 7 Aø£B 7 A¤B 7 A¤B 7 A ¤B 7 A¨¤B 7 A°¤B 7 A¸¤B 7 AÈ¤B 7 A¤A ; AÀ¤A 6 AÐ¤A :  AØ¤Aÿ) 7 AAÿ) !AÐ¤A:  AØ¤ 7 Aü¤§Aí AÔâ " 6 Aí ( AÜâ ( "    !Aü¤§( ! @ \r   Aí G\r Aü¤§AÔâ 6    Aü¤§( ! A !Aø  6 Aü( !@@  @   - O\rA t! A4lAj!A !@    - A M\r@  Atj"-  A F@ - E\r A ; Aü  r"6  Aj!   Aj"A\nG\r AüAÿ6 @Aø( " @AØû   ( 6   (" E\rAý -     AØû AÙ6 AA :  AA 6 \'AAAç+AAAß.+AA A´+@Aø( "E\r Aü( " E\r @@ - "E\rA !A( !@A  j o"t"  qE@  Aj"G\rAü   Asq6   A4lAj ( A Aj o6 Aø( "E\rAü( " \r AüA 6 Að¯A 6 Aì¯A 6 A°Aä 6 A°A 6 Aø¯Bx7 Aÿ) !A°A:  A° Bè|7 @Aÿ( "Aø¯F\r Aÿ( " Aø¯F\r Aÿ( "Aø¯F\r Aÿ( "Aø¯F\r A ÿ( "Aø¯F\r A¤ÿ( "Aø¯F\r A¨ÿ( "Aø¯F\r A¬ÿ( "Aø¯F\r Aÿ E\r Aÿ  E\r Aÿ E\r Aÿ E\r A ÿ E\r A¤ÿ E\r A¨ÿ E\r  \rA¬ÿAø¯6 AÀý AAìþ A :  Aøþ AA¤A:  A¸B 7 A°A 6 A´A 6 AÀA AÐ ü AA:  A A 6 Aèþ A 6 AÀA6 AðB°ÂßA¬AA¤ý / "   AM"   A¬OAl­> A A :  A¥§Aÿ) BàÜ*|7 Aô¤§( K\r~# Ak"$ @  D        e\r Aÿ) D     @o@    D     @o@dD     @@¢ü|"Aÿ) X\r @@Aø¤§-  E@A¥§) "   T Aÿ) A¥§) T\r\'Aü¤§( ( ! Aé6  AÊ.6 Aë.6  6# Ak"$  Aj$ Aø¤§A:  Aÿ) Bä |"   T Aÿ) !@A !Aì¯( Að¯( G@Að¯( "Aq-  °!Að¯ Aj6  @A !# A k"	$  @@@@@A(  A°( ! ! E AkA}Mq\r)!@@@@@ Ak   jAk" Ak"  K!@A¨-  @A¬( !A¬ 6 A¨A:    O\rA¬ Ak6 A¨-  E\rA¬( Aj" O\rA¬ 6 A¨A :  Aý Aý -  As:  A@A¨-  E\r A¬(  	Aj!E\r  	- AG\r A° 	AjAü\n  AÄA 6 AÀA 6 AÈ 	A jA 	/" AO\r:  AÀ( "Aß M@ 	A-AÌ- 	- 6  AlAÐjAAÉ 	¶AÀ( "A: ð®AÀ Aj6 (!# AÐk"$  A 6Ì A 6Ä A6À A<  A<O6È@A¸-  AG\r @AÀAA¾/ " AO"\n  Aj@@ - "Aÿ F@ Aî)  7  Aé)  7 Að O@  6à  Aï k6ä AjA0A± Aàj¶  6ô  6ð AjA0Aí0 Aðj¶  Aj6Ð AÀjAµ	AAÉ AÐj (È!@ - AF@ - !@@@@@ Al"- ; F\r A;j! - ; F\r - ; F\r - ¤; F\r Aj"A8G\r A  A;j A$j Aj Aj"Aj!A ! AÀjA3@@@@@ Al"- ; F\r A;j! - ; F\r - ; F\r - ¤; F\r Aj"A8G\r   6À  AÖ- 6Ä AÀjAª\rAAº AÀjAü1AÚ\r -  A;j A$j Aj Aj!  6°  AÖ- 6´ AÀjAª\rAAº A°j (AA AÀjAª\rAAÅ1A @@@ - AF@ - !A  AMAk@ - E\r A !@@@  Al"- À4G@ AÀ4j! - Ì4 F\r - Ø4 F\r Aj"A!G\r AÀ4j"( Aj"( Aj"(A !Aü1AÚ\r "ºAjI\r  6¤  6  AÀjA!AAº A j - AG\r AÀjA!AAÅ1A   6 AÀjA!AAÛ Aj AÀjA3 AA E\r  - "AI!Aø  v!@ - ¤AG\r @ - ¥AG\r  - ¦AF@ /ª! - §AF@  6Ð A©2A±3 - ¨6Ô AÀjAøAAà AÐj  6ð AÀjAøAA©, Aðj  /¬6à AÀjA%AAÏ Aàj  /ª6 AÀjAøAA2 Aj - ·AF@  /¸"Av6À  Aÿq6Ä AÀjAè\rAAý& AÀj AÀjA3 - ! /¸!@@@@@@ - "A%G@@@@@@@@@@@@@@@@@@@@@@ Ak± 	\n\rA8A8A8A 8A¨8A°8A¸8AÀ8AÈ8AÐ8AØ8Aà8\rAè8Að8Aø8\nA9	A9A9A9A8 E\r A&G\r ÁA H\r@@@@@@@@@@@@@@@@@@@ Av Aà:! A kA:!@ A k	\n\r  A"kA:! A kAð9! A k A k"Aÿÿq"AK\rA" vAqE\r AÿÿqAt(´A!AÀ9! A k E\r A k"Aÿÿq"AK\rA" vAqE\r AÿÿqAt(èA!AÈ9!\rAø9!A:!A:!\nA :!	A¨:!A°:!A¸:!AÀ:!AÈ:!AÐ:!Aè:! Aüÿj"AÿÿqA%I\r A$G\rAØ:! ("E\rB¢ ­§AqE\r AÿÿqAt( @("\r \r AA¢%Aë1A ÁA N A I! AA - ®AF@  /°6° AÀjA·AAÜ A°j - ²AG\r   - ³6   - ´6¤  - µ6¨  - ¶6¬ AÀjA&AAæ& A j  q! Aj!@ AF\r  - AqE\r  AÀjA\'Aó AF  @  AjAÏ1 - 6 AÀjAßAAÉ Aj@ - "E@ A	K\rA tAÀqE\r  A»jAÏ1 6 AÀjAÀAAÉ Aj - "AqE AGqE@  AäjAÏ1 Aq6ð AÀjAÊAAÉ Aðj - AF@  /6à AÀjAØAAÜ Aàj@ - AkAÿqAK\r  A : @ /"Aÿ M@  Aj6 AjA0A£ Aj¶ A¿M@  AqAÁ j6  AkAvAj6 AjA0AÒ% Aj¶ AßM@  A¿k6  AjA0A$ A j¶ AÿM@  Aßk6° AjA0AÉ A°j¶ AM@  Aÿk6À AjA0A§$ AÀj¶@@@ Aþk  AÞ)  7  AÙ)  7 AÅ$(  6  A¾$)  7 A¶$)  7 AüqAG\r   Aÿk6Ð AjA0A AÐj¶ - E\r  AÀjA3 AjAA  / 6p AÀjA½AAÜ Að j@ AG\r  - AqE\r  AÀjAó  - ¢AG\r   - £6` AÀjAÎ%AAÜ Aà jA !@ (¼ vAq@ AÀjA3 At(BAA Aj"AG\r   6Ð AÀjA½AA¹ AÐj@ AI\r AÁ-  "À"Aþ N@  6  Aó\'Aè\' Aÿ F6¤ AÀjA,AA§ A j AF\rAÂ-  "A÷G@  6 AÀjAµ	AAÛ Aj AI\rAÃ-  "A÷F\rAÄ-  "A÷F\r  6  6 AÀjAè%AAÕ Aj@ AI\r  \r AÂ-  ! AÃ-  6´  6° AÀjA,AAú& A°j AwF\r   6À A­A±3 Aý F6Ä AÀjA,AAë AÀjA¼-  "Aq AÀjA3Að!AAA¼-   AqE\r  AÀjA3AÖ1AA@A¾/ " \nK@  \n6D  6@ AàjA(Aä A@k¶  6P AàjA(Aµ AÐ j¶  Aàj60 AjA=AÉ A0j¶ Ajº (È"K@ Aj jA :   (À"@ AjA (Ä   (ÌAj! E\r A Aj"An AI! Aj j! (Ä!A !@ A : Ð@  \n  j"  \nK"\rO\r   AÀj-  6  AÐjA=A\' A j Aj" \rF\r @  AÀj-  6 AÐjA=A\' Aj Aj" \rG\r   AÐj6  AjA=AÉ ¶ Ajº K@ A :   @ AjA     Aj! \n "K\r  AÐj$ AAÜû ( "AJ\rAÜû  Aj"6  AtAðÂ 6Ð¯ Aá¯jA :   Aå¯jA :  A6 )!AÀ( " Ak"k"A   M!@@@@ Ak AÄ( "E\rAÄ Ak6 AÄ( " O\rAÄ Aj6  AÄ( "M@AÄA 6 AÄ  j"   K6 AA 6 AÜû ( "AtAÐ¯j( "( Aà¯j-  "A$lj!Aè¯-  @ - AF@A¬ý -  Aªý / Aé¯-  "!@@@@@ Ak   A Gk E@Aé¯A:  Aè¯A :   @Aé¯A :  Aè¯A :  Aè¯A :    Aã AÎ  Ij! @A¬ý  :  Aªý  ;  (  !@@@ Ak   .j" ."  H (   .k" ."  J ( Aè¯A :  @@@@@ Ak  @ Aà¯j Ak:   Aà¯j - Ak:   Aj" - I@ Aà¯j :   Aà¯jA :  Aè¯A :  AÜû  A J AkAA 6 A6 @@@@@ -   AJ\r (!AÜû  Aj"6  At 6Ð¯ Aá¯jA :   Aå¯jA :  AA6  ("E\r   (! (  E  Aè¯A:  Aè¯A:  Aé¯A :  )Ak!AÜû ( "Aà¯j-  " Aä¯j"-  "I@  :   !  j J\r  Aä¯j  kAj:  AA :   	A j$ A!# A k"$  Aj!@A¬£( "A°£( "G@ A°£( AÿqAtA¬j")¨w7  ) w7 A°£A°£( Aj6   G@ - \n"A  AI!@ - 	"Aq ) ! A Aü   7 A:  A:   :  Aj  A¸lAÀý j"A 6  A :  - 	 Aq@ - ! ) ! A Aü   :   7 A:  AAA AF AF:  Aj  A¸lAÀý j -  ) 	 Ak"\rA-  !AA :   A j$  !# Ak"$ @AÄ-  E\r  AÈ) T\r AÅ-  !AÆ-  ! A :  A<A  :   Ar:  AjA"E\r AÄA :  @AÐ-  E\r  AØ) T\r @AÀ( "A H@A0!AÑ-  ! A :   :   Ar:  AjA"E\rA0AÀ( "Aj A H"AÉ H\r AÀA6 AÐA :  AÀA6 AÑ-  ! Aä : 	  :   Ar:  AjA"@AÀ 6 AØ BÀ©|AØ) BÀ©|"  V7 @Aà-  E\r  Aè) T\r Aä( "A2L@ Aÿ?lA2m AM@Aÿ? Aÿÿ lAÎÿ1kAä nk A\rtAË kA2nA@j"AÐû ( G@Aá-  !  A@kAv:   Aÿ q:   Aàr: \n A\njA"E\rAÐû  6 Aä( !Aä Aj6  AÈN@AàA :  Aè BÎ |Aè) BÎ |"  V7 @AÔû ( "AM@@ Aû ;   A°r: \r A\rjA"E\rAÔû AÔû ( Aj"6  AI\r  AH\r AÔû A6 A A.)  7 A¨A.)  7 A°A .(  6 AAÿ) 7  Aj$ A !# Ak"$ @@ \r A-  AqE\r  A ) }B T\rA!AA:  A  7 @@@@@A(  (!A3! Bè§AÀ¤( kAM@AÊ/A3AÀ¤( !A  AÜjA AØj A,AéA¨-  6°  AÜj6´  AØj6¸ AàjAA A°j¶A A Aàj+ Ak *@ AH\r Aô-  E\r  AkAÒ,*A°( ! !@A¨-  E@ Ak! Ak"A¬( "   I"  I!  M  Oq\r A¬ 6 )!(!Aý -  ! Aý -  : Ö A AvA  jAk" AL: × AH\r Ak!)Ak! E@Añ.!  AÀj!E@A±3! AÀj AÖj A jA!AÂ AÁ  - Í!@Aý -  E@  6   A j6¤ AðjA.AÆ A j¶ )À Aàj\n  6  A j6  Aàj6 AðjA.A Aj¶  Ar A¨-  Aÿq Aðj+)"Ak!AÀ( "@  jAk n!AÄ( !A°)  Aðj\n A³,A¶&AÈ-  6Ð AÂ AÁ A½-  6Ô  Aðj6Ø AÀjAAÃ AÐj¶  6Ä   nAj   j I6À AàjAA÷\n AÀj¶A A AÀj Aàj, AH\r@ Aj!@AÄ(  j"AÀ( I@  - ð® AlAÐj+ A A±3+ !  G\r AÜû ( AtAÐ¯j( !)! ( !@ Ak" - "H@AÜû ( Aà¯j-  !  6P  6X  Aj6T AÀjAAô\n AÐ j¶  6` AÀjAAÉ Aà j¶A A AÀj+ AN@A !@@ AÜû ( "Aä¯j-  j" - O@ Aj"A A±3+ (! A : ð@@@@@@@  A$lj"-   A>;ð ( ! (  ! @  AðjA   A®AÔ 6  AðjAAÉ ¶ ( ! (  !@ @  AàjA    6  AàjAA% A j¶@Aè¯-  E\r  AÜû ( "AtAÐ¯j( ( Aà¯j-  A$ljG\r Aà-AÉ!  Aàj6 AðjA  Aj¶ (! ( "@    A  AðjA   E\r   E\r AÒª¹6ð ( "E\r . AðjA  A¬ý -  !	Aªý / !@Aè¯-  E\r   AtAÐ¯j( ( Aà¯j-  A$ljG\r Aé¯-  E@  	6D  6@ AðjAA A@k¶  	64  60 AðjAAØ- A0j¶@ \r  	\r  AÝ-  : ô AÙ(  6ð Aðj!\n# A k"$ @@ \r  	\r  \nA :   	E@  6  \nAAÜ ¶  	6  6 \nAAý\n Aj¶ A j$  Aj"AA  AÜû ( Aà¯j-  F (  Aðj,  G\r @Aè¯-  @A!Aá! (AÜû ( Aà¯j-  A$lj- AG\rAõA¸%Aé¯-  !A!A!A -  E\r  A) }B¿·V\r A!A !)Ak  + A +A! AF\r @) Asj!@@@ E\r   K\r   k AÀj!\r AA±3+ AÀj AÖj A jA!AÂ AÁ  - Í!@Aý -  AF@ )À Aàj\n  6p  A j6x  Aàj6t AðjA.A Að j¶  6  A j6 AðjA.AÆ Aj¶  Aÿq Aðj+ Aj" G\r  Aj$ A !@Aø( "E\r Aü( "E\r @ - "E\r A( !@A  j o"t" qE@  Aj"G\rAü  Asq6   A4lAj ( A Aj o6 AüA 6  Aÿ) V\r  Aj$ =   AM@A  - Ðwt! A°ÿ @A°ÿ(   rA°ÿ(   Asq6     AÿqB \'    Aÿq D         D        dü#~  AtAð£j) "Aÿ) "  Vº   At" AÈ£j(   AÐ£j( k6  At"AÐ£j AÈ£j( 6   At" Að£j  Aà£j) 7 ¤ A LA   AtAà¤j!  AtAà¤j!  At" A ¤j( !  A¨¤j"( !A ! @@  F\r   j  Aÿÿ q"	j-  :     Atj  	Atj+ 9   Aj"6   Aj"  G\r  !   \n Aÿ) º AÀÿ	 Aäû ( 	 Aèû ( 	 AÀ£( 	 AÄ£( 	 AÈ£-   Aÿ) AÈ¤) TAü¤§( " E@A±3  ( D Aý -  Aý -  AtrAý -  AtrAý -  AtrAý -  AtrAý -  AtrAÿq|@@@@@@@@@@@  \n 	\nA´¬( ¸Aä¬( ¸A ¸A¸AÐß( ¸AÔß( ¸ A°( ¸A´( ¸ A´( ¸A¼£( ¸A ¸A¸! Y    (H"Ak r6H  ( "Aq@   A r6 A  B 7    (,"6   6     (0j6A &# Ak"$   6     Æ Aj$ ë# A k"$    ("6  (!  6  6   k"6  j!@@@  (< AjAr Aj  F""AA " Aj È@ !@  ("F\r A H@ ! AA   ("K"	j"  A  	k" ( j6  AA 	j" (  k6   k!  (< "  	k" Aj ÈE\r  AG\r    (,"6   6     (0j6   A 6  B 7    ( A r6 A  AF\r   (k! A j$   A  B l@  "Aq@@ -  E\r Aj"Aq\r @ "Aj!A ( "k rAxqAxF\r @ "Aj! -  \r    k~  ½"B4§Aÿq"AÿG| E@   D        aA   D      ðC¢ »!  ( A@j6     Aþk6  BÿÿÿÿÿÿÿBð?¿    @    ü\n  # AÐk"$   6Ì A jA A(ü   (Ì6ÈA   AÈj AÐ j A j  ¾A N@    ( "A_q6 @@  (0E@  AÐ 60  A 6  B 7  (,!   6,  (\rA  µ\r    AÈj AÐ j A j  ¾! A q! @  A A   ($   A 60   6,  A 6  (!  B 7    (  r6  AÐj$ Á~# A@j"$   6< A)j! A\'j! A(j!@@@@@A !@  \rAÿÿÿÿsJ\r  \rj!\r (<"!@@@@ -  "@@@@ Aÿq"E@ !	 A%G\r !@ - A%G@ !	 Aj! - ! Aj"	! A%F\r   	6<  k" \rAÿÿÿÿs"J\r	  @    ¿ \r 	Aj!A!@ 	, A0k"A	K\r  	- A$G\r  	Aj!A! !  6<A !@ ,  "A k"	AK@ ! !A 	t"	AÑqE\r @  Aj"6< 	 r! , "A k"	A O\r !A 	t"	AÑq\r @ A*F@@ , A0k"A	K\r  - A$G\r   E@  AtjA\n6 A   Atj( ! Aj!A \r Aj!  E@  6<A !A !  ( "Aj6  ( !A !  6< A N\rA  k! AÀ r! A<jÀ"A H\r\n (<!A !A!\nA  -  A.G\r  - A*F@@ , A0k"	A	K\r  - A$G\r  Aj!  E@  	AtjA\n6 A   	Atj(  \r Aj!A   E\r   ( "	Aj6  	( !\n  6< \nA N  Aj6< A<jÀ!\n (<!A!@ !	A! ",  "Aû kAFI\r Aj! 	A:l jA¯÷ j-  "AkAÿqAI\r   6<@ AG@ E\r A N@  E@  Atj 6    Atj) 70  E\r A0j   Á A N\rA !  E\r  -  A q\r Aÿÿ{q"  AÀ q!A !AÕ! !@@@@@@@@@@@@@@@ -  "À"ASq  AqAF  	"AØ k!	\n @ AÁ k  AÓ F\r )0!AÕA !@@@@@@@ 	  (0 \r6  (0 \r6  (0 \r¬7  (0 \r;  (0 \r:   (0 \r6  (0 \r¬7 A \n \nAM!\n Ar!Aø ! !	 A q! )0""B R@@ 	Ak"	 §Aq- À{ r:   B"B R\r  	! P\r AqE\r AvAÕj!A! ! )0""B R@@ Ak" §AqA0r:   B"B R\r  ! AqE\r \n  k"  \nH!\n )0"B S@ B  }"70A!AÕ Aq@A!AÖA×AÕ Aq"!  Â!  \nA Hq\r Aÿÿ{q  !@ B R\r  \n\r  !A !\n \n P  kj"  \nH!\n\r - 0!Aÿÿÿÿ \n \nAÿÿÿÿO""A G!	@@@ (0"A1 ""AqE\r  E\r @ -  E\r Ak"A G!	 Aj"AqE\r \r  	E\r@ -  E\r  AI\r @A ( "	k 	rAxqAxG\r Aj! Ak"AK\r  E\r@  -  E\r Aj! Ak"\r A " k  " j! \nA N@ ! !\n ! !\n -  \r )0"B R\rA !	 \n@ (0A !  A  A  Ã A 6  >  Aj60A!\n Aj!A !@@ ( "	E\r  Aj 	É"	A H\r 	 \n kK\r  Aj!  	j" \nI\rA=! A H\r  A    Ã E@A !A !	 (0!@ ( "E\r Aj É" 	j"	 K\r   Aj ¿ Aj!  	K\r   A    AÀ sÃ    H!  \nA Hq\r	A=!   +0  \n   	  "A N\r\n - ! Aj!    \r	 E\rA!@  Atj( "@  Atj   ÁA!\r Aj"A\nG\r A\nO@A!\r\n@  Atj( \rA!\r Aj"A\nG\r 	A!  : \'A!\n ! ! \n  k" \n J"\n AÿÿÿÿsJ\rA=!  \n j"	 	 H" K\r  A   	 Ã    ¿  A0  	 AsÃ  A0 \n A Ã    ¿  A   	 AÀ sÃA !\rA=!A¦§ 6 A!\r A@k$  \rÂ  -  A qE@@  ("   µ\r  (  ("k I@      ($ @@  (PA H\r  E\r  !@  j"Ak-  A\nG@ Ak"\r      ($  I\r  k!  (! !   ¼    ( j6s  ( ",  A0k"A	K@A @A! AÌ³æ M@A  A\nl"j  AÿÿÿÿsK!   Aj"6  , ! ! ! A0k"A\nI\r  ¶ @@@@@@@@@@@@@@@@@@@ A	k 	\n\r  ( "Aj6    ( 6   ( "Aj6    4 7   ( "Aj6    5 7   ( "Aj6    4 7   ( "Aj6    5 7   ( AjAxq"Aj6    ) 7   ( "Aj6    2 7   ( "Aj6    3 7   ( "Aj6    0  7   ( "Aj6    1  7   ( AjAxq"Aj6    ) 7   ( "Aj6    5 7   ( AjAxq"Aj6    ) 7   ( AjAxq"Aj6    ) 7   ( "Aj6    4 7   ( "Aj6    5 7   ( AjAxq"Aj6    + 9      ~  BZ@@ Ak"  "  B\n" B\n~}§A0r:   BÿÿÿÿV\r   §!  B\nZ@@ Ak" " A\nn"A\nlkA0r:   Aã K\r  @ Ak" A0r:   t# Ak"$ @  L\r  AÀq\r   k"A AI""@   ü  E@@   A¿ Ak"AÿK\r     ¿ Aj$ |~# A°k"$  A 6¬@ ½"B S@A!Aß! "½! Aq@A!Aâ!AåAà Aq"! E!@ Bøÿ Bøÿ Q@  A   Aj" Aÿÿ{qÃ    ¿  AÛA) A q"AÄAÛ*   bA¿  A    AÀ sÃ    J!\n Aj!@@  A¬j»"  "D        b@  (¬"Ak6¬ A r"Aá G\r A r"Aá F\r (¬!A  A H  Ak"6¬ D      °A¢!A  A H! AèA  A Nj"!@  ü"6  Aj!  ¸¡D    eÍÍA¢"D        b\r @ A L@ ! !	 ! !	 !@A  AO!@ Ak" 	I\r  ­!B !@  5   |" BëÜ"BëÜ~}>  Ak" 	O\r  BëÜT\r  	Ak"	 > @ 	 "I@ Ak"( E\r  (¬ k"6¬ ! A J\r  A H@ AjA	nAj! Aæ F!@A	A  k" A	O!\n@  	M@A A 	( !AëÜ \nv!\rA \ntAs!A ! 	!@  ( " \nv j6   q \rl! Aj" I\r A A 	( ! E\r   6  Aj!  (¬ \nj"6¬   	j"	 " Atj   kAu J! A H\r A !@  	M\r   	kAuA	l!A\n! 	( "A\nI\r @ Aj!  A\nl"O\r   A  Aæ Gk Aç F A Gqk"  kAuA	lA	kH@ A`Aìc A Hj AÈ j"A	m"\rAtj!\nA\n!  \rA	lk"AL@@ A\nl! Aj"AG\r @ \n( "  n" lk"\rE \nAj" Fq\r @ AqE@D      @C! AëÜG\r 	 \nO\r \nAk-  AqE\rD     @C!D      à?D      ð?D      ø?  FD      ø? \r Av"F \r I!@ \r  -  A-G\r  ! ! \n  \rk"6     a\r  \n  j"6  AëÜO@@ \nA 6  	 \nAk"\nK@ 	Ak"	A 6  \n \n( Aj"6  AÿëÜK\r   	kAuA	l!A\n! 	( "A\nI\r @ Aj!  A\nl"O\r  \nAj"   K!@ " 	M"E@ Ak"( E\r@ Aç G@ Aq!\r AsA A " J A{Jq"\n j!AA~ \n j! Aq"\r\r Aw!@ \r  Ak( "\nE\r A\n!A ! \nA\np\r @ "\rAj! \n A\nl"pE\r  \rAs!  kAuA	l! A_qAÆ F@A !\r   jA	k"A  A J"  J!A !\r   j jA	k"A  A J"  J!A!\n AýÿÿÿAþÿÿÿ  \rr"J\r  A GjAj!@ A_q"AÆ F@  AÿÿÿÿsJ\r A  A J!   Au"s k­ Â"kAL@@ Ak"A0:    kAH\r  Ak" :   AkA-A+ A H:    k" AÿÿÿÿsJ\r  j" AÿÿÿÿsJ\r  A    j" Ã    ¿  A0   AsÃ@@@ AÆ F@ AjA	r!  	 	 K"!	@ 	5  Â!@  	G@  AjM\r@ Ak"A0:    AjK\r   G\r  Ak"A0:       k¿ 	Aj"	 M\r  @  A/A¿  	M\r A L\r@ 	5  Â" AjK@@ Ak"A0:    AjK\r    A	  A	N¿ A	k! 	Aj"	 O\r A	J! ! \r @ A H\r   	Aj  	K!\n AjA	r! 	!@  5  Â"F@ Ak"A0:  @  	G@  AjM\r@ Ak"A0:    AjK\r    A¿ Aj!  \rrE\r   A/A¿     k"   H¿  k! Aj" \nO\r A N\r   A0 AjAA Ã     k¿ !  A0 A	jA	A Ã  A    AÀ sÃ    J!\n  AtAuA	qj!@ AK\r  -  !D      ð?!@A4 Atk"AN@D      à! AÿI@ Aÿk!D      ð!Aý  AýOAþk! AxJ\r D      `! A¸pK@ AÉj!D        !Aðh  AðhMAj!  Aÿj­B4¿¢! A-F@   ¡ !    ¡!  (¬" Au"s k­ Â"F@ Ak"A0:   (¬! Ar! A q!	 Ak"\r Aj:   AkA-A+ A H:   AqE A Lq! Aj!@ " ü"AÀû j-   	r:    ·¡D      0@¢!@ Aj" AjkAG\r  D        a q\r  A.:  Aj! D        b\r A!\n Aûÿÿÿ   \rk"	jkJ\r   A   Aj  Ajk" Ak H  " 	 jj" Ã    ¿  A0   AsÃ   Aj ¿  A0  kA A Ã   \r 	¿  A    AÀ sÃ    J!\n A°j$  \n¹~  ( AjAxq"Aj6    ) ! )!# A k"$  Bÿÿÿÿÿÿ?!~ B0Bÿÿ"§" Aø kAýM@ B B<!  Aø k­!@ Bÿÿÿÿÿÿÿÿ"BZ@ B|! BR\r  B |!B   BÿÿÿÿÿÿÿV" !  ­ |@  P\r  BÿÿR\r  B B<B!Bÿ  AþK@B !BÿAø Aø  P"\n"  k"	Að J@B !B   BÀ  \n!A !\n   G@ Aj!  ! !@A 	k"AÀ q@  A@j­!B ! E\r   ­" AÀ  k­!  !   7    7 ) )B R!\n@ 	AÀ q@  	A@j­!B ! 	E\r  AÀ  	k­  	­"!  !  7   7 )B ) "B<!@ \n­ Bÿÿÿÿÿÿÿÿ"BZ@ B|! BR\r  B |! B  BÿÿÿÿÿÿÿV" !  ­! A j$  B B4 ¿9 # A k"$     Aj " 6   A Gk6 A Aü  A6L Að 6$ A6P  Aj6,  Aj6T  A :     Aî Aï ½ A j$ ¨  (T"( ! ("  (  ("k"  I"@   ¼  (  j"6   ( k"6    K"@   ¼  (  j"6   ( k6 A :      (,"6   6    E@A A¦§  6 A¤   E@A @   Aÿ M\r@Aý ( ( E@ AqA¿F\rA¦§A6  AÿM@   A?qAr:    AvAÀr:  A A@qAÀG A°OqE@   A?qAr:    AvAàr:     AvA?qAr: A AkAÿÿ?M@   A?qAr:    AvAðr:     AvA?qAr:    AvA?qAr: AA¦§A6 AA   :  AX~@  ­B|BøÿÿÿAý ( " ­|"BÿÿÿÿX@ §"? AtM\r \rA¦§A06 AAý  6   ï)# Ak"\n$ @@@@@@@@@@@@  AôM@AÐ®§( "A  AjAøq  AI"Av"v" Aq@@  AsAq j"At"Aø®§j"  (¯§"("F@AÐ®§ A~ wq6    6   6 Aj!   Ar6  j" (Ar6\r AØ®§( "M\r  @@   tA t" A   krqh"At"Aø®§j" (¯§" ("F@AÐ®§ A~ wq"6   6  6   Ar6   j"  k"Ar6   j 6  @ AxqAø®§j!Aä®§( ! A Avt"qE@AÐ®§  r6   (!  6  6  6  6  Aj! Aä®§ 6 AØ®§ 6 \rAÔ®§( "E\r hAt(±§"(Axq k! !@@ (" E@ (" E\r  (Axq k"   K"!    !  ! (!	  (" G@ ("  6   6 (" Aj ("E\r Aj!@ ! " Aj!  ("\r   Aj!  ("\r  A 6 A!  A¿K\r   Aj"Axq!AÔ®§( "	E\r A!  AôÿÿM@ A& Avg" kvAq  AtkA>j!A  k!@@@ At(±§"E@A ! A !  A AvkA  AGt!@@ (Axq k" O\r  ! "\r A ! !    ("   AvAqj("F   !  At! "\r    rE@A !A t" A   kr 	q" E\r  hAt(±§!   E\r@  (Axq k" I!   !    !  ("   (" \r  E\r  AØ®§(  kO\r  (!  (" G@ ("  6   6\n (" Aj ("E\r Aj!@ ! " Aj!  ("\r   Aj!  ("\r  A 6 	 AØ®§( " M@Aä®§( !@   k"AO@  j" Ar6   j 6   Ar6   Ar6   j"   (Ar6A !A !AØ®§ 6 Aä®§ 6  Aj!  AÜ®§( "I@AÜ®§  k"6 Aè®§Aè®§( "  j"6   Ar6   Ar6  Aj! A !  A/j"A¨²§( @A°²§( A´²§B7 A¬²§B 7 A¨²§ \nAjApqAØªÕªs6 A¼²§A 6 A²§A 6 A "j"A  k"q" M\r\nA²§( "@A²§( " j"	 M\r  	I\rA²§-  Aq\r@@Aè®§( "@A²§! @  ( " M@    (jI\r  (" \r A Ê"AF\r !A¬²§( " Ak" q@  k  jA   kqj!  O\rA²§( " @A²§( " j" M\r   I\r Ê"  G\r  k q"Ê"  (   (jF\r ! @  AF\r   A0jO\r A°²§( "  kjA  kq"ÊAF\r  j!  !  !  AG\rA ! A !  AG\rA²§A²§( Ar6  Ê!A Ê!  AF\r  AF\r   M\r   k" A(jM\rA²§A²§(  j" 6 A²§(   I@A²§  6 @@@Aè®§( "@A²§! @   ( "  ("jF\r  (" \r Aà®§( " A    ME@Aà®§ 6 A ! A²§ 6 A²§ 6 Að®§A6 Aô®§A¨²§( 6 A²§A 6 @  At" Aø®§j"6¯§  6¯§  Aj" A G\r AÜ®§ A(k" A  kAq"k"6 Aè®§  j"6   Ar6   jA(6Aì®§A¸²§( 6   O\r   I\r   (Aq\r     j6Aè®§ A  kAq" j"6 AÜ®§AÜ®§(  j"  k" 6    Ar6  jA(6Aì®§A¸²§( 6 Aà®§(  K@Aà®§ 6   j!A²§! @@   ( "G@  (" \r  - AqE\rA²§! @@  ( " M@    (j"I\r  (! AÜ®§ A(k" A  kAq"k"6 Aè®§  j"6   Ar6   jA(6Aì®§A¸²§( 6   A\' kAqjA/k"    AjI"A6 A²§) 7 A²§) 7A²§ 6 A²§ Aj6 A²§ 6 A²§A 6  Aj! @  A6  Aj!  Aj!   I\r   F\r   (A~q6   k"Ar6  6  AÿM@ AøqAø®§j! AÐ®§( "A Avt"qE@AÐ®§  r6     (!   6  6A!AA!  AÿÿÿM@ A& Avg" kvAq  AtrA>s!    6 B 7  AtA±§j!@@AÔ®§( "A  t"qE@AÔ®§  r6   6   6 A  AvkA   AGt!  ( !@ "(Axq F\r  Av!  At!   Aqj"("\r   6  6A! ! ! A ("  6  6   6A ! A!A j 6   j  6 AÜ®§( "  M\r AÜ®§   k"6 Aè®§Aè®§( "  j"6   Ar6   Ar6  Aj! A¦§A06 A !    6     ( j6 A  kAqj"	 Ar6 A  kAqj"  	j"k!@Aè®§(  F@Aè®§ 6 AÜ®§AÜ®§(  j"6   Ar6Aä®§(  F@Aä®§ 6 AØ®§AØ®§(  j"6   Ar6  j 6  ("AqAF@ Axq! (!@ AÿM@ ("  F@AÐ®§AÐ®§( A~ Avwq6    6   6 (!@  G@ (" 6  6@ (" Aj ("E\r Aj! @  ! "Aj!  ("\r  Aj!  ("\r  A 6 A ! E\r @ (" At"(±§ F@ A±§j 6  \rAÔ®§AÔ®§( A~  wq6 @  (F@  6  6 E\r  6 ("@  6  6 ("E\r   6  6  j"(!  j!  A~q6  Ar6  j 6  AÿM@ AøqAø®§j!AÐ®§( "A Avt"qE@AÐ®§  r6   (!  6  6  6  6A! AÿÿÿM@ A& Avg"kvAq AtrA>s!  6 B 7 AtA±§j!@@AÔ®§( " A t"qE@AÔ®§   r6   6   6 A AvkA  AGt! ( ! @  "(Axq F\r Av!  At!   Aqj"(" \r   6  6  6  6 (" 6  6 A 6  6  6 	Aj! @ E\r @ ("At"(±§ F@ A±§j  6   \rAÔ®§ 	A~ wq"	6 @  (F@   6   6  E\r   6 ("@   6   6 ("E\r    6   6@ AM@   j" Ar6   j"   (Ar6  Ar6  j" Ar6  j 6  AÿM@ AøqAø®§j! AÐ®§( "A Avt"qE@AÐ®§  r6     (!   6  6   6  6A!  AÿÿÿM@ A& Avg" kvAq  AtrA>s!    6 B 7  AtA±§j!@@ 	A  t"qE@AÔ®§  	r6   6   6 A  AvkA   AGt!  ( !@ "(Axq F\r  Av!  At!   Aqj"("\r   6  6  6  6 ("  6  6 A 6  6   6 Aj! @ 	E\r @ ("At"(±§ F@ A±§j  6   \rAÔ®§ A~ wq6 @  	(F@ 	  6 	  6  E\r   	6 ("@   6   6 ("E\r    6   6@ AM@   j" Ar6   j"   (Ar6  Ar6  j" Ar6  j 6  @ AxqAø®§j!Aä®§( ! A Avt" qE@AÐ®§  r6   (!   6   6   6   6Aä®§ 6 AØ®§ 6  Aj!  \nAj$   §@  E\r   Ak"  Ak( "Axq" j!@ Aq\r  AqE\r  ( "k"Aà®§( I\r   j! @@@Aä®§(  G@ (! AÿM@  ("G\rAÐ®§AÐ®§( A~ Avwq6  (!  G@ (" 6  6 (" Aj ("E\r Aj!@ ! "Aj! ("\r  Aj! ("\r  A 6  ("AqAG\rAØ®§  6   A~q6   Ar6   6   6  6A ! E\r @ ("At"(±§ F@ A±§j 6  \rAÔ®§AÔ®§( A~ wq6 @  (F@  6  6 E\r  6 ("@  6  6 ("E\r   6  6  O\r  ("AqE\r @@@@ AqE@Aè®§(  F@Aè®§ 6 AÜ®§AÜ®§(   j" 6    Ar6 Aä®§( G\rAØ®§A 6 Aä®§A 6 Aä®§( " F@Aä®§ 6 AØ®§AØ®§(   j" 6    Ar6   j  6  Axq  j!  (! AÿM@ (" F@AÐ®§AÐ®§( A~ Avwq6   6  6 (!  G@ (" 6  6 (" Aj ("E\r Aj!@ ! "Aj! ("\r  Aj! ("\r  A 6   A~q6   Ar6   j  6 A ! E\r @ ("At"(±§ F@ A±§j 6  \rAÔ®§AÔ®§( A~ wq6 @  (F@  6  6 E\r  6 ("@  6  6 ("E\r   6  6   Ar6   j  6   G\r AØ®§  6   AÿM@  AøqAø®§j!AÐ®§( "A  Avt" qE@AÐ®§   r6   (!   6   6  6   6A!  AÿÿÿM@  A&  Avg"kvAq AtrA>s!  6 B 7 AtA±§j!@AÔ®§( "A t"qE@AÔ®§  r6   6 A!A  A AvkA  AGt! ( !@ "(Axq  F\r Av! At!  Aqj"("\r   6A! !A!  !  (" 6  6A! A!A !  j 6   6   j 6 Að®§Að®§( Ak"A 6    $  #   kApq" $    # " AÀ²§( E@AÄ²§ 6 AÀ²§  6 h A±+	\n\r~ Show MSC only B only A only not standing by Display MMC Play SysEx -+   0X0x -0X+0X 0X-0x+0x 0x water low hydraulic oil low carbon dioxide low smoke/fog fluid low Dev Menu %lu:%02lu:%02lu %lu %02u:%02u.%03u NOTE OFF%2u %-4s %3u PAT %2u %-4s %3u NOTE ON %2u %-4s %3u %s%02u:%02u:%02u %s%02u:%02u:%02u:%02u %s%02u:%02u:%02u:%02u.%02u M%u G%u CC %2u #%u=%u %s %u/%u %u.%u <%u>.%u #%u AT %2u %u PC %2u %u sub master %u %02Xh Group %u SONG POS %u ERR %u SONG SEL %u About gas pilot out Clock out film tension lost time code lost sync lost unknown Q_list Cue list List TCst data too short MIDI Start Raw %ub, %u kept UP/DN adj  LEFT int limit switch inhibiting movement Fmt Built burned out cue light Last reset Reset extension set Stat unknown cmd format Format Flys Breakaways undefined status Show inputs Smoke pots Robots Clear msg counts Moving Lights Lifts Video Effects Stats Floats manual override in progress Brightness Video Monitors Video Projectors Film Projectors Slide Projectors Video Character Generators Errors Equalizers Video Disc Players CD Players Dissolvers Chasers Lasers Amplifiers Video Switchers Color Changers non-numeric Q chars 25 fps 24 fps 30 fps Song Pos Explosions IN B orphans IN A orphans Intercoms Shutter Controls IN B stalls IN A stalls Stalls Fireworks Gen msgs IN B msgs IN A msgs Raw %u bytes IN B bytes IN A bytes over 128 bytes Trusses Video Still Stores All-types Video Cassette Machines Audio Tape Machines Video Tape Machines Note names Turntables Barges Messages Audio Effects Devices Strobes Natural Gas %*s%.*s %s%.*s ~%s MTC %02u:%02u:%02u:%02u%s SYSEX %ub%s%s MMC %s%s %04Xh ok%s %02Xh%s MMC CMD%02X%s Q%s P%s L%s %-7s A:%-2s B:%s %c %s %s %02Xh universal %s %02Xh %s %s %c %s IN B UART err IN A UART err Clear monitor Monitor checksum error unknown/undefined error Compressed Air   inline MIDI tester chase %u master grand master MSC dev filter unknown Q_number invalid switch number \'..\' in Q number CC number Seq Tune Req MIDI Stop MMC Stop IN B merge drop IN A merge drop Note sweep PB sweep FIRE macro Animation Version power-on Time column Len OUT B <- Gen OUT A <- Gen nan Note On   MIDIum Custom power failure in controlled device subsystem unequal movement in multiple section system Program Ctrl SET control 7Fh All-call Hydraulic Oil channel %u level Channel Song Sel normal  non-commercial Val reading new show cues from disk UP/DN adjust, PRESS ok Chk Clock EPROM Playback PRESS select  LEFT back A+B merge -> both unknown Q_path Path %04Xh %02Xh %02Xh USB log Fog Custom routing Routing completing required Q missing Rigging IN B mon ovf IN A mon ovf inf PANIC notes off Note Off Cracked Haze too many cues active latch setting system inoperative MIDI Continue bad time value invalid d4 cue data value invalid d3 cue data value invalid d2 cue data value invalid d1 cue data value SET value CC value list/path w/o cue LOAD needs a cue Cue Generate Rate Active Sense scroller motor failure position motor failure amplifier failure lamp failure servo failure none Uptime Hide realtime Time 30 drop-frame , colour frame Flame Smoke atmospheric conditions prohibit discharge cue out of sequence Device Send Pitch Bend unknown command Command Cmd invalid 2PC seq 0 reserved excess gas detected terminated estimated manual override initiated capture truncated paused  IN B not passed reversed manual cueing of playback medium required Q field clipped Undefined MSC build failed laser safety interlock not established required safety interlock not established deadman interlock not established Gen RT shed In RT shed strobe not charged playback %u speed chase %u speed general fade speed charge not loaded amplifier overload 2PC checksum bad %d:%02d PB %2u %+d %s%d Calc Music manufacturer specific UP/DN adj  RIGHT .dec Mac playback %u master %c Sub Stray data unexpected data Data %s]   [ STANDING_BY STBY STANDBY DEF PLAY SYX  id%02X  id%02X%02X%02X F%02X C%02X %s %02X %02X %02X %02X %02X 00 %02X %02X UNDEF %02X MTC QF %u:%X MaxT CLSLST OPNLST OPEN_CUE_LIST CLOSE_CUE_LIST TUNE REQUEST ABORT START non-RT Gen RT REC EXIT CLKSET SYSTEM RESET EJECT Poly AT Chan AT RESTOR CLKSTP STOP ERR MONITOR GAP CLKZRO TIMED_GO TGO CLKGO H2O ERR RX OVERRUN MTC_CHASE_ON CHSON NAN >CLOCK %u BPM Clock BPM GOJAM COMPL QUEUE FULL ALL CANCEL START_CLOCK SET_CLOCK STOP_CLOCK ZERO_CLOCK GO/JAM_CLOCK ERR BREAK CLSPTH OPNPTH OPEN_CUE_PATH CLOSE_CUE_PATH WATCHDOG STBYNG ERR FRAMING MTC QF INF GO_OFF ALL_OFF MTC_CHASE_OFF CHSOFF GOOFF ALLOFF >CLOCK OFF CONTINUE WRITE COMPLETE LOCATE REC PAUSE ACTIVE SENSE CHASE RESTORE FIRE RESUME SHUTTLE REC STROBE FFWD REWIND CNCLD ID PAUSED CANCELLED LOAD %04Xh BAD MSC GO_2PC GO2PC Send PC Send CC B->A, B->B A+B Drops out B OUT B <- IN B OUT A <- IN B In   IN B Drops out A  IN A -> OUT A OUT B <- IN A OUT A <- IN A In   IN A ? %u.<%u> <%s> Unpowered: TFT ST7789 00:24:29 Oct 19 2026 >ALL NOTES OFF 1-16 OLED SSD1306 Note test C4 CO2 field-1 NSK MT-1 C4=60 C3=60   NSK MT-1 v0.3.0   waiting for MIDI...  ... STANDBY_- SEQUENCE_- SBY- SEQ- STANDBY_+ SEQUENCE_+ SBY+ SEQ+ * Pyro (General Category) Video (General Category) Lighting (General Category) Sound (General Category) improper gas ignition conditions (windy) A->A, A->B (thru) %02Xh (%u) A->A, B->B (split) (null) Projection (General) timeout (controller internal) (missing) (none) no F7 (unterminated) format dependent (undefined) %04Xh (unchecked) Time (TGO/SET)  (BE) extension set (00) Machinery (General Cat.) Process Control (Gen.) %d%% G# F# D# C# A# ! %-4s    =  !     \n%s %s v%s, display: %s\n AÀ3ER    1  }  ü    z  R  w  Ô                    A4            0@P`	\n           c  c     7  7     ä  ä    S  \\    $  $          ß  ß    f    	  ×  )  \n  \r  \r     _       ö  ¨    «  À      ¡    µ  Å      ¦    Ê  `    à  0    ë  L  	  Ö  ÿ    y      n  |    ²  «    À  ¤          )  \r   \n  %     !    A  "\n  7  >  #  ª  ®  $\r  Ã  Ã  %    \n  &  Ü  Ü                Á      $  .  (        \r     þ\n     §  $  .  (  Ö  0    @  É  D    P  u  T  (  X  »\r  \\  n  `  K  d    h  õ  l  Û  p  Á    #     w  °  A\r        ~        x    ¬    [            ¤    Ë            ý    ¾    |    r        ­    å    2    ¡            ´    I    !      ø    LTG    ý  MLT    W  CCHG   n  STRB   \n  LASR   L  CHSR   D  SND      MUS      CD     .  EPRM   \r  ATAP   ¤	  ICOM   Ô  AMP    S  AFX    ò	  EQ        MACH   B  !RIG    "  "FLY      #LIFT   e  $TTBL   ×	  %TRUS   g	  &ROBO   ?  \'ANIM     (FLOT     )BRKW     *BARG   â	  0VID    ä  1VTAP   ¸	  2VCAS   	  3VDSC     4VSW    ^  5VFX    k  6VCG    î  7VSTL   o	  8VMON   ­  @PROJ     AFILM   Í  BSLID   Ý  CVPRJ   ¼  DDISS   9  ESHUT   Þ  PPROC   [  QHYD    ö  RH2O    f  SCO2    >  TAIR    %  UGAS    \n  VFOG    é\r  WSMK      XHAZE   a  `PYRO   Ì  aFWRK   	  bEXPL   ¯  cFLAM     dSPOT   4  ALL    	  Ð A°À Ø AÀÀ à AÐÀ è A Á ð A°Á ø  Ð AÄÁ Ø AÔÁ à AäÁ è    AøÁ ¨ AÂ ° AÂ u¸  ð  Ö  X	  J  í  v  /  ÷    }    <  M  ²  n              ¹  !         ö\n          A¤Ã \nc      X" AÈÃ \nü\r      x& AìÃ \n>      (( AÄ \ny      ) A´Ä \nß      ä/ AØÄ 	c  p"   AðÄ \r   AÅ !               1          A¸Å ÷         	   \n AÜÅ ­   AìÅ                 3   AÆ !\r                L          AÈÆ Ð   AØÆ !                D          AÇ              A´Ç    AÄÇ        ,       ó   AèÇ !                Y          A È \rÄ          AÄÈ \r¤          AèÈ \n3      ø$ AÉ \rF          A°É \rÎ          AÔÉ \rH          AøÉ 	3  %  \n AÊ \rf          A´Ê    AÄÊ     !     \n    "       AèÊ #   $     7    %   _   AË &   \'         (   _   AÄË 7   AÔË )   *         +      AøË ,   -        .   Ý   AÌ /   0     ÿ?       )   AÀÌ 1   2     ÿ?          AäÌ 3   4             ü\r  &   AÍ [         5   6 A°Í 7   ©\r         8   9 AÔÍ 7   x         :   ; AøÍ 7   T         <   = AÎ 7   p      D\' AÄÎ í\r  P\'     ¾   AàÎ >   ?             }   AÏ @   A             N   A¨Ï B   C             °   AÌÏ D   E             o   AðÏ F   G             A   AÐ H   I             >  @(  	 AÀÐ å   AÐÐ J   K             Ì	   AôÐ L   M         N   1   AÑ O   P             ¢   A¼Ñ Q   R   \n d \n   S   á\r   AàÑ T   U             (   AÒ V   W         X      A¨Ò Y   Z             f   AÌÒ ![   \\   ÿÿ    ]   è\n         ^ AÓ y  )  -   é	   A¨Ó        _   M	   AÔÓ 	`   +	   AðÓ        `   Ú\n   AÔ        `   7   A¸Ô        `   ç   AÜÔ        `   Ç   AÕ        `   û   A¤Õ        `   B	   AÈÕ        `   !	   AìÕ        `   Ì\n   AÖ        `   *   A´Ö        `   ×   AØÖ        `   º   AüÖ        `   ï   A ×        `   _   AÄ×        a   X   Að× 	a   Q   AØ        a   Ð   A°Ø        a   k   AÔØ        a   !   AøØ        a      AÙ        a   O   AÀÙ        a   T   AäÙ        a   ¦   AÚ 	       a   \r   A¬Ú \n       a   »   AÐÚ        a   |\r   AôÚ        a   ^   AÛ \r       a   ©   A¼Û        a   Ò   AàÛ        a   q   AÜ        a   Ô   A¨Ü        a   ]   AÌÜ        a   	   AðÜ        a   ì   AÝ        _      A¸Ý        _   c   AÜÝ        _   ÷   AÞ        _   	   A¤Þ        _   ï   AÈÞ        _   ë   AìÞ 	       _   	   Aß \n       _   Þ   A¼ß b   F         ^ Aäß ß  ð/  	   i   Aà 	c       A¬à        c   ®   AÐà        c   ±   Aôà        c   >   Aá        c   É   A¼á        c   å   Aìá ¡   Aâ 	   A´â N	                      ð  \n  e   f   g          ÿÿèGGÿúúý Aã \n>[O[>>kOk>>|><~<W}W^^ < ÿçÃçÿ $ ÿçÛçÿ0H:&)y)&@@%?Z<ç<Z>>""__ __	 fj`````¢ÿ¢~ ~ **08>80>       _     $**#db6IV P   "A  A" **> p0   ``  >QIE> B@ rIIIF!AIM3\'EEE9<JII1A!	6III6FII)     @4   "A A"Y	>A]YN||III6>AAA"AAA>IIIA			>AAQs AA  @A?"A@@@@>AAA>			>AQ!^	)F&III2?@@@? @ ?@8@?ccxaYIMC AAA  AAA@@@@@   TTx@(DD88DDD(8DD(8TTT ~	¤¤xx D}@  @@= (D  A@ |xx|x8DDD8ü$$$$ü|HTTT$?D$<@@ | @ <@0@<D((DL|DdTLD 6A   w   A6 <&#&<¡¡a:@@ z8TTUY!UUyA"TTxB!UTx@ TUy@Rr9UUUY9TTTY9UTTX  E|A E}B E|@}}ð(%(ð|TUE  TT|T|\n	I2III2:DDD:2JHH0:AA!z:B@ x   }=BBB==@@@=<$ÿ$$H~ICf+/ü/+ÿ	)ö À~	 TTyA  D}A0HHJ28@@"z z\n\nr}\r1}&))/(&)))&0HM@ 88/È¬º/(4ú  {  *""*U U UªUªUªÿUÿUÿ   ÿ ÿ ÿ ÿ ÿððü ÷ ÿ  ÿ ÿôü ð    ð   ÿÿ   ÿ  ÿ ÿ    üôôô  ÿ ÷÷ ÷ôðð        ü  ððÿÿÿ    ðÿÿÿÿÿðððððÿÿÿ     ÿÿ8DD8DüJJJ4~~~cUIAc8DD<@~  ~¥ç¥*I*LrrL0JMM00HxH0¼bZF=>III ~~*****DD_DD@QJD@@DJQ@  ÿàÿ  kk66$6	      0@ÿ   <<<<     $    h   i   j A°í ®Õ¨?Ó @ ¡ÈÚÏÙñÛ@¤¦ AÕí \n>[O[>>kOk>>|><~<W}W^^ < ÿçÃçÿ $ ÿçÛçÿ0H:&)y)&@@%?Z<ç<Z>>""__ __	 fj`````¢ÿ¢~ ~ **08>80>       _     $**#db6IV P   "A  A" **> p0   ``  >QIE> B@ rIIIF!AIM3\'EEE9<JII1A!	6III6FII)     @4   "A A"Y	>A]YN||III6>AAA"AAA>IIIA			>AAQs AA  @A?"A@@@@>AAA>			>AQ!^	)F&III2?@@@? @ ?@8@?ccxaYIMC AAA  AAA@@@@@   TTx@(DD88DDD(8DD(8TTT ~	¤¤xx D}@  @@= (D  A@ |xx|x8DDD8ü$$$$ü|HTTT$?D$<@@ | @ <@0@<D((DL|DdTLD 6A   w   A6 <&#&<¡¡a:@@ z8TTUY!UUyA"TTxB!UTx@ TUy@Rr9UUUY9TTTY9UTTX  E|A E}B E|@}}ð(%(ð|TUE  TT|T|\n	I2III2:DDD:2JHH0:AA!z:B@ x   }=BBB==@@@=<$ÿ$$H~ICf+/ü/+ÿ	)ö À~	 TTyA  D}A0HHJ28@@"z z\n\nr}\r1}&))/(&)))&0HM@ 88/È¬º/(4ú  {  *""*U U UªUªUªÿUÿUÿ   ÿ ÿ ÿ ÿ ÿððü ÷ ÿ  ÿ ÿôü ð    ð   ÿÿ   ÿ  ÿ ÿ    üôôô  ÿ ÷÷ ÷ôðð        ü  ððÿÿÿ    ðÿÿÿÿÿðððððÿÿÿ     ÿÿ8DD8DüJJJ4~~~cUIAc8DD<@~  ~¥ç¥*I*LrrL0JMM00HxH0¼bZF=>III ~~*****DD_DD@QJD@@DJQ@  ÿàÿ  kk66$6	      0@ÿ   <<<<     	          ÿÿ Að÷ A            	             \n\n\n  	  	       AÁø !         \r \r   	   	    Aûø  Aù         	        Aµù  AÁù        	        Aïù  Aûù         	             A²ú          	 Aãú  Aïú         	        Aû  A©û \'        	         0123456789ABCDEF AÐû ) ÿÿÿÿÖ  ÿÿÿÿ<   @  ª   c            Aü k Aü l   m   Ó)   A´ü  AÄü ÿÿÿÿ\n Aý 8×) PÙ-')}function getBinarySync(file){return file}async function getWasmBinary(binaryFile){return getBinarySync(binaryFile)}async function instantiateArrayBuffer(binaryFile,imports){try{var binary=await getWasmBinary(binaryFile);var instance=await WebAssembly.instantiate(binary,imports);return instance}catch(reason){err(`failed to asynchronously prepare wasm: ${reason}`);abort(reason)}}async function instantiateAsync(binary,binaryFile,imports){return instantiateArrayBuffer(binaryFile,imports)}function getWasmImports(){var imports={env:wasmImports,wasi_snapshot_preview1:wasmImports};return imports}async function createWasm(){function receiveInstance(instance){wasmExports=instance.exports;assignWasmExports(wasmExports);updateMemoryViews();return wasmExports}function receiveInstantiationResult(result){return receiveInstance(result["instance"])}var info=getWasmImports();var instantiateWasm=Module["instantiateWasm"];if(instantiateWasm){return new Promise(resolve=>{instantiateWasm(info,inst=>resolve(receiveInstance(inst)))})}wasmBinaryFile??=findWasmBinary();var result=await instantiateAsync(wasmBinary,wasmBinaryFile,info);var exports=receiveInstantiationResult(result);return exports}class ExitStatus{name="ExitStatus";constructor(status){this.message=`Program terminated with exit(${status})`;this.status=status}}var callRuntimeCallbacks=callbacks=>{while(callbacks.length>0){callbacks.shift()(Module)}};var onPostRuns=[];var onPreRuns=[];var noExitRuntime=true;var abortOnCannotGrowMemory=requestedSize=>{abort("OOM")};var HEAPU8;var _emscripten_resize_heap=requestedSize=>{var oldSize=HEAPU8.length;requestedSize>>>=0;abortOnCannotGrowMemory(requestedSize)};var printCharBuffers=[null,[],[]];var UTF8Decoder=globalThis.TextDecoder&&new TextDecoder;var findStringEnd=(heapOrArray,idx,maxBytesToRead,ignoreNul)=>{var maxIdx=idx+maxBytesToRead;if(ignoreNul)return maxIdx;while(heapOrArray[idx]&&!(idx>=maxIdx))++idx;return idx};var UTF8ArrayToString=(heapOrArray,idx=0,maxBytesToRead,ignoreNul)=>{var endPtr=findStringEnd(heapOrArray,idx,maxBytesToRead,ignoreNul);if(endPtr-idx>16&&heapOrArray.buffer&&UTF8Decoder){return UTF8Decoder.decode(heapOrArray.subarray(idx,endPtr))}var str="";while(idx<endPtr){var u0=heapOrArray[idx++];if(!(u0&128)){str+=String.fromCharCode(u0);continue}var u1=heapOrArray[idx++]&63;if((u0&224)==192){str+=String.fromCharCode((u0&31)<<6|u1);continue}var u2=heapOrArray[idx++]&63;if((u0&240)==224){u0=(u0&15)<<12|u1<<6|u2}else{u0=(u0&7)<<18|u1<<12|u2<<6|heapOrArray[idx++]&63}if(u0<65536){str+=String.fromCharCode(u0)}else{var ch=u0-65536;str+=String.fromCharCode(55296|ch>>10,56320|ch&1023)}}return str};var printChar=(stream,curr)=>{var buffer=printCharBuffers[stream];if(!curr||curr===10){(stream===1?out:err)(UTF8ArrayToString(buffer));buffer.length=0}else{buffer.push(curr)}};var UTF8ToString=(ptr,maxBytesToRead,ignoreNul)=>ptr?UTF8ArrayToString(HEAPU8,ptr,maxBytesToRead,ignoreNul):"";var HEAPU32;var _fd_write=(fd,iov,iovcnt,pnum)=>{var num=0;for(var i=0;i<iovcnt;i++){var ptr=HEAPU32[iov>>2];var len=HEAPU32[iov+4>>2];iov+=8;for(var j=0;j<len;j++){printChar(fd,HEAPU8[ptr+j])}num+=len}HEAPU32[pnum>>2]=num;return 0};var HEAPF64;{if(Module["noExitRuntime"])noExitRuntime=Module["noExitRuntime"];if(Module["print"])out=Module["print"];if(Module["printErr"])err=Module["printErr"];if(Module["arguments"])programArgs=Module["arguments"];if(Module["thisProgram"])thisProgram=Module["thisProgram"];var preInit=Module["preInit"];if(preInit){if(typeof preInit=="function")Module["preInit"]=preInit=[preInit];while(preInit.length>0){preInit.shift()()}}}Module["UTF8ToString"]=UTF8ToString;var _sim_init,_sim_tick,_sim_key,_sim_midi_in,_sim_midi_in_at,_sim_rx_free_at,_sim_rx_pending,_sim_rx_flush,_sim_out_read,_sim_now_us,_sim_framebuffer,_sim_fb_w,_sim_fb_h,_sim_fb_version,_sim_brightness,_sim_display_on,_sim_led,_sim_display_name,_sim_route_bits,_sim_clock_running,_sim_stat,_malloc,_free,_setThrew,__emscripten_stack_restore,__emscripten_stack_alloc,_emscripten_stack_get_current,memory,__indirect_function_table,wasmMemory;function assignWasmExports(wasmExports){_sim_init=Module["_sim_init"]=wasmExports["sim_init"];_sim_tick=Module["_sim_tick"]=wasmExports["sim_tick"];_sim_key=Module["_sim_key"]=wasmExports["sim_key"];_sim_midi_in=Module["_sim_midi_in"]=wasmExports["sim_midi_in"];_sim_midi_in_at=Module["_sim_midi_in_at"]=wasmExports["sim_midi_in_at"];_sim_rx_free_at=Module["_sim_rx_free_at"]=wasmExports["sim_rx_free_at"];_sim_rx_pending=Module["_sim_rx_pending"]=wasmExports["sim_rx_pending"];_sim_rx_flush=Module["_sim_rx_flush"]=wasmExports["sim_rx_flush"];_sim_out_read=Module["_sim_out_read"]=wasmExports["sim_out_read"];_sim_now_us=Module["_sim_now_us"]=wasmExports["sim_now_us"];_sim_framebuffer=Module["_sim_framebuffer"]=wasmExports["sim_framebuffer"];_sim_fb_w=Module["_sim_fb_w"]=wasmExports["sim_fb_w"];_sim_fb_h=Module["_sim_fb_h"]=wasmExports["sim_fb_h"];_sim_fb_version=Module["_sim_fb_version"]=wasmExports["sim_fb_version"];_sim_brightness=Module["_sim_brightness"]=wasmExports["sim_brightness"];_sim_display_on=Module["_sim_display_on"]=wasmExports["sim_display_on"];_sim_led=Module["_sim_led"]=wasmExports["sim_led"];_sim_display_name=Module["_sim_display_name"]=wasmExports["sim_display_name"];_sim_route_bits=Module["_sim_route_bits"]=wasmExports["sim_route_bits"];_sim_clock_running=Module["_sim_clock_running"]=wasmExports["sim_clock_running"];_sim_stat=Module["_sim_stat"]=wasmExports["sim_stat"];_malloc=Module["_malloc"]=wasmExports["malloc"];_free=Module["_free"]=wasmExports["free"];_setThrew=wasmExports["setThrew"];__emscripten_stack_restore=wasmExports["_emscripten_stack_restore"];__emscripten_stack_alloc=wasmExports["_emscripten_stack_alloc"];_emscripten_stack_get_current=wasmExports["emscripten_stack_get_current"];memory=wasmMemory=wasmExports["memory"];__indirect_function_table=wasmExports["__indirect_function_table"]}var wasmImports={emscripten_resize_heap:_emscripten_resize_heap,fd_write:_fd_write};async function run(){preRun();var setStatus=Module["setStatus"];if(setStatus){setStatus("Running...");await new Promise(resolve=>setTimeout(resolve,1));setTimeout(setStatus,1,"")}if(ABORT)return;initRuntime();Module["onRuntimeInitialized"]?.();postRun()}var wasmExports;wasmExports=await createWasm();await run();
+;return Module}})();if(typeof exports==="object"&&typeof module==="object"){module.exports=MidiumSim;module.exports.default=MidiumSim}else if(typeof define==="function"&&define["amd"])define([],()=>MidiumSim);
+</script>
+<script>
+(function () {
+  "use strict";
+  var M = null, booting = false, kind = 2;
+  var canvas = document.getElementById("lcd"), ctx = canvas.getContext("2d");
+  var img = null, fbVer = -1, fbPtr = 0, fbW = 0, fbH = 0;
+  var outBuf = 0, outTimes = 0;
+  var lastFrame = 0;
+
+  function lsGet(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k, v) { try { window.localStorage.setItem(k, v); } catch (e) { /* ignore */ } }
+
+  /* ---------------- time helpers ---------------- */
+  function now() { return M ? M._sim_now_us() : 0; }
+  function fmtTime(us) {
+    var ms = Math.floor(us / 1000), m = Math.floor(ms / 60000), s = Math.floor(ms / 1000) % 60, r = ms % 1000;
+    return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s + "." + ("00" + r).slice(-3);
+  }
+  function hex(b) { return (b < 16 ? "0" : "") + b.toString(16).toUpperCase(); }
+
+  /* ---------------- input scheduling (sim time) ---------------- */
+  var events = [];            // {t, port, bytes}
+  function at(port, bytes, delayMs, base) {
+    var t = (base == null ? now() : base) + (delayMs || 0) * 1000;
+    events.push({ t: t, port: port, bytes: bytes });
+  }
+  function flushEvents(horizon) {
+    if (!events.length) return;
+    events.sort(function (a, b) { return a.t - b.t; });
+    var i = 0;
+    while (i < events.length && events[i].t <= horizon) {
+      var e = events[i++];
+      for (var j = 0; j < e.bytes.length; j++) M._sim_midi_in_at(e.port, e.bytes[j], e.t);
+    }
+    events.splice(0, i);
+  }
+
+  /* ---------------- traffic ---------------- */
+  var ports = [mkPort(0), mkPort(1)];
+  function mkPort(p) {
+    return { p: p, ch: p, note: 0, prog: 0, mal: 0, bpm: 120, streams: {} };
+  }
+  var MELODY = [60, 64, 67, 72, 69, 65, 62, 59];
+  var NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+  function noteName(n) { return NOTE_NAMES[n % 12] + (Math.floor(n / 12) - 1); }
+  function ascii(s) { var a = []; for (var i = 0; i < s.length; i++) a.push(s.charCodeAt(i)); return a; }
+  function msc(dev, fmt, cmd, data) { return [0xF0, 0x7F, dev, 0x02, fmt, cmd].concat(data || [], [0xF7]); }
+
+  var ACTIONS = {
+    note: function (P) {
+      var n = MELODY[P.note++ % MELODY.length];
+      at(P.p, [0x90 | P.ch, n, 100]);
+      at(P.p, [0x80 | P.ch, n, 64], 300);
+    },
+    cc: function (P) {
+      var t0 = now(), vals = [];
+      for (var v = 0; v < 127; v += 6) vals.push(v);
+      vals.push(127);
+      vals.forEach(function (x, i) {
+        at(P.p, i === 0 ? [0xB0 | P.ch, 7, x] : [7, x], i * 18, t0);   // running status after the first
+      });
+    },
+    pc: function (P) { at(P.p, [0xC0 | P.ch, (P.prog = (P.prog + 1) % 128)]); },
+    pb: function (P) {
+      var t0 = now(), steps = 40;
+      for (var i = 0; i <= steps; i++) {
+        var x = i / steps, v = Math.round(Math.sin(x * Math.PI * 2) * 8191) + 8192;
+        if (i === steps) v = 8192;
+        at(P.p, i === 0 ? [0xE0 | P.ch, v & 0x7F, v >> 7] : [v & 0x7F, v >> 7], i * 15, t0);
+      }
+    },
+    mscgo: function (P) { at(P.p, msc(0x01, 0x01, 0x01, ascii("12.5"))); },
+    mscstop: function (P) { at(P.p, msc(0x01, 0x10, 0x02)); },
+    msclist: function (P) { at(P.p, msc(0x01, 0x01, 0x01, ascii("7").concat([0], ascii("2"), [0], ascii("3")))); },
+    msctgo: function (P) { at(P.p, msc(0x01, 0x01, 0x04, [0x21, 0x02, 0x03, 0x00, 0x00].concat(ascii("4")))); },
+    mscbad: function (P) {
+      var v = [
+        msc(0x01, 0x01, 0x01, ascii("12..5")),           // '..' in Q number
+        msc(0x01, 0x01, 0x55, [0x01]),                   // unknown command
+        msc(0x01, 0x01, 0x01, [0x00].concat(ascii("2"))), // list without cue
+        msc(0x01, 0x01, 0x01, ascii("1A"))               // non-numeric Q
+      ];
+      at(P.p, v[P.mal++ % v.length]);
+    },
+    sysex: function (P) {
+      var d = [0xF0, 0x43, 0x00 | P.ch, 0x7E, 0x01, 0x40], sum = 0;
+      var seed = 7 + P.p * 13;
+      while (d.length < 198) { seed = (seed * 1103515245 + 12345) & 0x7fffffff; var b = (seed >> 16) & 0x7F; d.push(b); sum += b; }
+      d.push((128 - (sum & 0x7F)) & 0x7F, 0xF7);
+      at(P.p, d);
+    }
+  };
+
+  /* Continuous streams, generated a little ahead of sim time. */
+  var STREAMS = {
+    clock: {
+      start: function (P, s) { at(P.p, [0xFA]); s.next = now() + 1000; },
+      stop: function (P) { at(P.p, [0xFC]); },
+      fill: function (P, s, horizon) {
+        var per = 60e6 / (Math.max(30, Math.min(300, P.bpm)) * 24);
+        while (s.next <= horizon) { at(P.p, [0xF8], 0, s.next); s.next += per; }
+      }
+    },
+    as: {
+      start: function (P, s) { s.next = now(); },
+      fill: function (P, s, horizon) { while (s.next <= horizon) { at(P.p, [0xFE], 0, s.next); s.next += 300000; } }
+    },
+    mtc: {
+      start: function (P, s) {
+        s.h = 1; s.m = 0; s.sec = 0; s.f = 0; s.q = 0; s.next = now() + 2000;
+        at(P.p, [0xF0, 0x7F, 0x7F, 0x01, 0x01, 0x20 | s.h, s.m, s.sec, s.f, 0xF7]);   // full frame, 25 fps
+      },
+      fill: function (P, s, horizon) {
+        while (s.next <= horizon) {
+          var q = s.q, v;
+          switch (q) {
+            case 0: v = s.f & 15; break; case 1: v = s.f >> 4; break;
+            case 2: v = s.sec & 15; break; case 3: v = s.sec >> 4; break;
+            case 4: v = s.m & 15; break; case 5: v = s.m >> 4; break;
+            case 6: v = s.h & 15; break; default: v = ((s.h >> 4) & 1) | (1 << 1); break;  // rate bits 01 = 25 fps
+          }
+          at(P.p, [0xF1, (q << 4) | v], 0, s.next);
+          s.next += 10000;     // 25 fps x 4 quarter frames per frame = 100 per second
+          if (++s.q === 8) {
+            s.q = 0; s.f += 2;
+            if (s.f >= 25) { s.f -= 25; if (++s.sec === 60) { s.sec = 0; if (++s.m === 60) { s.m = 0; s.h++; } } }
+          }
+        }
+      }
+    },
+    dense: {
+      start: function (P, s) { s.next = now(); s.i = 0; s.on = []; },
+      stop: function (P, s) { s.on.forEach(function (n) { at(P.p, [0x80 | P.ch, n, 0]); }); },
+      fill: function (P, s, horizon) {
+        // ~70% of line capacity: notes, CC with running status, channel aftertouch
+        while (s.next <= horizon) {
+          var m, k = s.i++ % 10;
+          if (k < 4) {
+            if (s.on.length > 3 || (k === 3 && s.on.length)) { var off = s.on.shift(); m = [0x80 | P.ch, off, 0]; }
+            else { var n = 48 + ((s.i * 7) % 36); s.on.push(n); m = [0x90 | P.ch, n, 70 + (s.i % 50)]; }
+          } else if (k < 8) m = [0xB0 | P.ch, 1 + (k & 1) * 10, (s.i * 5) & 0x7F];
+          else m = [0xD0 | P.ch, (s.i * 3) & 0x7F];
+          at(P.p, m, 0, s.next);
+          s.next += m.length * 320 / 0.7;
+        }
+      }
+    }
+  };
+
+  function streamToggle(P, name, btn) {
+    var s = P.streams[name];
+    if (s) { if (STREAMS[name].stop) STREAMS[name].stop(P, s); delete P.streams[name]; }
+    else { s = P.streams[name] = {}; STREAMS[name].start(P, s); }
+    if (btn) btn.setAttribute("aria-pressed", P.streams[name] ? "true" : "false");
+  }
+  function fillStreams(horizon) {
+    ports.forEach(function (P) {
+      for (var k in P.streams) STREAMS[k].fill(P, P.streams[k], horizon);
+    });
+  }
+
+  /* ---------------- input panel UI ---------------- */
+  var GROUPS = [
+    ["Channel voice", [["note", "Note on / off"], ["cc", "CC 7 sweep"], ["pc", "Program change"], ["pb", "Pitch bend sweep"]]],
+    ["Show control (MSC, device 1)", [["mscgo", "GO Q12.5 lighting"], ["mscstop", "STOP sound"], ["msclist", "GO Q7 L2 P3"], ["msctgo", "TIMED_GO Q4"], ["mscbad", "Malformed MSC"]]],
+    ["System", [["sysex", "SysEx dump 200 B"], ["~mtc", "MTC 25 fps"], ["~clock", "Clock"], ["~as", "Active sensing"], ["~dense", "Dense stream"]]]
+  ];
+  var inUi = [];
+  function buildInputs() {
+    var host = document.getElementById("ins");
+    host.innerHTML = "";
+    ports.forEach(function (P) {
+      var L = P.p ? "B" : "A";
+      var el = document.createElement("div");
+      el.className = "port";
+      var h = '<div class="port-h"><strong><span class="act" id="act-' + L + '"></span>IN ' + L + '</strong>' +
+        '<label for="ch-' + L + '">Channel <select id="ch-' + L + '">';
+      for (var c = 1; c <= 16; c++) h += '<option value="' + (c - 1) + '"' + (c - 1 === P.ch ? " selected" : "") + ">" + c + "</option>";
+      h += "</select></label></div>";
+      GROUPS.forEach(function (g) {
+        h += '<div class="grp"><span>' + g[0] + "</span><div>";
+        g[1].forEach(function (b) {
+          var tog = b[0][0] === "~", id = tog ? b[0].slice(1) : b[0];
+          h += '<button type="button" class="btn" id="b-' + L + "-" + id + '" data-a="' + id + '"' + (tog ? ' data-tog="1" aria-pressed="false"' : "") + ">" + b[1] + "</button>";
+          if (id === "clock") h += '<label class="bpm" for="bpm-' + L + '"><input id="bpm-' + L + '" type="number" min="30" max="300" value="' + P.bpm + '"> BPM</label>';
+        });
+        h += "</div></div>";
+      });
+      h += '<div class="meter" aria-hidden="true"><i id="mt-' + L + '"></i></div><div class="wire" id="wire-' + L + '">0 bytes in</div>';
+      el.innerHTML = h;
+      host.appendChild(el);
+      el.addEventListener("click", function (ev) {
+        var b = ev.target.closest("button[data-a]");
+        if (!b || !M) return;
+        if (b.dataset.tog) streamToggle(P, b.dataset.a, b);
+        else ACTIONS[b.dataset.a](P);
+      });
+      el.querySelector("#ch-" + L).addEventListener("change", function (ev) { P.ch = +ev.target.value; });
+      el.querySelector("#bpm-" + L).addEventListener("change", function (ev) {
+        var v = Math.max(30, Math.min(300, Math.round(+ev.target.value || 120)));
+        ev.target.value = v; P.bpm = v;
+      });
+      inUi[P.p] = { act: el.querySelector("#act-" + L), wire: el.querySelector("#wire-" + L), meter: el.querySelector("#mt-" + L), hist: [] };
+    });
+  }
+
+  /* ---------------- output capture: parse into messages ---------------- */
+  var outs = [mkOut(0), mkOut(1)];
+  function mkOut(o) { return { o: o, cur: null, need: 0, run: 0, rows: [], msgs: 0, byteBase: 0, dropBase: 0, last: null, el: null }; }
+  function dataLen(s) {
+    if (s < 0xF0) { var h = s & 0xF0; return (h === 0xC0 || h === 0xD0) ? 1 : 2; }
+    if (s === 0xF1 || s === 0xF3) return 1;
+    if (s === 0xF2) return 2;
+    return 0;
+  }
+  function feedOut(O, b, t) {
+    if (b >= 0xF8) { emit(O, [b], t, false, false); return; }
+    if (b & 0x80) {
+      if (O.cur && b !== 0xF7) { emit(O, O.cur.b, O.cur.t, O.cur.rs, true); O.cur = null; }
+      if (b === 0xF0) { O.cur = { b: [b], t: t, sx: true }; O.run = 0; return; }
+      if (b === 0xF7) {
+        if (O.cur && O.cur.sx) { O.cur.b.push(b); emit(O, O.cur.b, O.cur.t, false, false); }
+        else emit(O, [b], t, false, true);
+        O.cur = null; return;
+      }
+      if (b < 0xF0) O.run = b; else O.run = 0;
+      var n = dataLen(b);
+      if (n === 0) { emit(O, [b], t, false, false); return; }
+      O.cur = { b: [b], t: t, need: n }; return;
+    }
+    if (O.cur) {
+      O.cur.b.push(b);
+      if (O.cur.sx) { if (O.cur.b.length > 4096) { emit(O, O.cur.b, O.cur.t, false, true); O.cur = null; } return; }
+      if (O.cur.b.length - (O.cur.rs ? 0 : 1) >= O.cur.need) { emit(O, O.cur.b, O.cur.t, O.cur.rs, false); O.cur = null; }
+      return;
+    }
+    if (O.run) { O.cur = { b: [b], t: t, need: dataLen(O.run), rs: true, st: O.run }; if (O.cur.need === 1) { emit(O, O.cur.b, t, true, false); O.cur = null; } return; }
+    emit(O, [b], t, false, true);
+  }
+
+  var MSC_FMT = { 1: "LTG", 2: "MOV", 0x10: "SND", 0x11: "MUS", 0x20: "MACH", 0x30: "VID", 0x40: "PROJ", 0x50: "PROC", 0x60: "PYRO", 0x7F: "ALL" };
+  var MSC_CMD = { 1: "GO", 2: "STOP", 3: "RESUME", 4: "TIMED_GO", 5: "LOAD", 6: "SET", 7: "FIRE", 8: "ALL_OFF", 9: "RESTORE", 10: "RESET", 11: "GO_OFF" };
+  function label(bytes, rs, broken, st) {
+    var s = rs ? st : bytes[0], d = rs ? bytes : bytes.slice(1), ch = (s & 15) + 1;
+    if (broken) return ["incomplete / stray", "k-err"];
+    switch (s & 0xF0) {
+      case 0x80: return ["Note off  ch " + ch + "  " + noteName(d[0]) + "  " + d[1], "k-note"];
+      case 0x90: return [(d[1] ? "Note on   ch " : "Note off  ch ") + ch + "  " + noteName(d[0]) + "  " + d[1], "k-note"];
+      case 0xA0: return ["Poly AT  ch " + ch + "  " + noteName(d[0]) + "  " + d[1], "k-note"];
+      case 0xB0: return ["CC  ch " + ch + "  #" + d[0] + " = " + d[1], "k-cc"];
+      case 0xC0: return ["Program  ch " + ch + "  " + d[0], "k-pc"];
+      case 0xD0: return ["Chan AT  ch " + ch + "  " + d[0], "k-cc"];
+      case 0xE0: return ["Pitch bend  ch " + ch + "  " + ((d[0] | (d[1] << 7)) - 8192), "k-cc"];
+    }
+    switch (s) {
+      case 0xF0:
+        var n = bytes.length;
+        if (bytes[1] === 0x7F && bytes[3] === 0x02) {
+          var f = MSC_FMT[bytes[4]] || ("fmt " + hex(bytes[4] || 0)), c = MSC_CMD[bytes[5]] || ("cmd " + hex(bytes[5] || 0));
+          return ["MSC  " + f + "  " + c + "  dev " + bytes[2], "k-sysex"];
+        }
+        if (bytes[1] === 0x7F && bytes[3] === 0x01 && bytes[4] === 0x01)
+          return ["MTC full frame  " + [bytes[5] & 31, bytes[6], bytes[7], bytes[8]].map(function (x) { return ("0" + x).slice(-2); }).join(":"), "k-sysex"];
+        if (bytes[1] === 0x7F && bytes[3] === 0x06) return ["MMC", "k-sysex"];
+        return ["SysEx  " + n + " bytes  ID " + hex(bytes[1] || 0), "k-sysex"];
+      case 0xF1: return ["MTC quarter frame  " + (d[0] >> 4) + ":" + (d[0] & 15), "k-rt"];
+      case 0xF2: return ["Song position", "k-pc"];
+      case 0xF3: return ["Song select", "k-pc"];
+      case 0xF6: return ["Tune request", "k-pc"];
+      case 0xF8: return ["Clock", "k-rt"];
+      case 0xFA: return ["Start", "k-rt"];
+      case 0xFB: return ["Continue", "k-rt"];
+      case 0xFC: return ["Stop", "k-rt"];
+      case 0xFE: return ["Active sensing", "k-rt"];
+      case 0xFF: return ["System reset", "k-rt"];
+    }
+    return ["?", "k-err"];
+  }
+
+  var MAX_ROWS = 160;
+  function emit(O, bytes, t, rs, broken) {
+    O.msgs++;
+    var st = rs ? O.run : 0;
+    var b0 = bytes[0];
+    // collapse runs of clock / active sensing / quarter frames into one row
+    if (!rs && !broken && (b0 === 0xF8 || b0 === 0xFE || b0 === 0xF1) && O.last && O.last.b0 === b0 && O.last.el.isConnected) {
+      O.last.n++;
+      O.last.el.children[0].textContent = fmtTime(t);
+      if (b0 === 0xF1) O.last.el.children[1].textContent = bytes.map(hex).join(" ");
+      O.last.el.children[2].textContent = label(bytes, false, false, 0)[0] + "  ×" + O.last.n;
+      return;
+    }
+    var lb = label(bytes, rs, broken, st);
+    var row = document.createElement("div");
+    row.className = "row";
+    var hx;
+    if (bytes.length > 14) hx = bytes.slice(0, 10).map(hex).join(" ") + " … " + hex(bytes[bytes.length - 1]);
+    else hx = bytes.map(hex).join(" ");
+    var t1 = document.createElement("span"); t1.className = "t"; t1.textContent = fmtTime(t);
+    var t2 = document.createElement("span"); t2.className = "hx";
+    if (rs) { var r = document.createElement("span"); r.className = "rs"; r.textContent = "(" + hex(st) + ") "; r.title = "running status: status byte not re-sent"; t2.appendChild(r); }
+    t2.appendChild(document.createTextNode(hx));
+    var t3 = document.createElement("span"); t3.className = "lb " + lb[1]; t3.textContent = lb[0];
+    row.appendChild(t1); row.appendChild(t2); row.appendChild(t3);
+    var log = O.log;
+    if (O.emptyEl) { O.emptyEl.remove(); O.emptyEl = null; }
+    log.insertBefore(row, log.firstChild);
+    while (log.childElementCount > MAX_ROWS) log.removeChild(log.lastChild);
+    O.last = { b0: (!rs && !broken) ? b0 : -1, n: 1, el: row };
+  }
+
+  function buildOutputs() {
+    var host = document.getElementById("outs");
+    host.innerHTML = "";
+    outs.forEach(function (O) {
+      var L = O.o ? "B" : "A";
+      var el = document.createElement("div");
+      el.innerHTML =
+        '<div class="out-h"><strong>OUT ' + L + '</strong>' +
+        '<span class="route" aria-label="Sources routed to OUT ' + L + '">&larr; <span class="chip" id="r-' + L + '-0">IN A</span><span class="chip" id="r-' + L + '-1">IN B</span><span class="chip" id="r-' + L + '-2">GEN</span></span>' +
+        '<span class="counts"><span><b id="c-' + L + '-b">0</b> bytes</span><span><b id="c-' + L + '-m">0</b> msgs</span><span id="c-' + L + '-dw"><b id="c-' + L + '-d">0</b> merge drops</span></span>' +
+        '<button type="button" class="btn" id="clr-' + L + '">Clear</button></div>' +
+        '<div class="log" id="log-' + L + '" tabindex="0" aria-label="OUT ' + L + ' byte log, newest first"><div class="empty">Nothing sent yet.</div></div>';
+      host.appendChild(el);
+      O.log = el.querySelector("#log-" + L);
+      O.emptyEl = O.log.firstChild;
+      O.cb = el.querySelector("#c-" + L + "-b"); O.cm = el.querySelector("#c-" + L + "-m");
+      O.cd = el.querySelector("#c-" + L + "-d"); O.cdw = el.querySelector("#c-" + L + "-dw");
+      O.chips = [0, 1, 2].map(function (s) { return el.querySelector("#r-" + L + "-" + s); });
+      el.querySelector("#clr-" + L).addEventListener("click", function () { clearOut(O); });
+    });
+  }
+  function clearOut(O) {
+    O.log.innerHTML = '<div class="empty">Cleared.</div>';
+    O.emptyEl = O.log.firstChild;
+    O.msgs = 0; O.last = null;
+    if (M) { O.byteBase = M._sim_stat(2 + O.o); O.dropBase = M._sim_stat(4 + O.o); }
+  }
+  function resetOut(O) {
+    O.cur = null; O.run = 0; O.byteBase = 0; O.dropBase = 0;
+    clearOut(O); O.byteBase = 0; O.dropBase = 0;
+    O.log.innerHTML = '<div class="empty">Nothing sent yet.</div>'; O.emptyEl = O.log.firstChild;
+  }
+
+  /* ---------------- joystick ---------------- */
+  var keyDownAt = [null, null, null, null, null], keyRelease = [false, false, false, false, false];
+  var jbs = Array.prototype.slice.call(document.querySelectorAll(".jb"));
+  var cap = document.getElementById("cap");
+  function keyDown(k) {
+    if (!M || keyDownAt[k] !== null) { keyRelease[k] = false; return; }
+    M._sim_key(k, 1);
+    keyDownAt[k] = now(); keyRelease[k] = false;
+    document.querySelector('.jb[data-k="' + k + '"]').classList.add("down");
+    if (k < 4) cap.setAttribute("data-tilt", String(k)); else cap.classList.add("down");
+  }
+  function keyUp(k) { if (keyDownAt[k] !== null) keyRelease[k] = true; }
+  function serviceKeys() {
+    // The firmware debounces for 10 ms of samples: hold each contact at least 30 ms of sim time.
+    for (var k = 0; k < 5; k++) {
+      if (keyRelease[k] && keyDownAt[k] !== null && now() - keyDownAt[k] >= 30000) {
+        M._sim_key(k, 0); keyDownAt[k] = null; keyRelease[k] = false;
+        document.querySelector('.jb[data-k="' + k + '"]').classList.remove("down");
+        if (k < 4) { if (cap.getAttribute("data-tilt") === String(k)) cap.removeAttribute("data-tilt"); }
+        else cap.classList.remove("down");
+      }
+    }
+  }
+  jbs.forEach(function (b) {
+    var k = +b.dataset.k;
+    b.addEventListener("pointerdown", function (e) { e.preventDefault(); try { b.setPointerCapture(e.pointerId); } catch (x) {} keyDown(k); });
+    b.addEventListener("pointerup", function () { keyUp(k); });
+    b.addEventListener("pointercancel", function () { keyUp(k); });
+    b.addEventListener("lostpointercapture", function () { keyUp(k); });
+    b.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+    b.addEventListener("keydown", function (e) {
+      if ((e.key === "Enter" || e.key === " ") && !e.repeat) { e.preventDefault(); e.stopPropagation(); keyDown(k); }
+    });
+    b.addEventListener("keyup", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); keyUp(k); }
+    });
+  });
+  var KEYMAP = { ArrowUp: 0, ArrowDown: 1, ArrowLeft: 2, ArrowRight: 3, w: 0, s: 1, a: 2, d: 3, W: 0, S: 1, A: 2, D: 3, Enter: 4, " ": 4 };
+  function formTarget(t) { return t && (t.tagName === "INPUT" || t.tagName === "SELECT" || t.tagName === "TEXTAREA" || t.isContentEditable); }
+  document.addEventListener("keydown", function (e) {
+    if (e.ctrlKey || e.metaKey || e.altKey || formTarget(e.target)) return;
+    var k = KEYMAP[e.key];
+    if (k === undefined) return;
+    // Enter / Space on a page button keep their normal meaning
+    if (k === 4 && e.target && e.target !== document.body && e.target.closest && !e.target.closest("#device")) return;
+    if (k < 4 && e.target && e.target.classList && e.target.classList.contains("log")) return;
+    e.preventDefault();
+    if (!e.repeat) keyDown(k);   // the firmware does its own auto-repeat
+  });
+  document.addEventListener("keyup", function (e) {
+    var k = KEYMAP[e.key];
+    if (k !== undefined) keyUp(k);
+  });
+  window.addEventListener("blur", function () { for (var k = 0; k < 5; k++) keyUp(k); });
+
+  /* ---------------- display ---------------- */
+  var fbCanvas = document.createElement("canvas"), fbCtx = fbCanvas.getContext("2d"), scale = 1;
+  function setupDisplay() {
+    fbW = M._sim_fb_w(); fbH = M._sim_fb_h(); fbPtr = M._sim_framebuffer();
+    fbCanvas.width = fbW; fbCanvas.height = fbH;
+    img = fbCtx.createImageData(fbW, fbH);
+    canvas.classList.toggle("oled", fbW === 128);
+    sizeCanvas();
+  }
+  /* Draw at a whole-number multiple of the panel resolution that covers the
+     on-screen size, so every panel pixel is the same size and stays sharp. */
+  function sizeCanvas() {
+    if (!fbW) return;
+    var css = canvas.getBoundingClientRect().width || fbW;
+    var k = Math.max(1, Math.ceil(css * (window.devicePixelRatio || 1) / fbW));
+    if (k !== scale || canvas.width !== fbW * k) {
+      scale = k; canvas.width = fbW * k; canvas.height = fbH * k;
+    }
+    fbVer = -1;
+  }
+  if (window.ResizeObserver) new ResizeObserver(sizeCanvas).observe(canvas);
+  else window.addEventListener("resize", sizeCanvas);
+  function drawDisplay() {
+    var v = M._sim_fb_version();
+    if (v !== fbVer) {
+      fbVer = v;
+      img.data.set(M.HEAPU8.subarray(fbPtr, fbPtr + fbW * fbH * 4));
+      fbCtx.putImageData(img, 0, 0);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(fbCanvas, 0, 0, canvas.width, canvas.height);
+      var on = M._sim_display_on(), pct = M._sim_brightness();
+      canvas.style.filter = (!on || pct <= 0) ? "brightness(0)" : "brightness(" + (0.35 + 0.65 * pct / 100).toFixed(3) + ")";
+    }
+  }
+
+  /* ---------------- status ---------------- */
+  var ledEl = document.getElementById("led-midi");
+  var stUp = document.getElementById("st-up"), stMsgs = document.getElementById("st-msgs"), stDisp = document.getElementById("st-disp");
+  var lastBits = -1, lastRx = [0, 0], statT = 0;
+  function updateStatus(dtMs) {
+    ledEl.classList.toggle("on", !!M._sim_led());
+    var bits = M._sim_route_bits();
+    if (bits !== lastBits) {
+      lastBits = bits;
+      outs.forEach(function (O) { O.chips.forEach(function (c, s) { c.classList.toggle("on", !!(bits & (1 << (O.o * 3 + s)))); }); });
+    }
+    statT += dtMs;
+    if (statT < 120) return;
+    var span = statT; statT = 0;
+    var s = Math.floor(now() / 1e6);
+    stUp.textContent = Math.floor(s / 3600) + ":" + ("0" + Math.floor(s / 60) % 60).slice(-2) + ":" + ("0" + s % 60).slice(-2);
+    stMsgs.textContent = M._sim_stat(6);
+    for (var p = 0; p < 2; p++) {
+      var tot = M._sim_stat(p), d = tot - lastRx[p]; lastRx[p] = tot;
+      var load = Math.min(100, d * 320 / (span * 10));   // % of line capacity
+      var pend = M._sim_rx_pending(p);
+      var ui = inUi[p];
+      ui.act.classList.toggle("on", d > 0);
+      ui.meter.style.width = load.toFixed(0) + "%";
+      ui.wire.textContent = tot + " bytes in · line " + load.toFixed(0) + "% busy" + (pend > 32 ? " · " + pend + " waiting" : "");
+    }
+    outs.forEach(function (O) {
+      O.cb.textContent = M._sim_stat(2 + O.o) - O.byteBase;
+      O.cm.textContent = O.msgs;
+      var dr = M._sim_stat(4 + O.o) - O.dropBase;
+      O.cd.textContent = dr; O.cdw.classList.toggle("bad", dr > 0);
+    });
+  }
+
+  /* ---------------- main loop ---------------- */
+  function frame(ts) {
+    requestAnimationFrame(frame);
+    if (!M || booting) { lastFrame = ts; return; }
+    var dt = lastFrame ? Math.min(100, ts - lastFrame) : 16;
+    lastFrame = ts;
+    var horizon = now() + (dt + 30) * 1000;
+    fillStreams(horizon);
+    flushEvents(horizon);
+    // run in slices so key releases land on time
+    var left = dt;
+    while (left > 0) {
+      var step = Math.min(8, left);
+      M._sim_tick(step);
+      serviceKeys();
+      left -= step;
+    }
+    for (var o = 0; o < 2; o++) {
+      var n;
+      do {
+        n = M._sim_out_read(o, outBuf, outTimes, 4096);
+        for (var i = 0; i < n; i++) feedOut(outs[o], M.HEAPU8[outBuf + i], M.HEAPF64[(outTimes >> 3) + i]);
+      } while (n === 4096);
+    }
+    drawDisplay();
+    updateStatus(dt);
+  }
+
+  function demo() {
+    // A short scripted burst so the monitor and the outputs start with something on them.
+    var t0 = now() + 900000;   // just after the 700 ms splash
+    var A = 0, B = 1;
+    at(A, [0x90, 60, 100], 0, t0);
+    at(A, [0xB0, 7, 100], 120, t0);
+    at(A, [0xC0, 5], 260, t0);
+    at(B, msc(0x01, 0x01, 0x01, ascii("12.5")), 380, t0);
+    at(A, [0x80, 60, 64], 520, t0);
+    at(A, [0xE0, 0x00, 0x50], 640, t0);
+    at(A, [0x00, 0x40], 700, t0);
+    at(B, msc(0x01, 0x10, 0x02), 820, t0);
+    at(A, msc(0x7F, 0x01, 0x01, ascii("3")), 960, t0);
+    at(A, [0x90, 64, 90], 1100, t0);
+    at(A, [0x80, 64, 0], 1400, t0);
+  }
+
+  function boot(k) {
+    if (booting) return;
+    booting = true;
+    kind = k;
+    document.getElementById("d-tft").setAttribute("aria-pressed", k === 2 ? "true" : "false");
+    document.getElementById("d-oled").setAttribute("aria-pressed", k === 1 ? "true" : "false");
+    // stop streams, forget queued traffic: this is a power cycle
+    events = [];
+    ports.forEach(function (P) { P.streams = {}; });
+    document.querySelectorAll("button[data-tog]").forEach(function (b) { b.setAttribute("aria-pressed", "false"); });
+    for (var i = 0; i < 5; i++) { keyDownAt[i] = null; keyRelease[i] = false; }
+    jbs.forEach(function (b) { b.classList.remove("down"); }); cap.removeAttribute("data-tilt");
+    ctx.fillStyle = "#000"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    MidiumSim().then(function (mod) {
+      M = mod;
+      outBuf = M._malloc(4096);
+      outTimes = M._malloc(4096 * 8);
+      M._sim_init(k);
+      setupDisplay();
+      stDisp.textContent = M.UTF8ToString(M._sim_display_name());
+      outs.forEach(resetOut);
+      lastBits = -1; lastRx = [0, 0];
+      demo();
+      booting = false;
+    }).catch(function (err) {
+      booting = false;
+      var f = document.getElementById("foot");
+      f.className = "foot boot-err";
+      f.textContent = "The simulator failed to start: " + (err && err.message ? err.message : err) + ". Reload the page to try again.";
+    });
+  }
+
+  document.getElementById("d-tft").addEventListener("click", function () { lsSet("midium-disp", "2"); boot(2); });
+  document.getElementById("d-oled").addEventListener("click", function () { lsSet("midium-disp", "1"); boot(1); });
+  document.getElementById("power").addEventListener("click", function () { boot(kind); });
+
+  buildInputs();
+  buildOutputs();
+  var saved = lsGet("midium-disp");
+  boot(saved === "1" ? 1 : 2);
+  requestAnimationFrame(frame);
+
+})();
+</script>

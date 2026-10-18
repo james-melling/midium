@@ -23,6 +23,7 @@
 #define DISPLAY_I2C          i2c1
 #define I2C_BAUD             400000
 #define OLED_I2C_ADDR        0x3C
+#define OLED_I2C_ADDR_ALT    0x3D   /* probed second (Adafruit 938 with DC high) */
 /* Reserved for milestone 2 (not implemented yet):
  *   RV-3028-C7 RTC          0x52
  *   MAX17048 fuel gauge     0x36                                           */

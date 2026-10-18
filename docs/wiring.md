@@ -82,7 +82,7 @@ drives GP2 HIGH and the relays hand IN and OUT A over to the MCU.
 
 | Part | Value / type | Notes |
 |---|---|---|
-| RL1, RL2 | DPDT signal relay, 5 V coil (e.g. Omron G6K-2P-5VDC) | coil from VBUS (5 V) |
+| RL1, RL2 | DPDT signal relay, 5 V coil: G5V-2-H1 5VDC as ordered (coil 1-16, COM 4/13, NC 6/11, NO 8/9 per the G5V-2 datasheet; check with a meter) | coil from VBUS (5 V) |
 | Q1 | NPN, 2N3904 or BC547 | drives both coils |
 | R | 1 kΩ | GP2 to Q1 base |
 | R | 10 kΩ | GP2 to GND. Holds the relays off during reset. Don't rely on the RP2350 internal pull-down (erratum E9 on early silicon). |
@@ -163,14 +163,16 @@ one receiver (the downstream device), the same as a plain cable.
 Relay switching takes a few milliseconds. A message in flight at that moment
 will be corrupted. Expect that when the box boots or reboots on a live line.
 
-## 5. OLED (SH1106 or SSD1306, 128x64, I2C address 0x3C)
+## 5. OLED (SH1106 or SSD1306, 128x64, I2C address 0x3C or 0x3D)
 
-| OLED pin | Pico |
+| OLED pin (Adafruit 938 label) | Pico |
 |---|---|
-| VCC | 3V3(OUT), pin 36 |
+| VCC (938: **Vin**; leave its 3v3 output pin open) | 3V3(OUT), pin 36 |
 | GND | GND |
-| SDA | GP6, pin 9 |
-| SCL | GP7, pin 10 |
+| SDA (938: **Data**) | GP6, pin 9 |
+| SCL (938: **Clk**) | GP7, pin 10 |
+| 938 only: **DC** | GND, sets address 0x3C (the firmware also finds 0x3D) |
+| 938 only: **CS** | leave open |
 
 Most modules have their own I2C pull-ups. If yours doesn't, add 4.7 kΩ from SDA
 and from SCL to 3V3. The firmware defaults to SSD1306, which is what the
@@ -179,17 +181,19 @@ module (most generic 1.3" boards), build with `-DMIDIUM_OLED_SSD1306=OFF`.
 If the picture is shifted 2 pixels or has a garbage column, you have the
 other chip.
 
-**Adafruit 938 needs two changes before it will talk I2C:**
+**Adafruit 938 checks before it will talk I2C:**
 
-1. It ships in SPI mode. Solder-bridge jumpers **J1 and J2** on the back to
-   switch it to I2C. Wire its **Data** pin to SDA and **Clk** to SCL.
-2. Its **RST** pin must not float. Tie it to 3V3 through 10 kΩ, with
-   100 nF from RST to GND, so it resets itself at power-up.
+1. Look at jumpers **J1 and J2** on the back. Older boards ship in SPI mode
+   and need both bridged with solder. Current STEMMA QT boards ship with them
+   already closed (I2C).
+2. Older boards need **RST** held high: tie it to 3V3 through 10 kΩ, with
+   100 nF from RST to GND, so it resets itself at power-up. Current boards
+   reset themselves, and the RC does no harm on either.
 
 ## 6. TFT (ST7789 1.9", 170x320, SPI)
 
 Used in landscape (320 x 170). It is detected only when **no** OLED answers on
-I2C 0x3C, so remove the OLED to use the TFT (or force it with
+I2C 0x3C or 0x3D, so remove the OLED to use the TFT (or force it with
 `-DMIDIUM_DISPLAY=2`).
 
 | TFT pin (typical label) | Pico |

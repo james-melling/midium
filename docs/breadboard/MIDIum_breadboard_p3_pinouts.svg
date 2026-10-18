@@ -1,0 +1,481 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420.0mm" height="297.0mm" viewBox="0 0 420.0 297.0" font-family="'Century Gothic','URW Gothic','URW Gothic L','Questrial',sans-serif">
+<defs><marker id="arr" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="4" markerHeight="4" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#666"/></marker></defs><rect x="0" y="0" width="420.0" height="297.0" fill="#fff"/>
+<rect x="6.00" y="6.00" width="408.00" height="285.00" rx="0.00" fill="none" stroke="#000" stroke-width="0.50"/>
+<rect x="264.00" y="267.00" width="150.00" height="24.00" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.50"/>
+<line x1="264.00" y1="276.00" x2="414.00" y2="276.00" stroke="#000" stroke-width="0.30"/>
+<line x1="264.00" y1="283.50" x2="414.00" y2="283.50" stroke="#000" stroke-width="0.30"/>
+<line x1="376.00" y1="276.00" x2="376.00" y2="291.00" stroke="#000" stroke-width="0.30"/>
+<text x="267.00" y="273.30" font-size="5.00" text-anchor="start" font-weight="bold" fill="#111">MIDIum (NSK MT-1)</text>
+<text x="411.00" y="273.30" font-size="3.20" text-anchor="end" font-weight="normal" fill="#555">melling.audio</text>
+<text x="267.00" y="281.20" font-size="3.40" text-anchor="start" font-weight="normal" fill="#111">Breadboard prototype · Off-board pinouts</text>
+<text x="267.00" y="288.60" font-size="3.20" text-anchor="start" font-weight="normal" fill="#111">Rev A · 18/10/2026 · J Melling</text>
+<text x="379.00" y="281.20" font-size="3.20" text-anchor="start" font-weight="normal" fill="#111">Sheet 3 of 4</text>
+<text x="379.00" y="288.60" font-size="3.00" text-anchor="start" font-weight="normal" fill="#444">A3 · milestone 1</text>
+<text x="14.00" y="14.50" font-size="4.20" text-anchor="start" font-weight="bold" fill="#111">Sheet 3 · Pinouts for the parts that are easy to get wrong</text>
+<rect x="12.00" y="19.00" width="244.00" height="92.00" rx="1.00" fill="#fff" stroke="#999" stroke-width="0.30"/>
+<text x="15.00" y="24.50" font-size="3.20" text-anchor="start" font-weight="bold" fill="#111">5-pin DIN sockets X1-X3 · Same Sky SDS-50J (female, right-angle PCB)</text>
+<text x="15.00" y="29.00" font-size="2.40" text-anchor="start" font-weight="normal" fill="#111">MIDI numbering runs 1-4-2-5-3 around the arc. Pin 2 (centre) = shield.  Viewed from the front of a socket, pin 1 is on the RIGHT.</text>
+<text x="15.00" y="32.60" font-size="2.20" text-anchor="start" font-weight="normal" fill="#555">Pin positions taken from the Same Sky SDS-50J mechanical drawing (front view and recommended PCB layout).</text>
+<circle cx="48.00" cy="61.00" r="16.25" fill="#3a3a3a" stroke="#000" stroke-width="0.30"/>
+<circle cx="48.00" cy="61.00" r="13.65" fill="#1e1e1e" stroke="#666" stroke-width="0.25"/>
+<rect x="45.79" y="44.75" width="4.42" height="4.16" rx="0.00" fill="#fff" stroke="#000" stroke-width="0.25"/>
+<circle cx="48.00" cy="69.84" r="1.69" fill="#9fd3ff" stroke="#fff" stroke-width="0.25"/>
+<text x="48.00" y="67.20" font-size="2.80" text-anchor="middle" font-weight="bold" fill="#fff">2</text>
+<circle cx="54.25" cy="67.25" r="1.69" fill="#ffd84d" stroke="#fff" stroke-width="0.25"/>
+<text x="51.68" y="65.68" font-size="2.80" text-anchor="middle" font-weight="bold" fill="#fff">4</text>
+<circle cx="56.84" cy="61.00" r="1.69" fill="#d9d9d9" stroke="#fff" stroke-width="0.25"/>
+<text x="53.20" y="62.00" font-size="2.80" text-anchor="middle" font-weight="bold" fill="#fff">1</text>
+<circle cx="41.75" cy="67.25" r="1.69" fill="#ffd84d" stroke="#fff" stroke-width="0.25"/>
+<text x="44.32" y="65.68" font-size="2.80" text-anchor="middle" font-weight="bold" fill="#fff">5</text>
+<circle cx="39.16" cy="61.00" r="1.69" fill="#d9d9d9" stroke="#fff" stroke-width="0.25"/>
+<text x="42.80" y="62.00" font-size="2.80" text-anchor="middle" font-weight="bold" fill="#fff">3</text>
+<text x="48.00" y="81.75" font-size="2.40" text-anchor="middle" font-weight="bold" fill="#111">FRONT (looking into the socket)</text>
+<text x="48.00" y="85.25" font-size="2.00" text-anchor="middle" font-weight="normal" fill="#444">key notch at top; yellow 4/5 = loop, blue 2 = shield</text>
+<rect x="84.00" y="36.60" width="40.00" height="35.40" rx="0.50" fill="#4a4a4a" stroke="#000" stroke-width="0.30"/>
+<rect x="84.00" y="68.40" width="40.00" height="3.60" rx="0.00" fill="#666" stroke="none" stroke-width="0.25"/>
+<text x="104.00" y="75.00" font-size="2.00" text-anchor="middle" font-weight="normal" fill="#333">↓ front / plug side ↓</text>
+<circle cx="89.00" cy="57.00" r="2.40" fill="none" stroke="#999" stroke-width="0.25"/>
+<circle cx="119.00" cy="57.00" r="2.40" fill="none" stroke="#999" stroke-width="0.25"/>
+<circle cx="94.00" cy="42.00" r="1.90" fill="#d9d9d9" stroke="#000" stroke-width="0.25"/>
+<text x="97.80" y="40.80" font-size="2.60" text-anchor="middle" font-weight="bold" fill="#fff">5</text>
+<circle cx="114.00" cy="42.00" r="1.90" fill="#d9d9d9" stroke="#000" stroke-width="0.25"/>
+<text x="117.80" y="40.80" font-size="2.60" text-anchor="middle" font-weight="bold" fill="#fff">4</text>
+<circle cx="89.00" cy="47.00" r="1.90" fill="#d9d9d9" stroke="#000" stroke-width="0.25"/>
+<text x="92.80" y="45.80" font-size="2.60" text-anchor="middle" font-weight="bold" fill="#fff">3</text>
+<circle cx="104.00" cy="47.00" r="1.90" fill="#d9d9d9" stroke="#000" stroke-width="0.25"/>
+<text x="107.80" y="45.80" font-size="2.60" text-anchor="middle" font-weight="bold" fill="#fff">2</text>
+<circle cx="119.00" cy="47.00" r="1.90" fill="#d9d9d9" stroke="#000" stroke-width="0.25"/>
+<text x="122.80" y="45.80" font-size="2.60" text-anchor="middle" font-weight="bold" fill="#fff">1</text>
+<circle cx="99.00" cy="67.00" r="1.90" fill="#d9d9d9" stroke="#000" stroke-width="0.25"/>
+<text x="102.80" y="65.80" font-size="2.60" text-anchor="middle" font-weight="bold" fill="#fff">E</text>
+<circle cx="109.00" cy="67.00" r="1.90" fill="#d9d9d9" stroke="#000" stroke-width="0.25"/>
+<text x="112.80" y="65.80" font-size="2.60" text-anchor="middle" font-weight="bold" fill="#fff">E</text>
+<text x="104.00" y="79.00" font-size="2.40" text-anchor="middle" font-weight="bold" fill="#111">TOP view (component side), as on sheet 1</text>
+<rect x="142.00" y="36.60" width="40.00" height="35.40" rx="0.50" fill="#e9e3d0" stroke="#000" stroke-width="0.30"/>
+<rect x="142.00" y="68.40" width="40.00" height="3.60" rx="0.00" fill="#c9c1a8" stroke="none" stroke-width="0.25"/>
+<text x="162.00" y="75.00" font-size="2.00" text-anchor="middle" font-weight="normal" fill="#333">↓ front / plug side ↓</text>
+<circle cx="147.00" cy="57.00" r="2.40" fill="none" stroke="#999" stroke-width="0.25"/>
+<circle cx="177.00" cy="57.00" r="2.40" fill="none" stroke="#999" stroke-width="0.25"/>
+<circle cx="172.00" cy="42.00" r="1.90" fill="#d9d9d9" stroke="#000" stroke-width="0.25"/>
+<text x="175.80" y="40.80" font-size="2.60" text-anchor="middle" font-weight="bold" fill="#000">5</text>
+<circle cx="152.00" cy="42.00" r="1.90" fill="#d9d9d9" stroke="#000" stroke-width="0.25"/>
+<text x="155.80" y="40.80" font-size="2.60" text-anchor="middle" font-weight="bold" fill="#000">4</text>
+<circle cx="177.00" cy="47.00" r="1.90" fill="#d9d9d9" stroke="#000" stroke-width="0.25"/>
+<text x="180.80" y="45.80" font-size="2.60" text-anchor="middle" font-weight="bold" fill="#000">3</text>
+<circle cx="162.00" cy="47.00" r="1.90" fill="#d9d9d9" stroke="#000" stroke-width="0.25"/>
+<text x="165.80" y="45.80" font-size="2.60" text-anchor="middle" font-weight="bold" fill="#000">2</text>
+<circle cx="147.00" cy="47.00" r="1.90" fill="#d9d9d9" stroke="#000" stroke-width="0.25"/>
+<text x="150.80" y="45.80" font-size="2.60" text-anchor="middle" font-weight="bold" fill="#000">1</text>
+<circle cx="167.00" cy="67.00" r="1.90" fill="#d9d9d9" stroke="#000" stroke-width="0.25"/>
+<text x="170.80" y="65.80" font-size="2.60" text-anchor="middle" font-weight="bold" fill="#000">E</text>
+<circle cx="157.00" cy="67.00" r="1.90" fill="#d9d9d9" stroke="#000" stroke-width="0.25"/>
+<text x="160.80" y="65.80" font-size="2.60" text-anchor="middle" font-weight="bold" fill="#000">E</text>
+<text x="162.00" y="79.00" font-size="2.40" text-anchor="middle" font-weight="bold" fill="#111">SOLDER side (pins seen from below)</text>
+<text x="194.00" y="41.00" font-size="2.70" text-anchor="start" font-weight="bold" fill="#111">Lead per pin</text>
+<text x="194.00" y="45.50" font-size="2.40" text-anchor="start" font-weight="bold" fill="#111">X1 MIDI IN</text>
+<line x1="195.00" y1="48.10" x2="199.00" y2="48.10" stroke="#2ca02c" stroke-width="1.30" stroke-linecap="round"/>
+<text x="201.00" y="48.90" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">pin 4</text>
+<text x="214.00" y="48.90" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B2 j19 (RL1 COM1)</text>
+<line x1="195.00" y1="51.20" x2="199.00" y2="51.20" stroke="#2ca02c" stroke-width="1.30" stroke-linecap="round"/>
+<text x="201.00" y="52.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">pin 5</text>
+<text x="214.00" y="52.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B2 d19 (RL1 COM2)</text>
+<text x="201.00" y="55.10" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">pin 2</text>
+<text x="214.00" y="55.10" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">NOT connected</text>
+<text x="201.00" y="58.20" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">pin 1,3,E</text>
+<text x="214.00" y="58.20" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">NOT connected</text>
+<text x="194.00" y="62.50" font-size="2.40" text-anchor="start" font-weight="bold" fill="#111">X2 OUT A</text>
+<line x1="195.00" y1="65.10" x2="199.00" y2="65.10" stroke="#1f6fd1" stroke-width="1.30" stroke-linecap="round"/>
+<text x="201.00" y="65.90" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">pin 4</text>
+<text x="214.00" y="65.90" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B2 d37 (RL2 COM1)</text>
+<line x1="195.00" y1="68.20" x2="199.00" y2="68.20" stroke="#1f6fd1" stroke-width="1.30" stroke-linecap="round"/>
+<text x="201.00" y="69.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">pin 5</text>
+<text x="214.00" y="69.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B2 j37 (RL2 COM2)</text>
+<line x1="195.00" y1="71.30" x2="199.00" y2="71.30" stroke="#1a1a1a" stroke-width="1.30" stroke-linecap="round"/>
+<text x="201.00" y="72.10" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">pin 2</text>
+<text x="214.00" y="72.10" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B2 GND rail @39</text>
+<text x="201.00" y="75.20" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">pin 1,3</text>
+<text x="214.00" y="75.20" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">NOT connected</text>
+<text x="194.00" y="79.50" font-size="2.40" text-anchor="start" font-weight="bold" fill="#111">X3 OUT B</text>
+<line x1="195.00" y1="82.10" x2="199.00" y2="82.10" stroke="#8e44ad" stroke-width="1.30" stroke-linecap="round"/>
+<text x="201.00" y="82.90" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">pin 4</text>
+<text x="214.00" y="82.90" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B2 j51 (R8 33Ω)</text>
+<line x1="195.00" y1="85.20" x2="199.00" y2="85.20" stroke="#8e44ad" stroke-width="1.30" stroke-linecap="round"/>
+<text x="201.00" y="86.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">pin 5</text>
+<text x="214.00" y="86.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B2 j47 (R9 10Ω)</text>
+<line x1="195.00" y1="88.30" x2="199.00" y2="88.30" stroke="#1a1a1a" stroke-width="1.30" stroke-linecap="round"/>
+<text x="201.00" y="89.10" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">pin 2</text>
+<text x="214.00" y="89.10" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B2 GND rail @53</text>
+<text x="201.00" y="92.20" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">pin 1,3</text>
+<text x="214.00" y="92.20" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">NOT connected</text>
+<text x="15.00" y="106.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#444">The shell tabs (E) are not used on the breadboard. Never ground the MIDI IN shell or pin 2: the IN side must stay isolated (wiring.md section 2).</text>
+<text x="15.00" y="109.40" font-size="2.20" text-anchor="start" font-weight="normal" fill="#444">Socket pins are on a 2.5/5 mm grid, not 0.1&quot;: solder short (~15 cm) solid-core leads, sleeve each joint, label the socket.</text>
+<rect x="260.00" y="19.00" width="148.00" height="92.00" rx="1.00" fill="#fff" stroke="#999" stroke-width="0.30"/>
+<text x="263.00" y="24.50" font-size="3.20" text-anchor="start" font-weight="bold" fill="#111">RL1, RL2 · Omron G5V-2-H1 5 VDC (DPDT)</text>
+<text x="263.00" y="29.00" font-size="2.10" text-anchor="start" font-weight="normal" fill="#555">From the Omron G5V-2 datasheet, &#x27;Terminal arrangement / internal connections (bottom view)&#x27;.</text>
+<text x="263.00" y="32.20" font-size="2.30" text-anchor="start" font-weight="bold" fill="#c0392b">VERIFY against your datasheet and with a meter before fitting.</text>
+<rect x="268.00" y="41.00" width="40.00" height="22.00" rx="0.80" fill="#203f73" stroke="#000" stroke-width="0.30"/>
+<rect x="269.00" y="43.00" width="1.00" height="18.00" rx="0.00" fill="#9fb6dd" stroke="none" stroke-width="0.25"/>
+<rect x="269.70" y="63.00" width="1.60" height="2.50" rx="0.00" fill="#bbb" stroke="#000" stroke-width="0.20"/>
+<text x="270.50" y="69.50" font-size="2.60" text-anchor="middle" font-weight="bold" fill="#111">1</text>
+<rect x="284.70" y="63.00" width="1.60" height="2.50" rx="0.00" fill="#bbb" stroke="#000" stroke-width="0.20"/>
+<text x="285.50" y="69.50" font-size="2.60" text-anchor="middle" font-weight="bold" fill="#111">4</text>
+<rect x="294.70" y="63.00" width="1.60" height="2.50" rx="0.00" fill="#bbb" stroke="#000" stroke-width="0.20"/>
+<text x="295.50" y="69.50" font-size="2.60" text-anchor="middle" font-weight="bold" fill="#111">6</text>
+<rect x="304.70" y="63.00" width="1.60" height="2.50" rx="0.00" fill="#bbb" stroke="#000" stroke-width="0.20"/>
+<text x="305.50" y="69.50" font-size="2.60" text-anchor="middle" font-weight="bold" fill="#111">8</text>
+<rect x="269.70" y="38.50" width="1.60" height="2.50" rx="0.00" fill="#bbb" stroke="#000" stroke-width="0.20"/>
+<text x="270.50" y="37.50" font-size="2.60" text-anchor="middle" font-weight="bold" fill="#111">16</text>
+<rect x="284.70" y="38.50" width="1.60" height="2.50" rx="0.00" fill="#bbb" stroke="#000" stroke-width="0.20"/>
+<text x="285.50" y="37.50" font-size="2.60" text-anchor="middle" font-weight="bold" fill="#111">13</text>
+<rect x="294.70" y="38.50" width="1.60" height="2.50" rx="0.00" fill="#bbb" stroke="#000" stroke-width="0.20"/>
+<text x="295.50" y="37.50" font-size="2.60" text-anchor="middle" font-weight="bold" fill="#111">11</text>
+<rect x="304.70" y="38.50" width="1.60" height="2.50" rx="0.00" fill="#bbb" stroke="#000" stroke-width="0.20"/>
+<text x="305.50" y="37.50" font-size="2.60" text-anchor="middle" font-weight="bold" fill="#111">9</text>
+<text x="288.00" y="53.60" font-size="2.60" text-anchor="middle" font-weight="bold" fill="#fff">TOP VIEW</text>
+<text x="288.00" y="57.00" font-size="1.90" text-anchor="middle" font-weight="normal" fill="#dfe8f7">stripe = coil end</text>
+<text x="268.00" y="74.00" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">Rows 0.3&quot; apart: straddles the channel like a DIP-16.</text>
+<text x="268.00" y="77.40" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">Pin 1 bottom-left, 16 above it (DIP numbering).</text>
+<text x="322.00" y="40.00" font-size="2.30" text-anchor="start" font-weight="bold" fill="#111">Internal (de-energised shown)</text>
+<rect x="324.00" y="47.00" width="6.00" height="14.00" rx="0.00" fill="none" stroke="#000" stroke-width="0.35"/>
+<line x1="324.00" y1="61.00" x2="330.00" y2="47.00" stroke="#000" stroke-width="0.30"/>
+<text x="327.00" y="45.50" font-size="2.30" text-anchor="middle" font-weight="normal" fill="#111">1</text>
+<text x="327.00" y="65.00" font-size="2.30" text-anchor="middle" font-weight="normal" fill="#111">16</text>
+<text x="332.00" y="55.00" font-size="2.00" text-anchor="start" font-weight="normal" fill="#111">coil</text>
+<text x="332.00" y="58.00" font-size="2.00" text-anchor="start" font-weight="normal" fill="#111">(no</text>
+<text x="332.00" y="61.00" font-size="2.00" text-anchor="start" font-weight="normal" fill="#111">polarity)</text>
+<circle cx="362.00" cy="50.00" r="0.80" fill="#000" stroke="#000" stroke-width="0.25"/>
+<line x1="362.00" y1="50.00" x2="372.00" y2="44.60" stroke="#000" stroke-width="0.45"/>
+<line x1="373.00" y1="44.00" x2="380.00" y2="44.00" stroke="#000" stroke-width="0.35"/>
+<line x1="373.00" y1="56.00" x2="380.00" y2="56.00" stroke="#000" stroke-width="0.35"/>
+<line x1="356.00" y1="50.00" x2="362.00" y2="50.00" stroke="#000" stroke-width="0.35"/>
+<text x="355.00" y="51.00" font-size="2.40" text-anchor="end" font-weight="bold" fill="#111">COM 4</text>
+<text x="381.00" y="45.00" font-size="2.40" text-anchor="start" font-weight="bold" fill="#111">6  NC</text>
+<text x="381.00" y="57.00" font-size="2.40" text-anchor="start" font-weight="bold" fill="#111">8  NO</text>
+<text x="364.00" y="60.50" font-size="2.00" text-anchor="start" font-weight="normal" fill="#555">pole 1</text>
+<circle cx="362.00" cy="70.00" r="0.80" fill="#000" stroke="#000" stroke-width="0.25"/>
+<line x1="362.00" y1="70.00" x2="372.00" y2="64.60" stroke="#000" stroke-width="0.45"/>
+<line x1="373.00" y1="64.00" x2="380.00" y2="64.00" stroke="#000" stroke-width="0.35"/>
+<line x1="373.00" y1="76.00" x2="380.00" y2="76.00" stroke="#000" stroke-width="0.35"/>
+<line x1="356.00" y1="70.00" x2="362.00" y2="70.00" stroke="#000" stroke-width="0.35"/>
+<text x="355.00" y="71.00" font-size="2.40" text-anchor="end" font-weight="bold" fill="#111">COM 13</text>
+<text x="381.00" y="65.00" font-size="2.40" text-anchor="start" font-weight="bold" fill="#111">11  NC</text>
+<text x="381.00" y="77.00" font-size="2.40" text-anchor="start" font-weight="bold" fill="#111">9  NO</text>
+<text x="364.00" y="80.50" font-size="2.00" text-anchor="start" font-weight="normal" fill="#555">pole 2</text>
+<text x="263.00" y="85.00" font-size="2.30" text-anchor="start" font-weight="bold" fill="#111">Pin</text>
+<text x="274.00" y="85.00" font-size="2.30" text-anchor="start" font-weight="bold" fill="#111">RL1 (IN side)</text>
+<text x="332.00" y="85.00" font-size="2.30" text-anchor="start" font-weight="bold" fill="#111">RL2 (OUT A side, rotated 180°)</text>
+<text x="263.00" y="88.60" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">1/16</text>
+<text x="274.00" y="88.60" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">1 = +5V (j16), 16 = COIL-</text>
+<text x="332.00" y="88.60" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">16 = +5V (j40), 1 = COIL-</text>
+<text x="263.00" y="92.20" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">4 / 13</text>
+<text x="274.00" y="92.20" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">COM: IN DIN 4 / IN DIN 5</text>
+<text x="332.00" y="92.20" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">COM: OUT A DIN 4 / DIN 5</text>
+<text x="263.00" y="95.80" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">6 / 11</text>
+<text x="274.00" y="95.80" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">NC: to RL2 6 / RL2 11</text>
+<text x="332.00" y="95.80" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">NC: to RL1 6 / RL1 11</text>
+<text x="263.00" y="99.40" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">8 / 9</text>
+<text x="274.00" y="99.40" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">NO: R1 220Ω / opto pin 2</text>
+<text x="332.00" y="99.40" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">NO: R6 33Ω / R7 10Ω</text>
+<rect x="12.00" y="114.00" width="78.00" height="62.00" rx="1.00" fill="#fff" stroke="#999" stroke-width="0.30"/>
+<text x="15.00" y="119.50" font-size="3.20" text-anchor="start" font-weight="bold" fill="#111">U1 · H11L1M opto (DIP-6, top view)</text>
+<rect x="34.00" y="130.00" width="34.00" height="22.00" rx="0.60" fill="#2b2b2b" stroke="#000" stroke-width="0.30"/>
+<path d="M 34 138 A 3 3 0 0 1 34 144" fill="#888" stroke="#000" stroke-width="0.25"/>
+<circle cx="38.00" cy="148.00" r="1.00" fill="#bbb" stroke="#000" stroke-width="0.25"/>
+<rect x="39.00" y="152.00" width="2.00" height="3.00" rx="0.00" fill="#bbb" stroke="#000" stroke-width="0.20"/>
+<text x="40.00" y="150.00" font-size="2.60" text-anchor="middle" font-weight="bold" fill="#fff">1</text>
+<text x="40.00" y="158.50" font-size="2.00" text-anchor="middle" font-weight="normal" fill="#111">LED A</text>
+<rect x="50.00" y="152.00" width="2.00" height="3.00" rx="0.00" fill="#bbb" stroke="#000" stroke-width="0.20"/>
+<text x="51.00" y="150.00" font-size="2.60" text-anchor="middle" font-weight="bold" fill="#fff">2</text>
+<text x="51.00" y="158.50" font-size="2.00" text-anchor="middle" font-weight="normal" fill="#111">LED K</text>
+<rect x="61.00" y="152.00" width="2.00" height="3.00" rx="0.00" fill="#bbb" stroke="#000" stroke-width="0.20"/>
+<text x="62.00" y="150.00" font-size="2.60" text-anchor="middle" font-weight="bold" fill="#fff">3</text>
+<text x="62.00" y="158.50" font-size="2.00" text-anchor="middle" font-weight="normal" fill="#111">NC</text>
+<rect x="39.00" y="127.00" width="2.00" height="3.00" rx="0.00" fill="#bbb" stroke="#000" stroke-width="0.20"/>
+<text x="40.00" y="134.00" font-size="2.60" text-anchor="middle" font-weight="bold" fill="#fff">6</text>
+<text x="40.00" y="125.80" font-size="2.00" text-anchor="middle" font-weight="normal" fill="#111">Vcc 3V3</text>
+<rect x="50.00" y="127.00" width="2.00" height="3.00" rx="0.00" fill="#bbb" stroke="#000" stroke-width="0.20"/>
+<text x="51.00" y="134.00" font-size="2.60" text-anchor="middle" font-weight="bold" fill="#fff">5</text>
+<text x="51.00" y="125.80" font-size="2.00" text-anchor="middle" font-weight="normal" fill="#111">GND</text>
+<rect x="61.00" y="127.00" width="2.00" height="3.00" rx="0.00" fill="#bbb" stroke="#000" stroke-width="0.20"/>
+<text x="62.00" y="134.00" font-size="2.60" text-anchor="middle" font-weight="bold" fill="#fff">4</text>
+<text x="62.00" y="125.80" font-size="2.00" text-anchor="middle" font-weight="normal" fill="#111">Vo (out)</text>
+<text x="15.00" y="164.00" font-size="2.15" text-anchor="start" font-weight="normal" fill="#111">Notch (and pin-1 dot) to the LEFT on board 2 (rows 26-28).</text>
+<text x="15.00" y="167.60" font-size="2.15" text-anchor="start" font-weight="normal" fill="#111">1 ← 220Ω ← RL1 NO1;  2 ← RL1 NO2;  D3 1N4148: K→1, A→2</text>
+<text x="15.00" y="171.20" font-size="2.15" text-anchor="start" font-weight="normal" fill="#111">4 → GP1 + 470Ω pull-up to 3V3;  6 = 3V3 + 100nF to 5;  3 open</text>
+<rect x="93.00" y="114.00" width="52.00" height="62.00" rx="1.00" fill="#fff" stroke="#999" stroke-width="0.30"/>
+<text x="96.00" y="119.50" font-size="3.20" text-anchor="start" font-weight="bold" fill="#111">Q1 · 2N3904 (TO-92)</text>
+<path d="M 110 146 A 9 9 0 0 1 128 146 Z" fill="#2b2b2b" stroke="#000" stroke-width="0.30"/>
+<text x="119.00" y="143.00" font-size="2.00" text-anchor="middle" font-weight="normal" fill="#fff">flat face</text>
+<text x="119.00" y="145.40" font-size="2.00" text-anchor="middle" font-weight="normal" fill="#fff">towards you</text>
+<line x1="114.00" y1="146.00" x2="114.00" y2="156.00" stroke="#888" stroke-width="0.90"/>
+<text x="114.00" y="160.00" font-size="3.00" text-anchor="middle" font-weight="bold" fill="#111">E</text>
+<line x1="119.00" y1="146.00" x2="119.00" y2="156.00" stroke="#888" stroke-width="0.90"/>
+<text x="119.00" y="160.00" font-size="3.00" text-anchor="middle" font-weight="bold" fill="#111">B</text>
+<line x1="124.00" y1="146.00" x2="124.00" y2="156.00" stroke="#888" stroke-width="0.90"/>
+<text x="124.00" y="160.00" font-size="3.00" text-anchor="middle" font-weight="bold" fill="#111">C</text>
+<text x="96.00" y="164.00" font-size="2.15" text-anchor="start" font-weight="normal" fill="#111">Legs spread to 0.1&quot;: E e9, B e10, C e11.</text>
+<text x="96.00" y="167.60" font-size="2.15" text-anchor="start" font-weight="normal" fill="#111">Flat face towards the channel.</text>
+<text x="96.00" y="171.20" font-size="2.15" text-anchor="start" font-weight="normal" fill="#111">E = GND, B ← 1k ← GP2, C = COIL-.</text>
+<rect x="148.00" y="114.00" width="108.00" height="62.00" rx="1.00" fill="#fff" stroke="#999" stroke-width="0.30"/>
+<text x="151.00" y="119.50" font-size="3.20" text-anchor="start" font-weight="bold" fill="#111">SW1 · Adafruit 504 5-way switch</text>
+<rect x="156.00" y="128.00" width="30.00" height="30.00" rx="0.00" fill="#ddd" stroke="#555" stroke-width="0.30"/>
+<circle cx="171.00" cy="143.00" r="9.00" fill="#f4f4f4" stroke="#555" stroke-width="0.30"/>
+<rect x="168.00" y="140.00" width="6.00" height="6.00" rx="0.00" fill="#222" stroke="#000" stroke-width="0.25"/>
+<circle cx="162.00" cy="126.00" r="1.20" fill="#aaa" stroke="#000" stroke-width="0.20"/>
+<text x="162.00" y="123.80" font-size="2.50" text-anchor="middle" font-weight="bold" fill="#111">6</text>
+<circle cx="171.00" cy="126.00" r="1.20" fill="#aaa" stroke="#000" stroke-width="0.20"/>
+<text x="171.00" y="123.80" font-size="2.50" text-anchor="middle" font-weight="bold" fill="#111">5</text>
+<circle cx="180.00" cy="126.00" r="1.20" fill="#aaa" stroke="#000" stroke-width="0.20"/>
+<text x="180.00" y="123.80" font-size="2.50" text-anchor="middle" font-weight="bold" fill="#111">4</text>
+<circle cx="162.00" cy="160.00" r="1.20" fill="#aaa" stroke="#000" stroke-width="0.20"/>
+<text x="162.00" y="164.40" font-size="2.50" text-anchor="middle" font-weight="bold" fill="#111">1</text>
+<circle cx="171.00" cy="160.00" r="1.20" fill="#aaa" stroke="#000" stroke-width="0.20"/>
+<text x="171.00" y="164.40" font-size="2.50" text-anchor="middle" font-weight="bold" fill="#111">2</text>
+<circle cx="180.00" cy="160.00" r="1.20" fill="#aaa" stroke="#000" stroke-width="0.20"/>
+<text x="180.00" y="164.40" font-size="2.50" text-anchor="middle" font-weight="bold" fill="#111">3</text>
+<text x="171.00" y="132.00" font-size="1.90" text-anchor="middle" font-weight="bold" fill="#333">UP</text>
+<text x="171.00" y="156.00" font-size="1.90" text-anchor="middle" font-weight="bold" fill="#333">DOWN</text>
+<text x="158.50" y="144.00" font-size="1.90" text-anchor="middle" font-weight="bold" fill="#333">LEFT</text>
+<text x="183.50" y="144.00" font-size="1.90" text-anchor="middle" font-weight="bold" fill="#333">RIGHT</text>
+<text x="171.00" y="168.50" font-size="1.90" text-anchor="middle" font-weight="normal" fill="#111">top view, as placed on B1 rows 48-50</text>
+<text x="194.00" y="128.00" font-size="2.20" text-anchor="start" font-weight="bold" fill="#111">Pin  ALPS  Function   GPIO   strip</text>
+<text x="194.00" y="132.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">6</text>
+<text x="200.00" y="132.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">Centre</text>
+<text x="212.00" y="132.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">PRESS</text>
+<text x="227.00" y="132.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">GP22</text>
+<text x="239.00" y="132.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">d48</text>
+<text x="194.00" y="135.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">5</text>
+<text x="200.00" y="135.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">D</text>
+<text x="212.00" y="135.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">UP</text>
+<text x="227.00" y="135.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">GP8</text>
+<text x="239.00" y="135.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">d49</text>
+<text x="194.00" y="139.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">4</text>
+<text x="200.00" y="139.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">Common</text>
+<text x="212.00" y="139.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">GND</text>
+<text x="227.00" y="139.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">-</text>
+<text x="239.00" y="139.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">d50</text>
+<text x="194.00" y="142.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">1</text>
+<text x="200.00" y="142.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">A</text>
+<text x="212.00" y="142.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">LEFT</text>
+<text x="227.00" y="142.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">GP14</text>
+<text x="239.00" y="142.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">f48</text>
+<text x="194.00" y="146.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">2</text>
+<text x="200.00" y="146.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">B</text>
+<text x="212.00" y="146.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">DOWN</text>
+<text x="227.00" y="146.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">GP9</text>
+<text x="239.00" y="146.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">f49</text>
+<text x="194.00" y="149.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">3</text>
+<text x="200.00" y="149.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">C</text>
+<text x="212.00" y="149.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">RIGHT</text>
+<text x="227.00" y="149.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">GP15</text>
+<text x="239.00" y="149.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">f50</text>
+<text x="194.00" y="155.00" font-size="2.05" text-anchor="start" font-weight="normal" fill="#000">Pin letters per the ALPS SKQUCAA010 data sheet</text>
+<text x="194.00" y="158.30" font-size="2.05" text-anchor="start" font-weight="normal" fill="#000">that Adafruit links as &#x27;similar&#x27;. Not on a 0.1&quot;</text>
+<text x="194.00" y="161.60" font-size="2.05" text-anchor="start" font-weight="normal" fill="#000">grid (3.25 mm): bend the legs to snap it in.</text>
+<text x="194.00" y="164.90" font-size="2.05" text-anchor="start" font-weight="bold" fill="#c0392b">VERIFY each direction with a meter to pin 4.</text>
+<text x="194.00" y="168.20" font-size="2.05" text-anchor="start" font-weight="normal" fill="#000">Active low, internal pull-ups (no resistors).</text>
+<rect x="260.00" y="114.00" width="148.00" height="62.00" rx="1.00" fill="#fff" stroke="#999" stroke-width="0.30"/>
+<text x="263.00" y="119.50" font-size="3.20" text-anchor="start" font-weight="bold" fill="#111">Diodes and resistor colour codes</text>
+<line x1="266.00" y1="129.00" x2="296.00" y2="129.00" stroke="#888" stroke-width="0.60"/>
+<rect x="275.00" y="127.00" width="12.00" height="4.00" rx="1.00" fill="#f0a08a" stroke="#8a3a2a" stroke-width="0.30"/>
+<rect x="284.00" y="127.00" width="2.00" height="4.00" rx="0.00" fill="#111" stroke="#000" stroke-width="0.25"/>
+<text x="266.00" y="135.50" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">A (anode)</text>
+<text x="296.00" y="135.50" font-size="2.10" text-anchor="end" font-weight="normal" fill="#111">K (cathode, band)</text>
+<text x="302.00" y="127.00" font-size="2.15" text-anchor="start" font-weight="normal" fill="#111">D1, D2 flyback: band (K) to +5V, i.e. B2 bottom half (g13, g42).</text>
+<text x="302.00" y="130.60" font-size="2.15" text-anchor="start" font-weight="normal" fill="#111">D3 opto protection: band (K) in j26 (opto pin 1), stand upright.</text>
+<text x="263.00" y="141.00" font-size="2.30" text-anchor="start" font-weight="bold" fill="#111">Value</text>
+<text x="280.00" y="141.00" font-size="2.30" text-anchor="start" font-weight="bold" fill="#111">Used for</text>
+<text x="322.00" y="141.00" font-size="2.30" text-anchor="start" font-weight="bold" fill="#111">4-band code (+ gold); 1% parts have 5 bands - measure</text>
+<text x="263.00" y="145.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">10 Ω</text>
+<text x="280.00" y="145.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">R7, R9</text>
+<text x="322.00" y="145.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">brown black black</text>
+<text x="263.00" y="148.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">33 Ω</text>
+<text x="280.00" y="148.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">R6, R8</text>
+<text x="322.00" y="148.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">orange orange black</text>
+<text x="263.00" y="152.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">220 Ω</text>
+<text x="280.00" y="152.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">R1</text>
+<text x="322.00" y="152.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">red red brown</text>
+<text x="263.00" y="155.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">470 Ω</text>
+<text x="280.00" y="155.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">R2</text>
+<text x="322.00" y="155.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">yellow violet brown</text>
+<text x="263.00" y="159.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">1 kΩ</text>
+<text x="280.00" y="159.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">R3</text>
+<text x="322.00" y="159.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">brown black red</text>
+<text x="263.00" y="162.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">10 kΩ</text>
+<text x="280.00" y="162.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">R4, R5</text>
+<text x="322.00" y="162.50" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">brown black orange</text>
+<text x="263.00" y="166.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">4.7 kΩ</text>
+<text x="280.00" y="166.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">(spare: I2C pull-ups)</text>
+<text x="322.00" y="166.00" font-size="2.20" text-anchor="start" font-weight="normal" fill="#111">yellow violet red</text>
+<rect x="12.00" y="179.00" width="118.00" height="87.00" rx="1.00" fill="#fff" stroke="#999" stroke-width="0.30"/>
+<text x="15.00" y="184.50" font-size="3.20" text-anchor="start" font-weight="bold" fill="#111">DS1 · Adafruit 938 1.3&quot; OLED (I2C)</text>
+<rect x="17.00" y="191.00" width="98.00" height="9.00" rx="0.00" fill="#e8eefb" stroke="#24467a" stroke-width="0.30"/>
+<rect x="23.00" y="194.00" width="2.00" height="2.00" rx="0.00" fill="#d4af37" stroke="#000" stroke-width="0.20"/>
+<text x="24.00" y="193.40" font-size="2.20" text-anchor="middle" font-weight="bold" fill="#111">Data</text>
+<text x="24.00" y="202.80" font-size="2.00" text-anchor="middle" font-weight="normal" fill="#111">GP6 SDA</text>
+<text x="24.00" y="205.80" font-size="1.90" text-anchor="middle" font-weight="normal" fill="#555">a55</text>
+<rect x="35.00" y="194.00" width="2.00" height="2.00" rx="0.00" fill="#d4af37" stroke="#000" stroke-width="0.20"/>
+<text x="36.00" y="193.40" font-size="2.20" text-anchor="middle" font-weight="bold" fill="#111">Clk</text>
+<text x="36.00" y="202.80" font-size="2.00" text-anchor="middle" font-weight="normal" fill="#111">GP7 SCL</text>
+<text x="36.00" y="205.80" font-size="1.90" text-anchor="middle" font-weight="normal" fill="#555">a56</text>
+<rect x="47.00" y="194.00" width="2.00" height="2.00" rx="0.00" fill="#d4af37" stroke="#000" stroke-width="0.20"/>
+<text x="48.00" y="193.40" font-size="2.20" text-anchor="middle" font-weight="bold" fill="#111">DC</text>
+<text x="48.00" y="202.80" font-size="2.00" text-anchor="middle" font-weight="normal" fill="#111">GND</text>
+<text x="48.00" y="205.80" font-size="1.90" text-anchor="middle" font-weight="normal" fill="#555">a57</text>
+<rect x="59.00" y="194.00" width="2.00" height="2.00" rx="0.00" fill="#d4af37" stroke="#000" stroke-width="0.20"/>
+<text x="60.00" y="193.40" font-size="2.20" text-anchor="middle" font-weight="bold" fill="#111">Rst</text>
+<text x="60.00" y="202.80" font-size="2.00" text-anchor="middle" font-weight="normal" fill="#111">RC</text>
+<text x="60.00" y="205.80" font-size="1.90" text-anchor="middle" font-weight="normal" fill="#555">a58</text>
+<rect x="71.00" y="194.00" width="2.00" height="2.00" rx="0.00" fill="#d4af37" stroke="#000" stroke-width="0.20"/>
+<text x="72.00" y="193.40" font-size="2.20" text-anchor="middle" font-weight="bold" fill="#111">CS</text>
+<text x="72.00" y="202.80" font-size="2.00" text-anchor="middle" font-weight="normal" fill="#111">open</text>
+<text x="72.00" y="205.80" font-size="1.90" text-anchor="middle" font-weight="normal" fill="#555">a59</text>
+<rect x="83.00" y="194.00" width="2.00" height="2.00" rx="0.00" fill="#d4af37" stroke="#000" stroke-width="0.20"/>
+<text x="84.00" y="193.40" font-size="2.20" text-anchor="middle" font-weight="bold" fill="#111">3v3</text>
+<text x="84.00" y="202.80" font-size="2.00" text-anchor="middle" font-weight="normal" fill="#111">open</text>
+<text x="84.00" y="205.80" font-size="1.90" text-anchor="middle" font-weight="normal" fill="#555">a60</text>
+<rect x="95.00" y="194.00" width="2.00" height="2.00" rx="0.00" fill="#d4af37" stroke="#000" stroke-width="0.20"/>
+<text x="96.00" y="193.40" font-size="2.20" text-anchor="middle" font-weight="bold" fill="#111">Vin</text>
+<text x="96.00" y="202.80" font-size="2.00" text-anchor="middle" font-weight="normal" fill="#111">3V3</text>
+<text x="96.00" y="205.80" font-size="1.90" text-anchor="middle" font-weight="normal" fill="#555">a61</text>
+<rect x="107.00" y="194.00" width="2.00" height="2.00" rx="0.00" fill="#d4af37" stroke="#000" stroke-width="0.20"/>
+<text x="108.00" y="193.40" font-size="2.20" text-anchor="middle" font-weight="bold" fill="#111">Gnd</text>
+<text x="108.00" y="202.80" font-size="2.00" text-anchor="middle" font-weight="normal" fill="#111">GND</text>
+<text x="108.00" y="205.80" font-size="1.90" text-anchor="middle" font-weight="normal" fill="#555">a62</text>
+<text x="15.00" y="213.00" font-size="2.15" text-anchor="start" font-weight="bold" fill="#111">Before fitting, look at the back of the board:</text>
+<text x="15.00" y="216.55" font-size="2.15" text-anchor="start" font-weight="normal" fill="#111">• J1 and J2 must be CLOSED for I2C. Older 938s ship in SPI mode</text>
+<text x="15.00" y="220.10" font-size="2.15" text-anchor="start" font-weight="normal" fill="#111">  (bridge both with solder). The current STEMMA QT version ships</text>
+<text x="15.00" y="223.65" font-size="2.15" text-anchor="start" font-weight="normal" fill="#111">  with them closed already.</text>
+<text x="15.00" y="227.20" font-size="2.15" text-anchor="start" font-weight="normal" fill="#111">• Address: in I2C mode the DC pin is SA0. The firmware only probes</text>
+<text x="15.00" y="230.75" font-size="2.15" text-anchor="start" font-weight="normal" fill="#111">  0x3C; Adafruit&#x27;s 128x64 examples use 0x3D. W27 ties DC to GND</text>
+<text x="15.00" y="234.30" font-size="2.15" text-anchor="start" font-weight="normal" fill="#111">  to force 0x3C. Confirm with an I2C scan if it isn&#x27;t detected.</text>
+<text x="15.00" y="237.85" font-size="2.15" text-anchor="start" font-weight="normal" fill="#111">• Rst: R5 10k to 3V3 + C2 100nF to GND (power-on reset).</text>
+<text x="15.00" y="241.40" font-size="2.15" text-anchor="start" font-weight="normal" fill="#111">  Harmless on the newer board, which resets itself.</text>
+<text x="15.00" y="244.95" font-size="2.15" text-anchor="start" font-weight="normal" fill="#111">• Power: Vin ← 3V3. The &#x27;3v3&#x27; pin is the on-board regulator</text>
+<text x="15.00" y="248.50" font-size="2.15" text-anchor="start" font-weight="normal" fill="#111">  OUTPUT: leave it open.  CS: leave open in I2C mode.</text>
+<text x="15.00" y="252.05" font-size="2.15" text-anchor="start" font-weight="normal" fill="#111">• Module pull-ups on SDA/SCL are fitted; if yours has none add</text>
+<text x="15.00" y="255.60" font-size="2.15" text-anchor="start" font-weight="normal" fill="#111">  4.7k from each to 3V3.  SSD1306 is the firmware default.</text>
+<rect x="133.00" y="179.00" width="120.00" height="87.00" rx="1.00" fill="#fff" stroke="#999" stroke-width="0.30"/>
+<text x="136.00" y="184.50" font-size="3.20" text-anchor="start" font-weight="bold" fill="#111">DS2 · Adafruit 5394 1.9&quot; ST7789 TFT</text>
+<rect x="136.00" y="191.00" width="109.80" height="9.00" rx="0.00" fill="#e8eefb" stroke="#24467a" stroke-width="0.30"/>
+<rect x="141.00" y="194.00" width="2.00" height="2.00" rx="0.00" fill="#d4af37" stroke="#000" stroke-width="0.20"/>
+<text x="142.00" y="193.40" font-size="2.20" text-anchor="middle" font-weight="bold" fill="#111">V+</text>
+<text x="142.00" y="202.80" font-size="2.00" text-anchor="middle" font-weight="normal" fill="#111">3V3</text>
+<text x="142.00" y="205.80" font-size="1.90" text-anchor="middle" font-weight="normal" fill="#555">a36</text>
+<rect x="150.80" y="194.00" width="2.00" height="2.00" rx="0.00" fill="#d4af37" stroke="#000" stroke-width="0.20"/>
+<text x="151.80" y="193.40" font-size="2.20" text-anchor="middle" font-weight="bold" fill="#111">3V</text>
+<text x="151.80" y="202.80" font-size="2.00" text-anchor="middle" font-weight="normal" fill="#111">open</text>
+<text x="151.80" y="205.80" font-size="1.90" text-anchor="middle" font-weight="normal" fill="#555">a37</text>
+<rect x="160.60" y="194.00" width="2.00" height="2.00" rx="0.00" fill="#d4af37" stroke="#000" stroke-width="0.20"/>
+<text x="161.60" y="193.40" font-size="2.20" text-anchor="middle" font-weight="bold" fill="#111">G</text>
+<text x="161.60" y="202.80" font-size="2.00" text-anchor="middle" font-weight="normal" fill="#111">GND</text>
+<text x="161.60" y="205.80" font-size="1.90" text-anchor="middle" font-weight="normal" fill="#555">a38</text>
+<rect x="170.40" y="194.00" width="2.00" height="2.00" rx="0.00" fill="#d4af37" stroke="#000" stroke-width="0.20"/>
+<text x="171.40" y="193.40" font-size="2.20" text-anchor="middle" font-weight="bold" fill="#111">CK</text>
+<text x="171.40" y="202.80" font-size="2.00" text-anchor="middle" font-weight="normal" fill="#111">GP18</text>
+<text x="171.40" y="205.80" font-size="1.90" text-anchor="middle" font-weight="normal" fill="#555">a39</text>
+<rect x="180.20" y="194.00" width="2.00" height="2.00" rx="0.00" fill="#d4af37" stroke="#000" stroke-width="0.20"/>
+<text x="181.20" y="193.40" font-size="2.20" text-anchor="middle" font-weight="bold" fill="#111">SI</text>
+<text x="181.20" y="202.80" font-size="2.00" text-anchor="middle" font-weight="normal" fill="#111">GP19</text>
+<text x="181.20" y="205.80" font-size="1.90" text-anchor="middle" font-weight="normal" fill="#555">a40</text>
+<rect x="190.00" y="194.00" width="2.00" height="2.00" rx="0.00" fill="#d4af37" stroke="#000" stroke-width="0.20"/>
+<text x="191.00" y="193.40" font-size="2.20" text-anchor="middle" font-weight="bold" fill="#111">SO</text>
+<text x="191.00" y="202.80" font-size="2.00" text-anchor="middle" font-weight="normal" fill="#111">open</text>
+<text x="191.00" y="205.80" font-size="1.90" text-anchor="middle" font-weight="normal" fill="#555">a41</text>
+<rect x="199.80" y="194.00" width="2.00" height="2.00" rx="0.00" fill="#d4af37" stroke="#000" stroke-width="0.20"/>
+<text x="200.80" y="193.40" font-size="2.20" text-anchor="middle" font-weight="bold" fill="#111">TC</text>
+<text x="200.80" y="202.80" font-size="2.00" text-anchor="middle" font-weight="normal" fill="#111">GP17</text>
+<text x="200.80" y="205.80" font-size="1.90" text-anchor="middle" font-weight="normal" fill="#555">a42</text>
+<rect x="209.60" y="194.00" width="2.00" height="2.00" rx="0.00" fill="#d4af37" stroke="#000" stroke-width="0.20"/>
+<text x="210.60" y="193.40" font-size="2.20" text-anchor="middle" font-weight="bold" fill="#111">RT</text>
+<text x="210.60" y="202.80" font-size="2.00" text-anchor="middle" font-weight="normal" fill="#111">GP20</text>
+<text x="210.60" y="205.80" font-size="1.90" text-anchor="middle" font-weight="normal" fill="#555">a43</text>
+<rect x="219.40" y="194.00" width="2.00" height="2.00" rx="0.00" fill="#d4af37" stroke="#000" stroke-width="0.20"/>
+<text x="220.40" y="193.40" font-size="2.20" text-anchor="middle" font-weight="bold" fill="#111">DC</text>
+<text x="220.40" y="202.80" font-size="2.00" text-anchor="middle" font-weight="normal" fill="#111">GP16</text>
+<text x="220.40" y="205.80" font-size="1.90" text-anchor="middle" font-weight="normal" fill="#555">a44</text>
+<rect x="229.20" y="194.00" width="2.00" height="2.00" rx="0.00" fill="#d4af37" stroke="#000" stroke-width="0.20"/>
+<text x="230.20" y="193.40" font-size="2.20" text-anchor="middle" font-weight="bold" fill="#111">CC</text>
+<text x="230.20" y="202.80" font-size="2.00" text-anchor="middle" font-weight="normal" fill="#111">open</text>
+<text x="230.20" y="205.80" font-size="1.90" text-anchor="middle" font-weight="normal" fill="#555">a45</text>
+<rect x="239.00" y="194.00" width="2.00" height="2.00" rx="0.00" fill="#d4af37" stroke="#000" stroke-width="0.20"/>
+<text x="240.00" y="193.40" font-size="2.20" text-anchor="middle" font-weight="bold" fill="#111">BL</text>
+<text x="240.00" y="202.80" font-size="2.00" text-anchor="middle" font-weight="normal" fill="#111">GP21</text>
+<text x="240.00" y="205.80" font-size="1.90" text-anchor="middle" font-weight="normal" fill="#555">a46</text>
+<text x="136.00" y="213.00" font-size="2.15" text-anchor="start" font-weight="bold" fill="#111">Label map (wiring.md → Adafruit silkscreen):</text>
+<text x="136.00" y="216.55" font-size="2.15" text-anchor="start" font-weight="normal" fill="#111">VCC → V+ (Vin), SCL/SCK → CK, SDA/MOSI → SI,</text>
+<text x="136.00" y="220.10" font-size="2.15" text-anchor="start" font-weight="normal" fill="#111">RES/RST → RT, DC/RS → DC, CS → TC, BLK/BL → BL.</text>
+<text x="136.00" y="223.65" font-size="2.15" text-anchor="start" font-weight="normal" fill="#111">SO (MISO) and CC (SD-card CS) are not used.</text>
+<text x="136.00" y="227.20" font-size="2.15" text-anchor="start" font-weight="bold" fill="#111">Header order above follows the Adafruit guide&#x27;s pin list.</text>
+<text x="136.00" y="230.75" font-size="2.15" text-anchor="start" font-weight="normal" fill="#111">Check it against the silkscreen; if it differs, keep each</text>
+<text x="136.00" y="234.30" font-size="2.15" text-anchor="start" font-weight="normal" fill="#111">wire on the strip under the matching label.</text>
+<text x="136.00" y="237.85" font-size="2.15" text-anchor="start" font-weight="normal" fill="#111">Detection: firmware probes the OLED at 0x3C first and uses</text>
+<text x="136.00" y="241.40" font-size="2.15" text-anchor="start" font-weight="normal" fill="#111">the TFT only if nothing answers. Both may stay fitted; to</text>
+<text x="136.00" y="244.95" font-size="2.15" text-anchor="start" font-weight="normal" fill="#111">run the TFT, pull W25 (OLED Vin) or build -DMIDIUM_DISPLAY=2.</text>
+<text x="136.00" y="248.50" font-size="2.15" text-anchor="start" font-weight="normal" fill="#111">Offset / colour order: TFT_X_OFFSET, TFT_Y_OFFSET,</text>
+<text x="136.00" y="252.05" font-size="2.15" text-anchor="start" font-weight="normal" fill="#111">TFT_MADCTL in include/config.h.</text>
+<rect x="256.00" y="179.00" width="152.00" height="58.00" rx="1.00" fill="#fff" stroke="#999" stroke-width="0.30"/>
+<text x="259.00" y="184.50" font-size="3.20" text-anchor="start" font-weight="bold" fill="#111">A1 · Pico 2 pins used + Debug Probe</text>
+<text x="259.00" y="190.00" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">1</text>
+<text x="271.00" y="190.00" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">GP0</text>
+<text x="288.00" y="190.00" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">UART0 TX → OUT A</text>
+<text x="322.00" y="190.00" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">h6</text>
+<text x="259.00" y="193.35" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">2</text>
+<text x="271.00" y="193.35" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">GP1</text>
+<text x="288.00" y="193.35" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">UART0 RX ← opto</text>
+<text x="322.00" y="193.35" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">h7</text>
+<text x="259.00" y="196.70" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">4</text>
+<text x="271.00" y="196.70" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">GP2</text>
+<text x="288.00" y="196.70" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">relay drive</text>
+<text x="322.00" y="196.70" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">h9</text>
+<text x="259.00" y="200.05" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">6</text>
+<text x="271.00" y="200.05" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">GP4</text>
+<text x="288.00" y="200.05" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">UART1 TX → OUT B</text>
+<text x="322.00" y="200.05" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">h11</text>
+<text x="259.00" y="203.40" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">9/10</text>
+<text x="271.00" y="203.40" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">GP6/7</text>
+<text x="288.00" y="203.40" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">I2C1 SDA/SCL</text>
+<text x="322.00" y="203.40" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">h14/15</text>
+<text x="259.00" y="206.75" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">11/12</text>
+<text x="271.00" y="206.75" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">GP8/9</text>
+<text x="288.00" y="206.75" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">joy UP/DOWN</text>
+<text x="322.00" y="206.75" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">h16/17</text>
+<text x="259.00" y="210.10" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">19/20</text>
+<text x="271.00" y="210.10" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">GP14/15</text>
+<text x="288.00" y="210.10" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">joy LEFT/RIGHT</text>
+<text x="322.00" y="210.10" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">h24/25</text>
+<text x="259.00" y="213.45" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">21/22</text>
+<text x="271.00" y="213.45" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">GP16/17</text>
+<text x="288.00" y="213.45" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">TFT DC/CS</text>
+<text x="322.00" y="213.45" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">c25/24</text>
+<text x="259.00" y="216.80" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">24/25</text>
+<text x="271.00" y="216.80" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">GP18/19</text>
+<text x="288.00" y="216.80" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">SPI0 SCK/MOSI</text>
+<text x="322.00" y="216.80" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">c22/21</text>
+<text x="259.00" y="220.15" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">26/27</text>
+<text x="271.00" y="220.15" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">GP20/21</text>
+<text x="288.00" y="220.15" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">TFT RST/BL</text>
+<text x="322.00" y="220.15" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">c20/19</text>
+<text x="259.00" y="223.50" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">29</text>
+<text x="271.00" y="223.50" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">GP22</text>
+<text x="288.00" y="223.50" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">joy PRESS</text>
+<text x="322.00" y="223.50" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">c17</text>
+<text x="259.00" y="226.85" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">36</text>
+<text x="271.00" y="226.85" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">3V3(OUT)</text>
+<text x="288.00" y="226.85" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">3.3 V supply</text>
+<text x="322.00" y="226.85" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">c10</text>
+<text x="259.00" y="230.20" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">40</text>
+<text x="271.00" y="230.20" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">VBUS</text>
+<text x="288.00" y="230.20" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">5 V for relay coils</text>
+<text x="322.00" y="230.20" font-size="2.10" text-anchor="start" font-weight="normal" fill="#111">c6</text>
+<text x="338.00" y="190.00" font-size="2.05" text-anchor="start" font-weight="normal" fill="#111">Debug Probe &#x27;D&#x27; port → SWD header at the</text>
+<text x="338.00" y="193.60" font-size="2.05" text-anchor="start" font-weight="normal" fill="#111">far end of the Pico (opposite USB):</text>
+<text x="338.00" y="197.20" font-size="2.05" text-anchor="start" font-weight="normal" fill="#111">  orange SC → SWCLK, black → GND,</text>
+<text x="338.00" y="200.80" font-size="2.05" text-anchor="start" font-weight="normal" fill="#111">  yellow SD → SWDIO. Use the JST-to-JST cable</text>
+<text x="338.00" y="204.40" font-size="2.05" text-anchor="start" font-weight="normal" fill="#111">  (Pico 2 H) or JST-to-0.1&quot; female (3-pin header).</text>
+<text x="338.00" y="208.00" font-size="2.05" text-anchor="start" font-weight="normal" fill="#111">The probe does not supply VBUS: keep the Pico</text>
+<text x="338.00" y="211.60" font-size="2.05" text-anchor="start" font-weight="normal" fill="#111">USB plugged in or the relays never pull in.</text>
+<text x="338.00" y="215.20" font-size="2.05" text-anchor="start" font-weight="normal" fill="#111">Leave the &#x27;U&#x27; port unconnected: UART0 is MIDI.</text>
+<text x="338.00" y="218.80" font-size="2.05" text-anchor="start" font-weight="normal" fill="#111">Reserved, not fitted: GP10-13 (microSD),</text>
+<text x="338.00" y="222.40" font-size="2.05" text-anchor="start" font-weight="normal" fill="#111">GP26-28 (XRC/GPI), free: GP3, GP5.</text>
+</svg>

@@ -12,7 +12,7 @@
 #define MIDIUM_NAME   "MIDIum"
 #define MIDIUM_MODEL  "NSK MT-1"
 
-/* Display selection: 0 = auto (probe OLED at I2C 0x3C, else TFT),
+/* Display selection: 0 = auto (probe OLED at I2C 0x3C/0x3D, else TFT),
  *                    1 = force OLED, 2 = force TFT. */
 #define DISPLAY_AUTO 0
 #define DISPLAY_OLED 1

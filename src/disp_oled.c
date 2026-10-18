@@ -39,11 +39,21 @@ static void bus_init(void) {
     s_bus_ready = true;
 }
 
+/* Address found by oled_probe(): 0x3C (DC/SA0 low) or 0x3D (DC/SA0 high,
+ * the Adafruit 938 default when DC is left floating). */
+static uint8_t s_addr = OLED_I2C_ADDR;
+
 bool oled_probe(void) {
     bus_init();
-    uint8_t dummy;
-    int r = i2c_read_timeout_us(DISPLAY_I2C, OLED_I2C_ADDR, &dummy, 1, false, 5000);
-    return r == 1;
+    static const uint8_t addrs[] = { OLED_I2C_ADDR, OLED_I2C_ADDR_ALT };
+    for (size_t i = 0; i < sizeof addrs; i++) {
+        uint8_t dummy;
+        if (i2c_read_timeout_us(DISPLAY_I2C, addrs[i], &dummy, 1, false, 5000) == 1) {
+            s_addr = addrs[i];
+            return true;
+        }
+    }
+    return false;
 }
 
 static bool cmds(const uint8_t *c, size_t n) {
@@ -51,11 +61,12 @@ static bool cmds(const uint8_t *c, size_t n) {
     if (n + 1 > sizeof buf) return false;
     buf[0] = 0x00;                      /* Co=0, D/C=0: command stream */
     memcpy(buf + 1, c, n);
-    return i2c_write_timeout_us(DISPLAY_I2C, OLED_I2C_ADDR, buf, n + 1, false, 20000) == (int)(n + 1);
+    return i2c_write_timeout_us(DISPLAY_I2C, s_addr, buf, n + 1, false, 20000) == (int)(n + 1);
 }
 
 static bool oled_init(void) {
     bus_init();
+    (void)oled_probe();                 /* pick 0x3C or 0x3D, also when forced */
     static const uint8_t init_seq[] = {
         0xAE,             /* display off */
         0xD5, 0x80,       /* clock divide */
@@ -86,7 +97,7 @@ static bool oled_init(void) {
     for (uint8_t p = 0; p < 8; p++) {
         uint8_t a[3] = { (uint8_t)(0xB0 | p), 0x00, 0x10 };
         cmds(a, 3);
-        i2c_write_timeout_us(DISPLAY_I2C, OLED_I2C_ADDR, zero,
+        i2c_write_timeout_us(DISPLAY_I2C, s_addr, zero,
                              MIDIUM_OLED_SSD1306 ? 129 : 133, false, 50000);
     }
     static const uint8_t on[] = { 0xAF };
@@ -113,7 +124,7 @@ static void oled_draw_row(int row, const cell_t *cells) {
     uint8_t col = OLED_COL_OFFSET;
     uint8_t a[3] = { (uint8_t)(0xB0 | (row & 7)), (uint8_t)(col & 0x0F), (uint8_t)(0x10 | (col >> 4)) };
     cmds(a, 3);
-    i2c_write_timeout_us(DISPLAY_I2C, OLED_I2C_ADDR, buf, sizeof buf, false, 20000);
+    i2c_write_timeout_us(DISPLAY_I2C, s_addr, buf, sizeof buf, false, 20000);
 }
 
 static void oled_set_brightness(uint8_t pct) {

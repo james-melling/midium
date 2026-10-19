@@ -1,4 +1,4 @@
-# MIDIum (NSK MT-1) breadboard wiring (v0.4: milestone 1 + RTC)
+# MIDIum (NSK MT-1) breadboard wiring (v0.5: milestone 1, RTC, soft power, fuel gauge)
 
 Prototype on a **Raspberry Pi Pico 2** (RP2350). Everything runs at 3.3 V except
 the relay coils (5 V from VBUS). The pin map matches `include/pins.h`. If you
@@ -14,10 +14,11 @@ with USB at the top).
 | GP0 | 1 | UART0 TX: MIDI OUT A | OUT A driver, via relay 2 |
 | GP1 | 2 | UART0 RX: MIDI IN A | U1 H11L1 pin 4 (output) |
 | GP2 | 4 | Bypass relay drive (HIGH = energised) | NPN base, via 1 kΩ |
+| GP3 | 5 | PWR_KILL: soft power off (active low by default) | final PCB: power controller KILL / CLR input. **Breadboard: not connected** |
 | GP4 | 6 | UART1 TX: MIDI OUT B | OUT B driver |
 | GP5 | 7 | UART1 RX: MIDI IN B | U2 H11L1 pin 4 (output) |
-| GP6 | 9 | I2C1 SDA | OLED SDA, RV-3028 RTC SDA (later also the fuel gauge) |
-| GP7 | 10 | I2C1 SCL | OLED SCL, RV-3028 RTC SCL |
+| GP6 | 9 | I2C1 SDA | OLED SDA, RV-3028 RTC SDA, MAX17048 gauge SDA |
+| GP7 | 10 | I2C1 SCL | OLED SCL, RV-3028 RTC SCL, MAX17048 gauge SCL |
 | GP8 | 11 | Joystick UP | joystick, other side to GND |
 | GP9 | 12 | Joystick DOWN | joystick |
 | GP10 | 14 | SPI1 SCK, microSD (reserved, M2) | not fitted |
@@ -32,14 +33,19 @@ with USB at the top).
 | GP19 | 25 | SPI0 MOSI | TFT SDA / MOSI |
 | GP20 | 26 | TFT RST | TFT RES / RST |
 | GP21 | 27 | TFT backlight (PWM) | TFT BLK / BL |
-| GP22 | 29 | Joystick PRESS | joystick centre push |
+| GP22 | 29 | Joystick PRESS (also the power button) | joystick centre push; final PCB: also the controller's PB input, via a diode |
+| GP24 | (on board) | VBUS sense (high = USB power present) | the Pico 2's own VBUS divider; nothing to wire |
 | GP25 | (on board) | Activity LED | blinks on every MIDI IN byte |
 | GP26-28 | 31, 32, 34 | Reserved: XRC / GPI (M3) | not fitted |
 | 3V3(OUT) | 36 | 3.3 V supply | opto, MIDI OUT sources, displays |
 | VBUS | 40 | 5 V from USB | relay coils |
 | GND | 3, 8, 13, 18, 23, 28, 33, 38 | Ground | common ground |
 
-Free pins: GP3.
+Free pins: none on the Pico 2 header (GP3 is now PWR_KILL). On the final
+PCB with a bare RP2350, GP23 (used by the Pico 2 board for its SMPS) is
+reserved for the charger's CHG / STAT output (`PIN_CHG_STAT`).
+
+I2C1 addresses: OLED 0x3C / 0x3D, MAX17048 0x36, RV-3028 0x52.
 
 ## 2. MIDI IN A and MIDI IN B (H11L1 opto-isolators)
 
@@ -256,16 +262,62 @@ enabled, so no resistors are needed.
 | PRESS (centre) | GP22 | 29 |
 | COM | GND | any GND |
 
-## 8. Power (milestone 1)
+## 8. Power
+
+### Breadboard (USB only)
 
 | Supply | Source | Feeds |
 |---|---|---|
 | 5 V | USB into the Pico's micro-USB / USB-C | VBUS: relay coils (about 2 x 30 mA) |
 | 3.3 V | Pico on-board regulator, 3V3(OUT) | opto, MIDI OUT sources, display |
 
-The battery, charger and fuel gauge come in a later stage. When they do, the
-5 V coils will need either a boost rail or 3 V coil relays (e.g. G6K-2P-Y
-3 VDC), because a Li-ion cell can't hold a 5 V coil in.
+Nothing is connected to GP3. Holding the joystick press 4 s (or Menu >
+Power off) shuts the firmware down cleanly and, with no controller to cut
+the power, leaves it in soft-off: display off, relays released (IN A to OUT A
+passive), core1 stopped. A press wakes it. VBUS sense on GP24 is built into
+the Pico 2 board (on a Pico 2 W it is not on GP24; set `PIN_VBUS_SENSE` to
+-1 there).
+
+### Fuel gauge (MAX17048, I2C address 0x36), optional
+
+A MAX17048 breakout (for example Adafruit 5580 or SparkFun's) on the same
+I2C1 bus as the OLED and the RTC. Without it the firmware shows no battery
+UI.
+
+| Gauge pin | Connects to |
+|---|---|
+| VDD / CELL+ | the Li-ion cell + (the gauge is powered from, and measures, the cell) |
+| GND / CELL- | cell -, and Pico GND |
+| SDA | GP6, pin 9 |
+| SCL | GP7, pin 10 |
+| ALRT | not connected (the firmware polls once a second) |
+| QSTRT | not connected (or GND) |
+
+Most breakouts carry their own I2C pull-ups; with the OLED's as well that is
+fine at 400 kHz.
+
+### Final PCB: push-button power controller
+
+A push-button on/off controller (LTC2955 or MAX16150 class) switches the
+system supply from the battery / charger output:
+
+| Controller pin | Connects to |
+|---|---|
+| PB (push-button input) | joystick centre switch, via a diode (cathode to the switch). The switch also goes to GP22 via a second diode, so the two inputs don't load each other. Check the PB pin's internal pull-up and its voltage domain against the datasheet |
+| KILL (LTC2955) / CLR (MAX16150) | GP3. The firmware drives it high (stay on) at boot and low to power off (`PWR_KILL_ACTIVE_LOW 1`). Add a pull-up or pull-down per the datasheet so it is inactive while the MCU boots; also check whether the part ignores KILL for a blanking time after turn-on (the LTC2955 is believed to), and that it is long enough to cover the boot (GP3 is driven within a few ms of reset) |
+| EN / OUT | the regulator enable (or the P-FET in the supply path) |
+| ON (LTC2955), optional | USB VBUS detect via a jumper / option resistor: "USB power-on" strap. Fitted, plugging USB in powers the box up; the firmware (built with `MIDIUM_PWR_CTRL=1`) then shows the charging screen if Settings > USB power-on is "Charge only" |
+| TMR / long-press timing | set for the hard power-off on a held button, about 8 s (longer than the firmware's 4 s) |
+| INT | not needed (the MCU sees the button itself on GP22) |
+
+USB VBUS detect (divided to 3.3 V) also goes to GP24 (`PIN_VBUS_SENSE`), and
+the charger's CHG / STAT (open drain, low = charging) to GP23
+(`PIN_CHG_STAT`).
+
+The 5 V relay coils need either a boost rail or 3 V coil relays (e.g.
+G6K-2P-Y 3 VDC), because a Li-ion cell can't hold a 5 V coil in. Whatever is
+chosen, the relays must drop out when the controller cuts the supply: that is
+the passive-thru "off" state.
 
 ## 9. Bench test procedure
 
@@ -287,3 +339,7 @@ device on OUT A makes step 3 easier.
 | 9 | Remove USB power mid-stream. | | Relays drop out and IN A goes hard-wired to OUT A again. IN B stops. |
 | 10 | RTC eval board on GP6 / GP7. | Menu > Settings > Date & time. | `RTC RV-3028`. If `Time` says "lost - set it", press, set the date and time (LEFT / RIGHT field, UP / DOWN value), press. With a backup cell, unplug USB for a minute: the time is still right afterwards. |
 | 11 | Same. | Send some MSC from the laptop, then Menu > Logs. | The newest session is marked LIVE with the right start time; press it to browse the messages. Power-cycle: the session is still there and a new one starts. |
+| 12 | Notes streaming from the laptop into IN A. | Hold the joystick press. Let go after 3 s. | At 2 s *Power off... release to cancel* with a bar. Letting go returns to the screen you were on; nothing is selected and no menu opens. |
+| 13 | Same. | Hold the joystick press 4 s. | *Shutting down*, *Off / Safe to unplug*, then (no controller on the breadboard) *Off, press the joystick to power on*; the display goes dark after 3 s. The relays click off and the notes reach OUT A through the relays (passive). Press: the box reboots; Stats > Last off reads `clean`. |
+| 14 | Same. | Unplug USB mid-stream, plug it back in. | Stats > Last off reads `power loss`. |
+| 15 | MAX17048 breakout and a cell on I2C1. | Look at the monitor header; Stats. | Battery icon and % in the header; Stats shows the charge, cell voltage and `battery` / `USB, charging`. Check the cell voltage against a meter. |

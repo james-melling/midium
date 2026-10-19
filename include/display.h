@@ -23,6 +23,12 @@
 #define ATTR_CURSOR  0x40u
 #define ATTR_CLASS(a) ((a) & 0x0Fu)
 
+/* Icon characters (drawn from glyphs.h instead of the font):
+ * battery levels 0 (empty outline) .. 4 (full), and a charging bolt. */
+#define CH_BATT0     '\x10'
+#define CH_BATT(n)   ((char)(0x10 + (n)))
+#define CH_BOLT      '\x15'
+
 typedef struct {
     char    ch;
     uint8_t attr;
@@ -41,6 +47,8 @@ typedef struct {
      * colour of attr's class, clear bits in the background. OLED: y and h
      * must be multiples of 8 (one page = one text row). */
     void (*draw_bitmap)(int x, int y, int w, int h, const uint8_t *bits, int stride, uint8_t attr);
+    /* Panel off (sleep, backlight off) / on again (soft power-off). */
+    void (*power)(bool on);
 } display_driver_t;
 
 extern const display_driver_t g_disp_oled;

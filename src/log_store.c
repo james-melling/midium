@@ -50,8 +50,8 @@ static bool page_valid(const uint8_t *pg) {
     if (get16(pg) != LOG_MAGIC) return false;
     uint8_t kind = pg[2] & 0x7Fu;
     uint16_t len = get16(pg + 12);
-    if ((kind != LOG_KIND_START && kind != LOG_KIND_DATA) || len > LOG_PAYLOAD_SIZE) return false;
-    if (kind == LOG_KIND_START && len < LOG_SESS_INFO_SIZE) return false;
+    if ((kind != LOG_KIND_START && kind != LOG_KIND_DATA && kind != LOG_KIND_END) || len > LOG_PAYLOAD_SIZE) return false;
+    if ((kind == LOG_KIND_START || kind == LOG_KIND_END) && len < LOG_SESS_INFO_SIZE) return false;
     uint32_t c = log_crc32(pg, 28, 0);
     c = log_crc32(pg + LOG_HDR_SIZE, len, c);
     return c == get32(pg + 28);
@@ -207,6 +207,21 @@ static log_sess_t *add_sess(log_t *L, uint32_t no) {
     return s;
 }
 
+/* The 16-byte session info block (start page) / close info (close page). */
+static void info_time(const uint8_t *si, log_time_t *t) {
+    t->t_us = get64(si);
+    t->real_s = get32(si + 8);
+    t->real_ms = get16(si + 12);
+    t->real = (si[14] & 1u) != 0;
+}
+static void put_info(uint8_t *si, const log_time_t *t, uint8_t last) {
+    put64(si, t->t_us);
+    put32(si + 8, t->real ? t->real_s : 0u);
+    put16(si + 12, t->real ? t->real_ms : 0u);
+    si[14] = t->real ? 1u : 0u;
+    si[15] = last;
+}
+
 static void page_base(const uint8_t *pg, log_time_t *t) {
     t->t_us = get64(pg + 16);
     t->real = (pg[2] & LOG_KIND_REAL) != 0;
@@ -226,9 +241,9 @@ static bool cache_load(log_t *L, uint32_t slot) {
     c->seq = get32(c->raw + 4);
     c->session = get32(c->raw + 8);
     unsigned end = LOG_HDR_SIZE + get16(c->raw + 12);
-    unsigned i = LOG_HDR_SIZE + ((c->kind & 0x7Fu) == LOG_KIND_START ? LOG_SESS_INFO_SIZE : 0u);
+    unsigned i = LOG_HDR_SIZE + ((c->kind & 0x7Fu) != LOG_KIND_DATA ? LOG_SESS_INFO_SIZE : 0u);
     uint64_t t = get64(c->raw + 16);
-    unsigned n = 0, want = c->raw[3];
+    unsigned n = 0, want = (c->kind & 0x7Fu) == LOG_KIND_END ? 0u : c->raw[3];
     while (n < want && n < LOG_MAX_RECS && i < end) {
         int32_t dt;
         unsigned at = i;
@@ -277,33 +292,41 @@ void log_init(log_t *L, const log_flash_t *fl) {
         if (no > max_no) max_no = no;
         log_sess_t *e = find_mut(L, no);
         if (!e && !(e = add_sess(L, no))) continue;
+        if ((pg[2] & 0x7Fu) == LOG_KIND_END) {
+            /* close page: not part of the readable page range */
+            e->closed = true;
+            e->end_reason = pg[LOG_HDR_SIZE + 15];
+            info_time(pg + LOG_HDR_SIZE, &e->end);
+            continue;
+        }
         e->nrec += pg[3];
         if (!e->first_seq || seq < e->first_seq) { e->first_seq = seq; e->first_slot = s; }
         if (seq > e->last_seq) { e->last_seq = seq; e->last_slot = s; }
         if ((pg[2] & 0x7Fu) == LOG_KIND_START) {
-            const uint8_t *si = pg + LOG_HDR_SIZE;
-            e->start.t_us = get64(si);
-            e->start.real_s = get32(si + 8);
-            e->start.real_ms = get16(si + 12);
-            e->start.real = (si[14] & 1u) != 0;
+            info_time(pg + LOG_HDR_SIZE, &e->start);
             e->has_end = true;     /* marks "start known" until the end pass below */
         }
     }
-    /* end times (last record of each session); start of partial sessions */
+    /* end times (close page, else the last record); start of partial sessions */
     for (int i = 0; i < L->nsess; i++) {
         log_sess_t *e = &L->sess[i];
         bool start_known = e->has_end;
         e->has_end = false;
-        if (cache_load(L, e->last_slot) && L->cache.nrec) {
+        if (e->closed) {
+            e->has_end = true;
+        } else if (e->first_seq && cache_load(L, e->last_slot) && L->cache.nrec) {
             rec_time(&L->cache, L->cache.nrec - 1u, &e->end);
             e->has_end = true;
         }
         if (!start_known) {
             e->partial = true;
-            if (cache_load(L, e->first_slot) && L->cache.nrec) rec_time(&L->cache, 0, &e->start);
-            else page_base(L->cache.raw, &e->start);
+            if (e->first_seq && cache_load(L, e->first_slot) && L->cache.nrec) rec_time(&L->cache, 0, &e->start);
+            else if (e->first_seq && L->cache.ok) page_base(L->cache.raw, &e->start);
+            else e->start = e->end;          /* only the close page is left */
         }
     }
+    L->prev_known = L->nsess > 0;
+    L->prev_end = L->nsess > 0 && L->sess[L->nsess - 1].closed ? L->sess[L->nsess - 1].end_reason : LOG_END_NONE;
     L->next_seq = max_seq + 1;
     L->next_session = max_no + 1;
     L->cur_slot = max_seq ? next_slot(L, newest) : 0;
@@ -348,6 +371,48 @@ void log_new_session(log_t *L, const log_time_t *now) {
     L->live_start_done = false;
 }
 
+static void open_page(log_t *L, const log_time_t *t);
+
+void log_commit_start(log_t *L) {
+    if (!L->enabled || !L->live || L->wiping || L->live_start_done) return;
+    const log_sess_t *e = log_find(L, L->live_no);
+    if (!e) return;
+    log_time_t st = e->start;
+    log_flush(L);
+    open_page(L, &st);
+    log_flush(L);
+}
+
+bool log_close_session(log_t *L, const log_time_t *now, uint8_t reason) {
+    if (!L->enabled || !L->live || L->wiping) return false;
+    log_flush(L);
+    if (!L->live_start_done) {
+        log_commit_start(L);
+        if (!L->live_start_done) return false;      /* queue full */
+    }
+    if (log_pending(L) >= LOG_PENDING_PAGES) return false;
+    log_page_buf_t *p = &L->pend[L->ph % LOG_PENDING_PAGES];
+    memset(p->payload, 0xFF, sizeof p->payload);
+    put_info(p->payload, now, reason);
+    p->len = LOG_SESS_INFO_SIZE;
+    p->nrec = 0;
+    p->kind = (uint8_t)(LOG_KIND_END | (now->real ? LOG_KIND_REAL : 0u));
+    p->session = L->live_no;
+    p->base = *now;
+    p->last_us = now->t_us;
+    p->real_off_ms = 0;
+    L->ph++;
+    log_sess_t *e = find_mut(L, L->live_no);
+    if (e) {
+        e->closed = true;
+        e->end_reason = reason;
+        e->end = *now;
+        e->has_end = true;
+    }
+    L->live = false;
+    return true;
+}
+
 static void open_page(log_t *L, const log_time_t *t) {
     log_page_buf_t *p = &L->open;
     memset(p->payload, 0xFF, sizeof p->payload);
@@ -361,12 +426,7 @@ static void open_page(log_t *L, const log_time_t *t) {
     if (!L->live_start_done) {
         const log_sess_t *e = log_find(L, L->live_no);
         log_time_t st = e ? e->start : *t;
-        uint8_t *si = p->payload;
-        put64(si, st.t_us);
-        put32(si + 8, st.real_s);
-        put16(si + 12, st.real_ms);
-        si[14] = st.real ? 1u : 0u;
-        si[15] = 0xFF;
+        put_info(p->payload, &st, 0xFF);
         p->len = LOG_SESS_INFO_SIZE;
         p->kind = (uint8_t)((p->kind & LOG_KIND_REAL) | LOG_KIND_START);
         L->live_start_done = true;
@@ -425,6 +485,11 @@ static void forget_sector(log_t *L, uint32_t sector) {
         uint32_t no = get32(pg + 8), seq = get32(pg + 4);
         log_sess_t *e = find_mut(L, no);
         if (!e) continue;
+        if ((pg[2] & 0x7Fu) == LOG_KIND_END) {
+            /* the close page is a session's newest page: its data went first */
+            if (!log_is_live(L, no)) remove_sess(L, (int)(e - L->sess));
+            continue;
+        }
         e->nrec = e->nrec >= pg[3] ? e->nrec - pg[3] : 0;
         if ((pg[2] & 0x7Fu) == LOG_KIND_START) e->partial = true;
         if (seq >= e->first_seq) {
@@ -477,7 +542,7 @@ static void program_head(log_t *L, uint32_t slot) {
     L->pt++;
     L->pages_written++;
     L->used_pages++;
-    log_sess_t *e = find_mut(L, p->session);
+    log_sess_t *e = (p->kind & 0x7Fu) == LOG_KIND_END ? NULL : find_mut(L, p->session);
     if (e) {
         if (!e->first_seq) { e->first_seq = seq; e->first_slot = slot; }
         e->last_seq = seq;

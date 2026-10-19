@@ -64,6 +64,9 @@ void settings_defaults(settings_t *s) {
     s->usb_log = true;
     msg_filter_defaults(&s->filter);
 
+    s->usb_power_on = USBPO_CHARGE;
+    s->auto_off_idx = 0;     /* Off */
+
     s->gen_channel = 1;
     s->cc_number = 7;
     s->cc_value = 100;

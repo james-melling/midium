@@ -15,6 +15,7 @@
 #include "config.h"
 #include "display.h"
 #include "font5x7.h"
+#include "glyphs.h"
 
 #if MIDIUM_OLED_SSD1306
 #define OLED_COL_OFFSET 0
@@ -110,7 +111,7 @@ static void oled_draw_row(int row, const cell_t *cells) {
     buf[0] = 0x40;                      /* data stream */
     uint8_t *px = buf + 1 + OLED_XPAD;
     for (int c = 0; c < OLED_COLS; c++) {
-        const uint8_t *g = &font5x7[(uint8_t)cells[c].ch * 5u];
+        const uint8_t *g = glyph5x7((uint8_t)cells[c].ch);
         bool inv = (cells[c].attr & ATTR_INVERSE) != 0;
         bool cur = (cells[c].attr & ATTR_CURSOR) != 0;
         for (int i = 0; i < 6; i++) {
@@ -162,6 +163,11 @@ static void oled_set_brightness(uint8_t pct) {
     cmds(c, 2);
 }
 
+static void oled_power(bool on) {
+    uint8_t c[1] = { on ? 0xAF : 0xAE };      /* display on / off (sleep) */
+    cmds(c, 1);
+}
+
 const display_driver_t g_disp_oled = {
     .name = "OLED "
 #if MIDIUM_OLED_SSD1306
@@ -178,4 +184,5 @@ const display_driver_t g_disp_oled = {
     .cell_w = 6,
     .cell_h = 8,
     .draw_bitmap = oled_draw_bitmap,
+    .power = oled_power,
 };

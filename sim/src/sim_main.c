@@ -13,6 +13,16 @@
  *   sim_midi_in_at(p,b,t) same, not before simulated time t (us)
  *   sim_out_read(p, buf, times, max)  bytes that left OUT A / OUT B
  *   sim_framebuffer() / sim_fb_w() / sim_fb_h() / sim_fb_version()
+ *
+ * Power (the page plays the push-button power controller):
+ *   sim_boot_keys(mask)   joystick contacts held at power-up (bit 4 = press:
+ *                         the button press that powered the box on)
+ *   sim_soft_wake(w)      this power-up is a wake from soft-off
+ *   sim_power_kill()      the firmware drives PIN_PWR_KILL: cut the power
+ *   sim_power_cut()       supply gone (kill obeyed, or "Pull power")
+ *   sim_reboot_requested() soft-off wake: boot a fresh module
+ *   sim_batt_config(fitted, soc, usb) / sim_batt_set(soc) / sim_batt_usb(on)
+ *   sim_batt_soc()        MAX17048 emulation; charging on USB raises it
  */
 #include <emscripten/emscripten.h>
 #include <string.h>
@@ -32,11 +42,13 @@
 #include "clock.h"
 #include "logger.h"
 #include "log_flash_ram.h"
+#include "power.h"
 
 #define CORE0_LOOP_US 100u   /* how often the sim runs one core0 loop pass */
 
 static int s_kind;
 static bool s_in_loop;
+static bool s_powered;
 static uint64_t s_splash_until;
 static const display_driver_t *s_drv;
 
@@ -70,6 +82,7 @@ static void core0_loop_pass(void) {
     gen_task(now);
     clock_task(now);
     logger_task(now);
+    power_task(now);
     ui_render(now, changed);
     con_flush_step();
 }
@@ -78,6 +91,10 @@ EMSCRIPTEN_KEEPALIVE int sim_init(int kind) {
     s_kind = kind == SIM_DISP_OLED ? SIM_DISP_OLED : SIM_DISP_TFT;
     sim_hal_reset(s_kind == SIM_DISP_OLED);
     s_in_loop = false;
+    s_powered = true;
+
+    /* 0. hold the power on, note the power button */
+    power_early_init();
 
     /* 1. bypass relays off (no-op here) */
     gpio_init(PIN_BYPASS_RELAY);
@@ -108,9 +125,10 @@ EMSCRIPTEN_KEEPALIVE int sim_init(int kind) {
      * simulated time), then the log and the boot session. */
     uint64_t t_splash = time_us_64();
     clock_init();
+    bool charge_only = power_init();
     log_ram_flash_init(&s_rf, &s_fl, s_flash, sizeof s_flash, !s_flash_restored);
     s_flash_restored = false;
-    logger_init(&s_fl);
+    logger_init(charge_only ? NULL : &s_fl);
     /* main.c then sleeps out the rest of 700 ms and clears - done by
      * sim_tick so the page shows the splash while core1 passes MIDI. */
     s_splash_until = t_splash + 700000u;
@@ -122,6 +140,7 @@ EMSCRIPTEN_KEEPALIVE void sim_tick(double ms) {
     if (ms <= 0) return;
     if (ms > 250) ms = 250;   /* a backgrounded tab must not stall the page */
     uint64_t end = time_us_64() + (uint64_t)(ms * 1000.0);
+    if (!s_powered) { sim_advance_to(end); return; }     /* wires only (passive thru) */
     while (time_us_64() < end) {
         if (!s_in_loop) {
             uint64_t t = s_splash_until < end ? s_splash_until : end;
@@ -205,3 +224,24 @@ EMSCRIPTEN_KEEPALIVE void sim_flash_restored(void) { s_flash_restored = true; }
 /* Log sessions / usage for the page. */
 EMSCRIPTEN_KEEPALIVE int sim_log_sessions(void) { return log_session_count(logger_log()); }
 EMSCRIPTEN_KEEPALIVE int sim_log_used_pct(void) { return (int)log_used_pct(logger_log()); }
+
+/* ---- power and battery (page side) ---- */
+EMSCRIPTEN_KEEPALIVE void sim_boot_keys(int mask) { sim_hal_set_boot_keys((uint32_t)mask); }
+EMSCRIPTEN_KEEPALIVE void sim_soft_wake(int w) { sim_io_set_soft_wake(w != 0); }
+EMSCRIPTEN_KEEPALIVE int sim_power_kill(void) { return s_powered && sim_hal_kill_active(); }
+EMSCRIPTEN_KEEPALIVE int sim_power_state(void) { return s_powered ? (int)power_state() : -1; }
+EMSCRIPTEN_KEEPALIVE int sim_relays(void) { return s_powered && sim_hal_relays(); }
+EMSCRIPTEN_KEEPALIVE void sim_power_cut(void) {
+    s_powered = false;
+    sim_hal_power_cut();
+    sim_io_power_cut();
+}
+EMSCRIPTEN_KEEPALIVE int sim_reboot_requested(void) { return s_powered && sim_io_reboot_requested(); }
+EMSCRIPTEN_KEEPALIVE void sim_batt_config(int fitted, double soc, int usb) { sim_hal_batt_config(fitted != 0, soc, usb != 0); }
+EMSCRIPTEN_KEEPALIVE void sim_batt_set(double soc) { sim_hal_batt_set(soc); }
+EMSCRIPTEN_KEEPALIVE void sim_batt_usb(int usb) { sim_hal_batt_usb(usb != 0); }
+EMSCRIPTEN_KEEPALIVE double sim_batt_soc(void) { return sim_hal_batt_soc(); }
+/* Test hook: pretend nothing happened for ms (auto-off demo). */
+EMSCRIPTEN_KEEPALIVE void sim_idle_skip(double ms) { if (ms > 0) power_sim_idle_skip((uint32_t)ms); }
+/* Seconds to auto-off (0 = not counting). */
+EMSCRIPTEN_KEEPALIVE double sim_autooff_left(void) { return s_powered ? (double)power_autooff_secs_left() : 0; }

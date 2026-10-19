@@ -10,6 +10,7 @@
 #include "config.h"
 #include "timeutil.h"
 #include "rv3028.h"
+#include "max17048.h"
 
 /* ------------------------------------------------------------------------ */
 /* Time                                                                      */
@@ -79,7 +80,15 @@ void sim_hal_run_timers(uint64_t t) {
 /* GPIO: joystick inputs (active low) + output latches                       */
 /* ------------------------------------------------------------------------ */
 static uint32_t s_keys_down;   /* bit per joystick pin held */
+static uint32_t s_boot_keys;   /* idx bits held at power-up */
 static const uint8_t KEY_PINS[5] = { PIN_JOY_UP, PIN_JOY_DOWN, PIN_JOY_LEFT, PIN_JOY_RIGHT, PIN_JOY_PRESS };
+static bool s_kill_level = !PWR_KILL_ACTIVE_LOW;    /* inactive */
+static bool s_relay_level;
+static bool s_usb;
+
+void sim_hal_set_boot_keys(uint32_t m) { s_boot_keys = m; }
+bool sim_hal_kill_active(void) { return s_kill_level == (PWR_KILL_ACTIVE_LOW ? false : true); }
+bool sim_hal_relays(void) { return s_relay_level; }
 
 void sim_hal_set_key(int idx, bool down) {
     if (idx < 0 || idx > 4) return;
@@ -90,9 +99,19 @@ void sim_hal_set_key(int idx, bool down) {
 void gpio_init(uint gpio) { (void)gpio; }
 void gpio_set_dir(uint gpio, bool out) { (void)gpio; (void)out; }
 void gpio_pull_up(uint gpio) { (void)gpio; }
+void gpio_disable_pulls(uint gpio) { (void)gpio; }
 void gpio_set_function(uint gpio, enum gpio_function fn) { (void)gpio; (void)fn; }
-/* Everything reads high (pull-ups) except joystick contacts held closed. */
-uint32_t gpio_get_all(void) { return ~s_keys_down; }
+/* Everything reads high (pull-ups) except joystick contacts held closed;
+ * the VBUS sense pin reads the simulated USB. */
+uint32_t gpio_get_all(void) {
+    uint32_t v = ~s_keys_down;
+#if PIN_VBUS_SENSE >= 0
+    v &= ~(1u << PIN_VBUS_SENSE);
+    if (s_usb) v |= 1u << PIN_VBUS_SENSE;
+#endif
+    return v;
+}
+bool gpio_get(uint gpio) { return (gpio_get_all() >> gpio) & 1u; }
 
 /* ------------------------------------------------------------------------ */
 /* Framebuffer                                                               */
@@ -175,6 +194,8 @@ int spi_write_blocking(spi_inst_t *spi, const uint8_t *src, size_t len) {
 void gpio_put(uint gpio, bool value) {
     if (gpio == PIN_TFT_CS) { T.cs = !value; if (value) T.have_hi = false; }
     if (gpio == PIN_TFT_DC) T.dc = value;
+    if (gpio == PIN_PWR_KILL) s_kill_level = value;
+    if (gpio == PIN_BYPASS_RELAY) s_relay_level = value;
 }
 
 /* Backlight PWM: wrap 999, level = pct * 10 */
@@ -302,6 +323,62 @@ static void rtc_read(uint8_t *dst, size_t len) {
     for (size_t i = 0; i < len; i++) dst[i] = R.reg[(R.ptr + i) & 0x3Fu];
 }
 
+/* ------------------------------------------------------------------------ */
+/* MAX17048 fuel gauge at 0x36 (16-bit registers, MSB first)                 */
+/* ------------------------------------------------------------------------ */
+#define SIM_CHARGE_PCT_PER_S 0.5        /* fast, for the demo */
+static struct {
+    bool     fitted;
+    double   soc;                       /* % */
+    uint64_t t;                         /* sim time of soc */
+    uint16_t config, mode;
+    uint8_t  ptr;
+} G = { .fitted = true, .soc = 76.0, .config = 0x971C };
+
+static void gauge_update(void) {
+    if (s_now > G.t) {
+        if (s_usb && G.soc < 100.0) {
+            G.soc += SIM_CHARGE_PCT_PER_S * (double)(s_now - G.t) / 1e6;
+            if (G.soc > 100.0) G.soc = 100.0;
+        }
+    }
+    G.t = s_now;
+}
+void sim_hal_batt_config(bool fitted, double soc, bool usb) { G.fitted = fitted; G.soc = soc; s_usb = usb; G.t = s_now; }
+void sim_hal_batt_set(double soc) { gauge_update(); G.soc = soc < 0 ? 0 : soc > 100 ? 100 : soc; }
+void sim_hal_batt_usb(bool usb) { gauge_update(); s_usb = usb; }
+double sim_hal_batt_soc(void) { gauge_update(); return G.soc; }
+
+/* open-circuit voltage of a typical Li-ion cell, mV */
+static unsigned ocv_mv(double soc) {
+    static const double P[][2] = { { 0, 3300 }, { 5, 3550 }, { 10, 3650 }, { 20, 3720 }, { 50, 3820 }, { 80, 4000 }, { 100, 4180 } };
+    for (int i = 1; i < 7; i++)
+        if (soc <= P[i][0]) return (unsigned)(P[i - 1][1] + (P[i][1] - P[i - 1][1]) * (soc - P[i - 1][0]) / (P[i][0] - P[i - 1][0]));
+    return 4180;
+}
+
+static uint16_t gauge_reg(uint8_t r) {
+    gauge_update();
+    switch (r) {
+    case MAX17048_VCELL: {
+        unsigned mv = ocv_mv(G.soc) + ((s_usb && G.soc < 100.0) ? 50u : 0u);
+        return (uint16_t)(mv * 64u / 5u);
+    }
+    case MAX17048_SOC:     return (uint16_t)(G.soc * 256.0);
+    case MAX17048_MODE:    return G.mode;
+    case MAX17048_VERSION: return 0x0012;
+    case MAX17048_HIBRT:   return 0x8030;
+    case MAX17048_CONFIG:  return G.config;
+    case MAX17048_CRATE: {
+        double r_pct_h = (s_usb && G.soc < 100.0) ? SIM_CHARGE_PCT_PER_S * 3600.0 : s_usb ? 0.0 : -6.0;
+        double raw = r_pct_h / 0.208;
+        if (raw > 32767) raw = 32767;
+        return (uint16_t)(int16_t)raw;
+    }
+    default:               return 0;
+    }
+}
+
 uint i2c_init(i2c_inst_t *i2c, uint baud) { (void)i2c; return baud; }
 
 int i2c_read_timeout_us(i2c_inst_t *i2c, uint8_t addr, uint8_t *dst, size_t len, bool nostop, uint timeout_us) {
@@ -314,6 +391,14 @@ int i2c_read_timeout_us(i2c_inst_t *i2c, uint8_t addr, uint8_t *dst, size_t len,
         rtc_read(dst, len);
         return (int)len;
     }
+    if (i2c == DISPLAY_I2C && G.fitted && addr == MAX17048_I2C_ADDR) {
+        for (size_t i = 0; i < len; i += 2) {
+            uint16_t v = gauge_reg((uint8_t)(G.ptr + i));      /* next word = next even register */
+            dst[i] = (uint8_t)(v >> 8);
+            if (i + 1 < len) dst[i + 1] = (uint8_t)v;
+        }
+        return (int)len;
+    }
     return PICO_ERROR_GENERIC;       /* no ACK: nothing at this address */
 }
 
@@ -321,6 +406,15 @@ int i2c_write_timeout_us(i2c_inst_t *i2c, uint8_t addr, const uint8_t *src, size
     (void)nostop; (void)timeout_us;
     if (i2c == DISPLAY_I2C && R.fitted && addr == RV3028_I2C_ADDR && len) {
         rtc_write(src, len);
+        return (int)len;
+    }
+    if (i2c == DISPLAY_I2C && G.fitted && addr == MAX17048_I2C_ADDR && len) {
+        G.ptr = src[0];
+        if (len >= 3) {
+            uint16_t v = (uint16_t)(src[1] << 8 | src[2]);
+            if (G.ptr == MAX17048_CONFIG) G.config = (uint16_t)(v & ~(uint16_t)MAX17048_CFG_ALRT);
+            if (G.ptr == MAX17048_MODE) G.mode = v;
+        }
         return (int)len;
     }
     if (i2c != DISPLAY_I2C || !s_oled_fitted || addr != OLED_I2C_ADDR || len == 0) return PICO_ERROR_GENERIC;
@@ -337,6 +431,15 @@ int i2c_write_timeout_us(i2c_inst_t *i2c, uint8_t addr, const uint8_t *src, size
 }
 
 /* ------------------------------------------------------------------------ */
+/* The supply is gone: no more timer interrupts, the panel goes dark. */
+void sim_hal_power_cut(void) {
+    memset(s_timers, 0, sizeof s_timers);
+    s_disp_on = false;
+    s_bright = 0;
+    s_relay_level = false;
+    s_fb_ver++;
+}
+
 bool stdio_init_all(void) { return true; }
 bool stdio_usb_connected(void) { return false; }
 
@@ -352,7 +455,11 @@ void sim_hal_reset(int oled_fitted) {
     s_bright = 0;
     s_disp_on = false;
     s_keys_down = 0;
+    for (int i = 0; i < 5; i++) if (s_boot_keys & (1u << i)) s_keys_down |= 1u << KEY_PINS[i];
+    s_kill_level = !PWR_KILL_ACTIVE_LOW;
+    s_relay_level = false;
     s_now = 0;
+    G.t = 0;
     rtc_reset();
     s_fb_ver++;
 }

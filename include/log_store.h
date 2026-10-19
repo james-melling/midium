@@ -18,6 +18,12 @@
  *   start page payload begins with 16 bytes of session info:
  *              start uptime us u64 | start real s u32 | start real ms u16 |
  *              flags u8 (bit 0 real valid) | 0xFF
+ *   close page (kind 3, v0.5): written once when a session is closed by a
+ *              clean shutdown; no records, payload = 16 bytes:
+ *              end uptime us u64 | end real s u32 | end real ms u16 |
+ *              flags u8 (bit 0 real valid) | reason u8 (LOG_END_*).
+ *              A session without one ended in a power loss or a crash.
+ *              (v0.4 firmware counts a close page as a bad page and skips it.)
  *   record   = b0 | dt varint | [len u8] | [total u16] | bytes
  *              b0: bit 0 input (0 A, 1 B), bit 1 sysex truncated (u16 total
  *              length follows), bit 2 sysex unterminated, bit 3 error record
@@ -53,12 +59,19 @@
 #define LOG_MAGIC            0x4C4Du
 #define LOG_KIND_START       1u
 #define LOG_KIND_DATA        2u
+#define LOG_KIND_END         3u       /* session close record */
 #define LOG_KIND_REAL        0x80u
 #define LOG_MAX_RECS         80u      /* records per page (min record = 3 bytes) */
 #define LOG_MAX_SESSIONS     128      /* sessions kept in the RAM index (newest) */
 #define LOG_PENDING_PAGES    16u      /* full pages waiting for flash (4 kB RAM) */
 #define LOG_PENDING_FORCE    8u       /* erase even when not quiet at this backlog */
 #define LOG_ERASE_AHEAD      8u       /* pre-erase the next sector this many pages early */
+
+/* How a session ended (close page reason; LOG_END_NONE = no close page). */
+#define LOG_END_NONE         0u       /* no close record: power lost, crash, or still live */
+#define LOG_END_CLEAN        1u       /* powered off from the button or the menu */
+#define LOG_END_LOWBATT      2u       /* battery empty */
+#define LOG_END_AUTOOFF      3u       /* auto-off on battery */
 
 /* Flash backend. Offsets are relative to the start of the log region.
  * erase_sector / program_page do the whole operation before returning. */
@@ -86,6 +99,8 @@ typedef struct {
     log_time_t end;                /* last record */
     bool       has_end;
     bool       partial;            /* start overwritten (start = first remaining record) */
+    bool       closed;             /* a close page was written (end = close time) */
+    uint8_t    end_reason;         /* LOG_END_* */
 } log_sess_t;
 
 typedef struct {
@@ -123,6 +138,9 @@ typedef struct {
     int      nsess;
     uint32_t next_seq, next_session;
     uint32_t used_pages;           /* valid pages in flash */
+    /* the newest session found by log_init (before any new one): */
+    bool     prev_known;           /* there was one */
+    uint8_t  prev_end;             /* how it ended: LOG_END_* */
 
     /* writer */
     uint32_t cur_slot;             /* next slot to program */
@@ -150,6 +168,15 @@ typedef struct {
 void log_init(log_t *L, const log_flash_t *fl);
 /* Start a new session (closes the current one). */
 void log_new_session(log_t *L, const log_time_t *now);
+/* Queue the live session's start page now, before any message, so even a
+ * session that logs nothing is in flash (one per power-up). */
+void log_commit_start(log_t *L);
+/* Close the live session: queue the partly filled page, the start page if
+ * none was written yet, and a close page with reason (LOG_END_*). The
+ * session is no longer live (nothing more is logged until a new session).
+ * The pages still have to be programmed by log_service(). false = not
+ * logging, or the RAM queue was full. */
+bool log_close_session(log_t *L, const log_time_t *now, uint8_t reason);
 /* Add one message (all messages, unfiltered). false = dropped / not logging. */
 bool log_append(log_t *L, const midi_msg_t *m, const log_time_t *t);
 /* Move the partly filled RAM page to the flash queue. */

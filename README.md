@@ -8,9 +8,10 @@ tagged with its input, and can merge test messages into the outputs without
 breaking the stream. When it's unpowered or crashes, two relays wire IN A
 straight to OUT A. **IN B is not passed through when the box is unpowered.**
 
-This is the firmware (v0.4: milestone 1, the second input, and the first
-part of milestone 2: real-time clock, MTC reader and flash logging) for the
-breadboard prototype on a Raspberry Pi Pico 2 (RP2350). For the hookup, see
+This is the firmware (v0.5: milestone 1, the second input, and milestone 2
+so far: real-time clock, MTC reader, flash logging, soft power on / off and
+the battery fuel gauge) for the breadboard prototype on a Raspberry Pi Pico 2
+(RP2350). For the hookup, see
 [docs/wiring.md](docs/wiring.md). A browser simulator runs the same code
 ([sim/](sim/), page `sim/web/index.html`).
 
@@ -81,6 +82,12 @@ breadboard prototype on a Raspberry Pi Pico 2 (RP2350). For the hookup, see
 * **Two display options**, detected at boot: a 1.3" SH1106 / 0.96" SSD1306 OLED
   (21 x 8 characters), or a 1.9" ST7789 colour TFT (26 x 10 characters,
   colour-coded by message type).
+* **Soft power and battery** (v0.5). The joystick press is also the power
+  button: hold it to power off, with a countdown you can cancel. Power-off
+  always closes the log cleanly and drops the relays to passive thru. With
+  a MAX17048 fuel gauge fitted: battery icon and % in the header, charging
+  shown, low-battery warning, popup and safe automatic shutdown, and
+  optional auto-off on battery. See [Power](#power).
 * **USB debug log** (CDC serial). Each decoded message is printed with its
   timestamp and input, and the log can be turned off in the menu. The type
   filters apply to it (input, channel and device filters do not).
@@ -135,6 +142,17 @@ output, sysex protection, realtime inside sysex, stall timeouts with one and
 two inputs, routing latched at message starts, lane overflow (whole-message
 drops), and the per-input monitor ring.
 
+v0.5 adds: the power-button state machine (taps of every length act once,
+on release; a hold never also selects; cancel; power off; a press held at
+power-up is ignored; timer wrap-around), auto-off timing for every period
+(warning at 60 s, any activity cancels, never on USB, unplugging starts a
+full period), the low-battery thresholds (warning 10 %, one popup at 5 %
+re-armed by charging, shutdown at 3 % or below 3.3 V after three readings,
+never on USB or without a gauge), the MAX17048 register conversions, and
+the log's session close record (clean, auto-off and low-battery closes read
+back after a reboot, power loss and a torn close page detected, empty
+sessions, 120 closed sessions through the ring).
+
 v0.4 adds: calendar conversion for every day 2000-2099; MTC frame counting
 (drop-frame: 107,892 frames per hour), quarter-frame reassembly at all four
 rates in both directions over 600 sets each (checked against a transmitter
@@ -169,6 +187,10 @@ behind anything but other realtime), and that the TX backlog stays bounded.
 
 ## Controls (5-way joystick)
 
+PRESS acts when you **let go** of a short press. Holding PRESS for 2 s
+anywhere starts the power-off countdown instead (see [Power](#power)), so
+a press that turns into a hold never also selects something.
+
 | Where | UP / DOWN | LEFT | RIGHT | PRESS |
 |---|---|---|---|---|
 | Monitor (home) | scroll history. Pauses the display and the header shows `PAUSED`. The first UP selects the pinned newest line; the next ones move the cursor (`A>`) up the history. | back to live | time column: off / uptime / time of day | open menu. When paused on a sysex / MSC line (cursor, or the pinned line selected): open its detail page |
@@ -180,13 +202,17 @@ behind anything but other realtime), and that the TX backlog stays bounded.
 | Date & time | (editing) change the field in `< >`, wraps within its range (month 1-12, day 1 to the month's length, hour 0-23, ...) | previous field; on the year: cancel | next field | edit; while editing: set the clock |
 | Logs | move (wraps) | back | open | open the session / start a new session / delete all |
 | Log browser | scroll (older / newer) | back to Logs | time column | detail page of an MSC / sysex line |
+| Power off? | choose Cancel / Power off | cancel | ok | ok |
+| Anywhere | | | | hold 2 s: power-off countdown; release to cancel, hold 2 s more to power off |
 
 The monitor header shows the routing: `MIDIum  A:a  B:a` means both outputs
 take IN A; `A:ab B:ab` is the merge, `A:a  B:b` the split, `-` an output fed
 by no input (generator routing is not shown here). A `*` at the right edge
 means MIDI arrived on either input in the last 150 ms. On the TFT, a `C`
 means the clock generator is running. The onboard LED also blinks on every
-byte received.
+byte received. With a fuel gauge fitted, a battery icon and the charge sit
+just left of these (`MIDIum A:a  B:a ▮ 76` on the OLED, which drops one
+space after the name to make room; `▮ 76%` on the TFT); see [Power](#power).
 
 While MTC is running (a quarter frame in the last 250 ms) the header shows
 the time instead, with the rate and the input: `01:00:03;12 29.97df A` on
@@ -244,19 +270,30 @@ bar on the TFT, an underline on the OLED).
   channel messages on other channels; system messages always pass), Show
   inputs (A+B, A only, B only) and MSC dev filter (all, or one device ID;
   all-call messages always pass). Presets leave the Errors line alone.
+* **Settings > USB power-on**: *Charge only* (default) or *Power on*: what
+  plugging USB into a box that is off does. Needs the power controller and
+  its VBUS strap; see [Power](#power).
+* **Settings > Auto-off (batt)**: Off (default), 15, 30, 60 or 120 min with
+  no MIDI in and no key presses, on battery only.
+* **Power off**: asks again (Cancel is preselected), then shuts down
+  cleanly, the same as holding the button.
 * **Settings > Date & time**: whether the RTC was found, whether the time is
   valid (`not set`, `lost - set it` after the RTC lost power), the backup
   mode, and the current date and time. Press to set it (starts from the
   current time, or the firmware build date).
-* **Stats**: total messages, then per input: bytes, messages, UART errors,
+* **Stats**: battery charge (to 0.1 %), cell voltage, power source (USB,
+  charging / USB, full / battery), charge rate (%/h), time to auto-off,
+  uptime and how the last power-down went (*clean*, *low battery*,
+  *auto-off*, *power loss*, *watchdog*). Then total messages, then per input: bytes, messages, UART errors,
   monitor overflow, merge drops (whole messages dropped because that input's
   merge buffer was full), orphan data bytes and stalls. Then counts per
   message type, stray data, TX drops per output (should always be 0), input
-  realtime shed, generator counts, stalls, uptime. Log: % of the log flash
+  realtime shed, generator counts, stalls. Log: % of the log flash
   used, sessions, the live session's number and message count, records
   dropped (RAM queue full), bad pages found, pages written, sector erases.
 * **About**: model, version, build date, which display was detected, the
-  RTC, last reset cause (power-on or watchdog), and a reminder that unpowered
+  RTC, last reset cause (power-on or watchdog), last power-down, the gauge
+  (MAX17048 or none), and a reminder that unpowered
   only IN A reaches OUT A (IN B is not passed).
 
 Notes on the display:
@@ -345,6 +382,110 @@ it reaches (`me_input_byte`, `pump`, `me_service`, `me_out_pop`,
 `me_mon_push`, and the SDK's 64-bit divide) must sit at a 0x2000xxxx (SRAM)
 address, with no literal-pool references to 0x10xxxxxx.
 
+## Power
+
+### Hardware
+
+On the final PCB a push-button on/off controller (LTC2955 or MAX16150
+class) switches the system supply. The joystick centre switch is wired to
+both GP22 (as now) and the controller's PB input through diodes, so pressing
+it while the box is off powers it on. The firmware drives **GP3
+(PWR_KILL)** to its inactive level as the very first thing at boot to keep
+the power on, and to its active level to power off. The controller also
+forces power off by itself after a long hold (about 8 s), whatever the
+firmware is doing. GP3 is active-low by default (LTC2955 KILL, MAX16150
+CLR, or a P-FET hold circuit read as "low = off"); `PWR_KILL_ACTIVE_LOW` in
+`include/config.h` flips it. On the breadboard prototype nothing is
+connected to GP3. Build with `-DMIDIUM_PWR_CTRL=1` on the final PCB (see
+USB power-on below).
+
+USB power is sensed on **GP24**: the Pico 2 board feeds VBUS to it
+through a divider (the SDK's `PICO_VBUS_PIN`). `PIN_VBUS_SENSE` in
+`include/pins.h` moves it, or `-1` turns it off (the box then counts as on
+battery whenever a gauge answers). The charger's status pin (`PIN_CHG_STAT`)
+is reserved for the PCB (GP23 there) and unused on the prototype, where
+*charging* means USB present and the gauge below 100 %.
+
+The fuel gauge is a **MAX17048** on I2C1 with the OLED and the RTC
+(address **0x36**). Without it there is no battery UI, no low-battery
+handling and no auto-off. Its ALRT pin is not used (the firmware polls once
+a second). See [docs/wiring.md](docs/wiring.md).
+
+### Powering off
+
+* **Hold PRESS** on any screen. After 2 s the screen shows *Power off...
+  release to cancel* with a bar that fills over 2 s more. Let go before the
+  end and nothing happens (no menu opens, nothing is selected). Hold to the
+  end to power off. (`PWR_HOLD_MS`, `PWR_COUNTDOWN_MS` in `config.h`.)
+* **Menu > Power off**, then *Power off* (Cancel is preselected).
+* **Low battery** and **auto-off** (below) use the same sequence.
+
+The sequence: *Shutting down*: the generator stops (clock, sweeps), the
+log session is closed and everything in RAM is written to flash (with a
+close record, so it is not counted as a power loss), core1 is stopped
+cleanly after its output queues drain, and the bypass relays drop: IN A is
+wired to OUT A again (passive thru), IN B goes nowhere, exactly as when the
+box is unpowered. Then *Off / Safe to unplug*, and GP3 cuts the power.
+
+If the power does not go within 1 s (the breadboard, which has no
+controller, or anything else keeping the supply up), the box goes to
+**soft-off**: *Off, press the joystick to power on*, then the display
+turns off after 3 s. The relays stay released and core1 stays stopped. A
+press reboots the box (a watchdog reset, marked so it is not reported as a
+crash).
+
+### Powering on
+
+Press the joystick. The press that powered the box on is ignored by the
+firmware, however long it is held, so it cannot open the menu or start
+the power-off countdown.
+
+**Settings > USB power-on** decides what plugging USB into a box that is
+off does. The controller has to be told in hardware: route the USB VBUS
+detect to the controller's ON input (the LTC2955 has one; for a part
+without, OR it into PB; check the datasheet of the part chosen) through a
+jumper or an option resistor. Without that strap USB only
+charges. With it fitted the box powers up on USB, and a firmware built with
+`MIDIUM_PWR_CTRL=1` then checks the setting: with *Charge only* (default) a
+power-up caused by USB (VBUS present, the button not pressed at power-up)
+goes straight to a *Charging* screen (no logging, relays released, display
+off after 10 s; a press powers on properly; unplugging USB powers off). With
+*Power on* it starts normally. Settings are not saved to flash yet (M2), so
+until they are the default applies at every power-up.
+
+### Battery
+
+Read once a second from the gauge. The monitor header shows an icon (four
+fill levels, or a lightning bolt while charging) and the charge: `▮ 76` on
+the OLED, `▮ 76%` on the TFT. While charging the number alternates with
+`CHG`. During MTC the icon and number appear if the time leaves room, else
+just the icon.
+
+* **10 %** on battery: the field alternates with `LOW`, out of the header's
+  inverse (red on the TFT).
+* **5 %**: a *Battery low* popup, once (again after charging, or after the
+  charge climbs back 2 % above it). Any key closes it.
+* **3 %**, or the cell below **3.3 V**, for three readings in a row: clean
+  shutdown (*Battery empty*), so the log is kept.
+* Never while USB is connected. Thresholds: `BATT_*` in `config.h`.
+
+### Auto-off
+
+**Settings > Auto-off (batt)**: after the set time with no MIDI arriving on
+either input, no key presses and the generator idle (clock, sweeps), on
+battery only, the box powers off cleanly. 60 s before, *Auto power off*
+counts down; any key cancels it (and does nothing else), as does MIDI.
+On USB the timer does not run, and unplugging starts a full period. Stats
+shows the time left.
+
+### Last power-down
+
+At power-up the firmware looks at the newest log session: a close record
+gives *clean*, *low battery* or *auto-off*; no close record means *power
+loss* (or *watchdog* if the chip was reset by the core1 watchdog). Every
+power-up now writes its session's start page at once, so a power-up with
+no MIDI still counts. Shown in Stats and About.
+
 ## Real-time clock
 
 The RV-3028-C7 sits on I2C1 with the OLED (address 0x52). At boot the
@@ -381,6 +522,9 @@ NOR flash), and can later sit on a microSD archive.
   a quarter frame 5-6, so a page holds 30-45 short messages and 3 MB about
   450,000 of them (about 1.25 hours of continuous 25 fps MTC on one input;
   weeks of cues and notes).
+* **Closing.** A clean shutdown writes a close page (kind 3: end time and
+  reason) after the session's last page. A session without one ended in a
+  power loss. v0.4 firmware skips close pages (it counts them as bad pages).
 * **Writing.** Records collect in a RAM page; full pages queue in RAM
   (16 pages) and are programmed from the core0 main loop (~1 ms each). A
   part-filled page is written after 2 s, so a power cut loses at most the
@@ -407,7 +551,7 @@ NOR flash), and can later sit on a microSD archive.
 
 | Path | What |
 |---|---|
-| `include/pins.h` | the pin map (single source of truth): IN A = GP1 (UART0 RX), OUT A = GP0, IN B = GP5 (UART1 RX), OUT B = GP4, bypass relays = GP2, I2C1 (OLED, RTC 0x52) = GP6 / GP7 |
+| `include/pins.h` | the pin map (single source of truth): IN A = GP1 (UART0 RX), OUT A = GP0, IN B = GP5 (UART1 RX), OUT B = GP4, bypass relays = GP2, PWR_KILL = GP3, I2C1 (OLED, RTC 0x52, gauge 0x36) = GP6 / GP7, VBUS sense = GP24 |
 | `include/config.h` | build options, TFT geometry, timings |
 | `src/midi_engine.c` | thru / merge engine: two input parsers, per-output mergers (portable, unit tested) |
 | `src/midi_io.c` | UART setup, bypass relays, core1 loop (both inputs), watchdog |
@@ -430,7 +574,11 @@ NOR flash), and can later sit on a microSD archive.
 | `src/rv3028.c`, `src/clock.c` | RTC driver; time of day (RTC second + microsecond timer, or software clock) |
 | `src/log_store.c` | flash log format: pages, sessions, ring, reader (portable, unit tested) |
 | `src/log_flash_rp2350.c`, `src/log_flash_ram.c` | log backends: QSPI flash, RAM NOR emulation |
-| `src/logger.c` | logging sessions on core0: stamps, flush and erase pacing |
+| `src/logger.c` | logging sessions on core0: stamps, flush and erase pacing, clean close |
+| `src/power.c` | soft power (kill line, shutdown sequence, soft-off, charge-only), battery polling, low battery, auto-off |
+| `src/power_fsm.c` | power-button state machine, auto-off timer, low-battery thresholds (portable, unit tested) |
+| `src/max17048.c` | MAX17048 fuel gauge driver; register conversions in `include/max17048.h` (unit tested) |
+| `src/glyphs.h` | battery and charging icons drawn in place of a few control characters |
 | `sim/` | browser simulator: the core0 code + engine in WebAssembly, `sim/build.sh` |
 | `test/` | host unit tests |
 
@@ -439,7 +587,7 @@ NOR flash), and can later sit on a microSD archive.
 | Milestone | Scope |
 |---|---|
 | **M1** (v0.3) | Thru / merge engine with two inputs and a routing matrix, monitor, generator, menus, OLED / TFT, USB debug log |
-| **M2** (v0.4: first part) | Done: RV-3028 RTC (real timestamps), message log as a flash ring buffer with sessions, MTC reader and display, monitor filters. Still to do: microSD archive, settings saved to flash, battery fuel gauge (MAX17048) |
+| **M2** (v0.4, v0.5) | Done: RV-3028 RTC (real timestamps), message log as a flash ring buffer with sessions, MTC reader and display, monitor filters, soft power on / off, MAX17048 fuel gauge, low battery, auto-off. Still to do: microSD archive, settings saved to flash |
 | **M3** | USB composite device (class-compliant MIDI plus mass storage for logs), replacing the CDC debug log. XRC host/remote mode with selectable 5 V / 12 V VCC. GPI in and out (3.5 mm TRS) |
 | **M4** | Filter / transform rules on the MIDI outputs: channel remap, per-type and per-channel filters, per output (the v0.4 filters are display only) |
 

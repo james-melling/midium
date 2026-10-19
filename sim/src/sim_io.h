@@ -12,5 +12,9 @@ uint32_t sim_io_rx_total(int in);
 int      sim_io_out_read(int port, uint8_t *buf, double *times, int max);
 uint32_t sim_io_out_total(int port);
 bool     sim_io_led(void);
+bool     sim_io_reboot_requested(void);
+void     sim_io_set_soft_wake(bool w);
+void     sim_io_power_cut(void);
+bool     sim_io_relays(void);
 
 #endif

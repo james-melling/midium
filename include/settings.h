@@ -26,6 +26,10 @@ typedef struct {
     bool    usb_log;         /* printf decoded messages over USB CDC */
     msg_filter_t filter;     /* what the monitor and the log browser show */
 
+    /* power */
+    uint8_t usb_power_on;    /* USBPO_*: what plugging USB into a box that is off does */
+    uint8_t auto_off_idx;    /* auto-off on battery: 0 Off, 15, 30, 60, 120 min (autooff_minutes) */
+
     /* generator */
     uint8_t  gen_channel;    /* 1..16 */
     uint8_t  cc_number;
@@ -45,6 +49,9 @@ typedef struct {
     uint16_t msc_value;      /* SET value (14-bit) */
     uint8_t  msc_macro;      /* FIRE macro */
 } settings_t;
+
+#define USBPO_CHARGE   0     /* charge only, stay off (default) */
+#define USBPO_POWER_ON 1     /* power on (needs the VBUS -> controller ON strap) */
 
 #define TIMECOL_OFF    0
 #define TIMECOL_UPTIME 1     /* mm:ss.mmm since boot */

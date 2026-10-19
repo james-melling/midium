@@ -87,7 +87,7 @@ button, select, input { font: inherit; color: inherit; }
   .layout { grid-template-columns: minmax(0, 1fr); }
   /* phone / tablet: device, then inputs, outputs, and the controls legend last */
   .col { display: contents; }
-  .bench { order: 1; } #p-in { order: 2; } #p-out { order: 3; } #p-ctl { order: 4; }
+  .bench { order: 1; } #p-pwr { order: 2; } #p-in { order: 3; } #p-out { order: 4; } #p-ctl { order: 5; }
 }
 
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; min-width: 0; }
@@ -131,6 +131,27 @@ button, select, input { font: inherit; color: inherit; }
 .led i { width: 1.05em; height: 1.05em; border-radius: 50%; display: inline-block; background: #2b322e; box-shadow: inset 0 1px 2px rgba(0,0,0,0.7); }
 .led.midi.on i { background: var(--led-midi); box-shadow: 0 0 0.7em var(--led-midi), inset 0 0 2px #fff; }
 .led.chg i { background: #4a4026; }
+.led.chg.on i { background: var(--led-chg); box-shadow: 0 0 0.7em var(--led-chg), inset 0 0 2px #fff; }
+.glass { position: relative; }
+.offmsg { position: absolute; inset: 0; display: none; place-items: center; text-align: center; color: #8a9097;
+  font-size: clamp(11px, 2.4cqw, 15px); letter-spacing: 0.04em; line-height: 1.5; padding: 4%; }
+.offmsg b { display: block; color: #c9cdd2; font-weight: 400; font-size: 1.25em; letter-spacing: 0.12em; }
+.device.off .offmsg { display: grid; }
+
+/* ---------- power & battery ---------- */
+.pwr { display: grid; gap: 12px; }
+.pwr-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.pwr-state { font-family: var(--f-mono); font-size: 0.8rem; padding: 2px 8px; border-radius: 10px; border: 1px solid var(--line); }
+.pwr-state.on { border-color: var(--c-note); color: var(--c-note); }
+.pwr-state.off { color: var(--muted); }
+.pwr-state.warn { border-color: var(--c-err); color: var(--c-err); }
+.pwr-meta { font-family: var(--f-mono); font-size: 0.74rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.batt { display: grid; grid-template-columns: auto minmax(0, 1fr) 4.2em; align-items: center; gap: 10px; font-size: 0.84rem; }
+.batt input[type="range"] { width: 100%; accent-color: var(--accent); }
+.batt output { font-family: var(--f-mono); font-size: 0.8rem; text-align: right; font-variant-numeric: tabular-nums; }
+.chk { display: inline-flex; align-items: center; gap: 6px; font-size: 0.84rem; color: var(--ink); cursor: pointer; }
+.chk input { accent-color: var(--accent); width: 15px; height: 15px; }
+.pwr .note { margin: 0; color: var(--muted); font-size: 0.8rem; max-width: 70ch; }
 
 .joy { grid-area: joy; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
   width: min(100%, 24cqw); aspect-ratio: 1; justify-self: center; align-self: center; }
@@ -235,7 +256,7 @@ td:first-child { white-space: nowrap; }
   <header class="top">
     <div>
       <h1>MIDIum <span>NSK MT-1 simulator</span></h1>
-      <p>The screen, menus, monitor, generator and thru / merge engine below are the real v0.4 firmware, compiled to WebAssembly. Inject traffic on IN A and IN B, drive the joystick, and watch what leaves OUT A and OUT B.</p>
+      <p>The screen, menus, monitor, generator, thru / merge engine and soft power below are the real v0.5 firmware, compiled to WebAssembly. Inject traffic on IN A and IN B, drive the joystick, and watch what leaves OUT A and OUT B.</p>
     </div>
     <div class="top-ctl">
       <div class="seg" role="group" aria-label="Display fitted">
@@ -251,10 +272,10 @@ td:first-child { white-space: nowrap; }
       <section class="bench" aria-label="MT-1 top face">
         <div class="device" id="device">
           <i class="screw tl"></i><i class="screw tr"></i><i class="screw bl"></i><i class="screw br"></i>
-          <div class="screen"><div class="glass"><canvas id="lcd" width="320" height="170" aria-label="Device screen"></canvas></div></div>
+          <div class="screen"><div class="glass"><canvas id="lcd" width="320" height="170" aria-label="Device screen"></canvas><div class="offmsg" id="offmsg" aria-live="polite"><span><b>OFF</b><span id="offwhy">Press the joystick to power on</span></span></div></div></div>
           <div class="leds">
             <span class="led midi" id="led-midi" title="MIDI activity (blinks on every input byte)"><i></i>MIDI</span>
-            <span class="led chg" title="Charge (battery arrives in M2)"><i></i>CHG</span>
+            <span class="led chg" id="led-chg" title="Charging (USB-C connected, battery not full)"><i></i>CHG</span>
           </div>
           <div class="joy" role="group" aria-label="5-way joystick">
             <button type="button" class="jb up" data-k="0" aria-label="Joystick up"><svg viewBox="0 0 10 10" aria-hidden="true"><polygon points="5,1.5 9,8 1,8"/></svg></button>
@@ -274,17 +295,45 @@ td:first-child { white-space: nowrap; }
         </div>
       </section>
 
+      <section class="panel" id="p-pwr" aria-labelledby="h-pwr">
+        <h2 id="h-pwr">Power &amp; battery</h2>
+        <div class="pwr">
+          <div class="pwr-row">
+            <span class="pwr-state on" id="pw-state">On</span>
+            <span class="pwr-meta" id="pw-meta">relays engaged</span>
+          </div>
+          <div class="batt">
+            <label for="pw-soc">Battery</label>
+            <input type="range" id="pw-soc" min="0" max="100" step="1" value="76">
+            <output id="pw-soc-v" for="pw-soc">76%</output>
+          </div>
+          <div class="pwr-row">
+            <button type="button" class="btn" id="pw-usb" aria-pressed="false">USB-C connected</button>
+            <button type="button" class="btn" id="pw-pull">Pull power</button>
+            <button type="button" class="btn" id="pw-idle" title="Pretend the box sat idle until 50 s before auto-off (Settings > Auto-off, on battery)">Skip idle time</button>
+          </div>
+          <div class="pwr-row">
+            <label class="chk"><input type="checkbox" id="pw-gauge" checked> Battery + gauge fitted</label>
+            <label class="chk"><input type="checkbox" id="pw-ctrl" checked> Power controller fitted</label>
+            <label class="chk"><input type="checkbox" id="pw-strap"> USB powers on (strap)</label>
+          </div>
+          <p class="note">Hold the joystick press for 2 s anywhere for the power-off countdown, 2 s more to power off; release to cancel. With the controller fitted the power is cut; without it (the breadboard) the box goes to soft-off. Skip idle time jumps to 50 s before auto-off. Charging is sped up to 0.5 %/s. The gauge and strap options apply at the next power-up.</p>
+        </div>
+      </section>
+
       <section class="panel" id="p-ctl" aria-labelledby="h-ctl">
         <h2 id="h-ctl">Controls</h2>
         <div class="keys">
           <span><kbd>&uarr;</kbd> <kbd>&darr;</kbd> <kbd>&larr;</kbd> <kbd>&rarr;</kbd> or <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> joystick</span>
           <span><kbd>Enter</kbd> / <kbd>Space</kbd> press</span>
           <span>Hold up / down to auto-repeat</span>
+          <span>Hold press 4 s: power off</span>
         </div>
         <div class="tbl">
           <table>
             <thead><tr><th>Where</th><th>Up / Down</th><th>Left</th><th>Right</th><th>Press</th></tr></thead>
             <tbody>
+              <tr><td>Anywhere</td><td>-</td><td>-</td><td>-</td><td>a short press acts on release; hold 2 s: power-off countdown (release cancels), 2 s more: power off</td></tr>
               <tr><td>Monitor</td><td>scroll history (pauses); the newest message stays pinned on the bottom line, the cursor can land on it</td><td>back to live</td><td>time column: off / uptime / time of day</td><td>open menu; on a selected MSC / sysex line, open its detail page</td></tr>
               <tr><td>Detail page</td><td>scroll</td><td>back to monitor</td><td>next page</td><td>next page</td></tr>
               <tr><td>Menu</td><td>move (wraps)</td><td>back</td><td>select / toggle / edit</td><td>select / toggle / edit</td></tr>
@@ -319,7 +368,7 @@ td:first-child { white-space: nowrap; }
     </div>
   </div>
 
-  <p class="foot" id="foot">Default routing is the firmware default: IN A goes to both outputs and IN B is monitored only. Change it on the device under Menu &gt; Routing. Settings live in RAM, as on the hardware so far, so a power cycle or display change resets them. The clock starts from this computer's time, and the flash log (emulated in RAM with the real format code) survives power cycles until the page is reloaded.</p>
+  <p class="foot" id="foot">Default routing is the firmware default: IN A goes to both outputs and IN B is monitored only. Change it on the device under Menu &gt; Routing. Settings live in RAM, as on the hardware so far, so a power cycle or display change resets them (including the power settings). The clock starts from this computer's time, and the flash log (emulated in RAM with the real format code) survives power cycles until the page is reloaded.</p>
 </div>
 
 <script>/*__MIDIUM_SIM_JS__*/</script>
@@ -327,6 +376,9 @@ td:first-child { white-space: nowrap; }
 (function () {
   "use strict";
   var M = null, booting = false, kind = 2;
+  /* power: the page plays the push-button power controller and the battery */
+  var off = false, offWhy = "";
+  var batt = { fitted: true, soc: 76, usb: false }, ctrlFitted = true, strap = false, dragging = false;
   var canvas = document.getElementById("lcd"), ctx = canvas.getContext("2d");
   var img = null, fbVer = -1, fbPtr = 0, fbW = 0, fbH = 0;
   var outBuf = 0, outTimes = 0;
@@ -717,13 +769,19 @@ td:first-child { white-space: nowrap; }
   var jbs = Array.prototype.slice.call(document.querySelectorAll(".jb"));
   var cap = document.getElementById("cap");
   function keyDown(k) {
+    // off: the centre press reaches the controller's push-button input and powers the box on
+    if (off) { if (k === 4 && !booting) { bootHeld = true; boot(kind, { press: true, held: true }); } return; }
     if (!M || keyDownAt[k] !== null) { keyRelease[k] = false; return; }
     M._sim_key(k, 1);
     keyDownAt[k] = now(); keyRelease[k] = false;
     document.querySelector('.jb[data-k="' + k + '"]').classList.add("down");
     if (k < 4) cap.setAttribute("data-tilt", String(k)); else cap.classList.add("down");
   }
-  function keyUp(k) { if (keyDownAt[k] !== null) keyRelease[k] = true; }
+  function keyUp(k) {
+    if (keyDownAt[k] !== null) keyRelease[k] = true;
+    if (k === 4) bootHeld = false;
+  }
+  var bootHeld = false;     // the power-on press is still held (boot is async)
   function serviceKeys() {
     // The firmware debounces for 10 ms of samples: hold each contact at least 30 ms of sim time.
     for (var k = 0; k < 5; k++) {
@@ -807,6 +865,22 @@ td:first-child { white-space: nowrap; }
   var stLog = document.getElementById("st-log");
   var stUp = document.getElementById("st-up"), stMsgs = document.getElementById("st-msgs"), stDisp = document.getElementById("st-disp");
   var lastBits = -1, lastRx = [0, 0], statT = 0;
+  var chgEl = document.getElementById("led-chg"), pwState = document.getElementById("pw-state"), pwMeta = document.getElementById("pw-meta");
+  var socIn = document.getElementById("pw-soc"), socOut = document.getElementById("pw-soc-v");
+  var PSTATE = ["On", "Shutting down", "Off (power cut next)", "Off (cutting power)", "Soft-off", "Charge only"];
+  function updatePower() {
+    batt.soc = M._sim_batt_soc();
+    if (!dragging) socIn.value = String(Math.round(batt.soc));
+    socOut.textContent = Math.floor(batt.soc) + "%";
+    chgEl.classList.toggle("on", batt.fitted && batt.usb && batt.soc < 100);
+    var st = M._sim_power_state(), txt, cls;
+    if (off || st < 0) { txt = offWhy || "Off"; cls = "off"; }
+    else { txt = PSTATE[st] || "?"; cls = st === 0 ? "on" : st === 1 ? "warn" : "off"; }
+    pwState.textContent = txt; pwState.className = "pwr-state " + cls;
+    pwMeta.textContent = (off ? "unpowered" : M._sim_relays() ? "relays engaged" : "relays dropped") +
+      " \u00b7 " + (off || !M._sim_relays() ? "IN A \u2192 OUT A passive" : "firmware thru") +
+      (batt.fitted ? " \u00b7 " + (batt.usb ? (batt.soc < 100 ? "charging" : "USB, full") : "on battery") : (batt.usb ? " \u00b7 USB" : " \u00b7 no battery"));
+  }
   function updateStatus(dtMs) {
     ledEl.classList.toggle("on", !!M._sim_led());
     var bits = M._sim_route_bits();
@@ -817,6 +891,7 @@ td:first-child { white-space: nowrap; }
     statT += dtMs;
     if (statT < 120) return;
     var span = statT; statT = 0;
+    updatePower();
     var s = Math.floor(now() / 1e6);
     stUp.textContent = Math.floor(s / 3600) + ":" + ("0" + Math.floor(s / 60) % 60).slice(-2) + ":" + ("0" + s % 60).slice(-2);
     stMsgs.textContent = M._sim_stat(6);
@@ -854,6 +929,11 @@ td:first-child { white-space: nowrap; }
       M._sim_tick(step);
       serviceKeys();
       left -= step;
+      if (!off && M._sim_reboot_requested()) {
+        bootHeld = keyDownAt[4] !== null && !keyRelease[4];
+        boot(kind, { press: true, held: bootHeld, wake: true }); return;
+      }
+      if (!off && ctrlFitted && M._sim_power_kill()) { cutPower("Powered off"); break; }
     }
     for (var o = 0; o < 2; o++) {
       var n;
@@ -892,13 +972,32 @@ td:first-child { white-space: nowrap; }
     return (Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds()) - Date.UTC(2000, 0, 1)) / 1000;
   }
 
-  function boot(k) {
+  /* The supply goes: kill line obeyed, or "Pull power". The module keeps
+     running on sim time with the relays dropped, so IN A still reaches OUT A
+     (passive thru); core0 and core1 are gone. */
+  function cutPower(why) {
+    if (!M || off) return;
+    M._sim_power_cut();
+    off = true; offWhy = why;
+    document.getElementById("device").classList.add("off");
+    document.getElementById("offwhy").textContent = "Press the joystick to power on";
+    for (var i = 0; i < 5; i++) { if (keyDownAt[i] !== null) M._sim_key(i, 0); keyDownAt[i] = null; keyRelease[i] = false; }
+    jbs.forEach(function (b) { b.classList.remove("down"); }); cap.removeAttribute("data-tilt");
+    fbVer = -1;
+    updatePower();
+  }
+
+  /* opts.press: the centre switch is held at power-up (the press that powered
+     the box on); opts.held: and still held by the user; opts.wake: soft-off wake. */
+  function boot(k, opts) {
     if (booting) return;
+    opts = opts || { press: true };
     if (M) {
       try {
         var fp = M._sim_flash_ptr(), fs = M._sim_flash_size();
         flashImage = M.HEAPU8.slice(fp, fp + fs);
         if (M._sim_rtc_valid()) rtcOffset = M._sim_rtc_now() - localSecs();
+        batt.soc = M._sim_batt_soc();
       } catch (e) { flashImage = null; }
     }
     booting = true;
@@ -918,7 +1017,17 @@ td:first-child { white-space: nowrap; }
       outTimes = M._malloc(4096 * 8);
       if (flashImage) { M.HEAPU8.set(flashImage, M._sim_flash_ptr()); M._sim_flash_restored(); }
       M._sim_rtc_config(1, localSecs() + rtcOffset, 0);
+      M._sim_batt_config(batt.fitted ? 1 : 0, batt.soc, batt.usb ? 1 : 0);
+      M._sim_boot_keys(opts.press ? 16 : 0);
+      M._sim_soft_wake(opts.wake ? 1 : 0);
+      off = false; offWhy = "";
+      document.getElementById("device").classList.remove("off");
       M._sim_init(k);
+      if (opts.press) {
+        // the power-on press: released 150 ms in, unless the user still holds it
+        keyDownAt[4] = now() + 120000; keyRelease[4] = !(opts.held && bootHeld);
+        cap.classList.add("down");
+      }
       setupDisplay();
       stDisp.textContent = M.UTF8ToString(M._sim_display_name());
       outs.forEach(resetOut);
@@ -936,6 +1045,29 @@ td:first-child { white-space: nowrap; }
   document.getElementById("d-tft").addEventListener("click", function () { lsSet("midium-disp", "2"); boot(2); });
   document.getElementById("d-oled").addEventListener("click", function () { lsSet("midium-disp", "1"); boot(1); });
   document.getElementById("power").addEventListener("click", function () { boot(kind); });
+
+  /* power & battery panel */
+  socIn.addEventListener("input", function () { dragging = true; batt.soc = +socIn.value; socOut.textContent = socIn.value + "%"; if (M) M._sim_batt_set(batt.soc); });
+  socIn.addEventListener("change", function () { dragging = false; });
+  var usbBtn = document.getElementById("pw-usb");
+  usbBtn.addEventListener("click", function () {
+    batt.usb = !batt.usb;
+    usbBtn.setAttribute("aria-pressed", batt.usb ? "true" : "false");
+    if (M) M._sim_batt_usb(batt.usb ? 1 : 0);
+    // with the VBUS -> ON strap, plugging USB into a box that is off powers it up (no button press)
+    if (off && batt.usb && strap) boot(kind, { press: false });
+    if (M) updatePower();
+  });
+  document.getElementById("pw-pull").addEventListener("click", function () { cutPower("Power pulled"); });
+  document.getElementById("pw-idle").addEventListener("click", function () {
+    if (!M || off) return;
+    var left = M._sim_autooff_left();
+    if (left > 50) M._sim_idle_skip((left - 50) * 1000);
+    else if (!left) pwMeta.textContent = "Auto-off is not counting: set Settings > Auto-off (batt), and unplug USB";
+  });
+  document.getElementById("pw-gauge").addEventListener("change", function (e) { batt.fitted = e.target.checked; if (M) updatePower(); });
+  document.getElementById("pw-ctrl").addEventListener("change", function (e) { ctrlFitted = e.target.checked; });
+  document.getElementById("pw-strap").addEventListener("change", function (e) { strap = e.target.checked; });
 
   buildInputs();
   buildOutputs();

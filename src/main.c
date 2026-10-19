@@ -22,6 +22,7 @@
 #include "clock.h"
 #include "logger.h"
 #include "log_flash_rp2350.h"
+#include "power.h"
 
 static const display_driver_t *select_display(void) {
 #if MIDIUM_DISPLAY == DISPLAY_OLED
@@ -42,6 +43,9 @@ static void splash(void) {
 }
 
 int main(void) {
+    /* 0. Hold the power on (soft power controller), note the power button. */
+    power_early_init();
+
     /* 1. Bypass relays OFF first: IN A stays hard-wired to OUT A. */
     gpio_init(PIN_BYPASS_RELAY);
     gpio_put(PIN_BYPASS_RELAY, 0);
@@ -71,7 +75,9 @@ int main(void) {
      * splash), then the flash log and the boot session. */
     uint64_t t_splash = time_us_64();
     clock_init();
-    logger_init(log_flash_rp2350());
+    /* Battery gauge; a power-up by USB alone may only charge (no logging). */
+    bool charge_only = power_init();
+    logger_init(charge_only ? NULL : log_flash_rp2350());
     uint64_t spent = time_us_64() - t_splash;
     if (spent < 700000u) sleep_us(700000u - spent);
     con_clear();
@@ -86,7 +92,10 @@ int main(void) {
         gen_task(now);
         clock_task(now);
         logger_task(now);
+        power_task(now);
         ui_render(now, changed);
         con_flush_step();
+        /* soft-off idle with the panel dark: poll the button slowly */
+        if (power_display_off()) sleep_ms(10);
     }
 }

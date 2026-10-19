@@ -30,6 +30,10 @@ me_t g_engine;
 
 static volatile uint32_t s_last_rx_ms;
 static bool s_wdt_reset;
+static bool s_soft_wake;
+
+/* watchdog scratch[0] (scratch[4..7] belong to the SDK / boot ROM) */
+#define SOFT_WAKE_MAGIC 0x4D57414Bu      /* "MWAK" */
 
 #define WATCHDOG_MS     250u
 #define LED_HOLD_US     30000u
@@ -68,7 +72,9 @@ static void uart_setup(uart_inst_t *u, uint tx_pin, int rx_pin) {
 }
 
 void midi_io_init(me_settings_t *settings) {
-    s_wdt_reset = watchdog_caused_reboot();
+    s_soft_wake = watchdog_hw->scratch[0] == SOFT_WAKE_MAGIC;
+    watchdog_hw->scratch[0] = 0;
+    s_wdt_reset = watchdog_caused_reboot() && !s_soft_wake;
     me_init(&g_engine, settings);
     uart_setup(MIDI_UART_A, PIN_MIDI_OUT_A_TX, PIN_MIDI_IN_A_RX);
     uart_setup(MIDI_UART_B, PIN_MIDI_OUT_B_TX, PIN_MIDI_IN_B_RX);
@@ -86,6 +92,27 @@ void midi_io_engage_relays(void) {
 }
 
 bool midi_io_watchdog_reset(void) { return s_wdt_reset; }
+bool midi_io_soft_wake(void) { return s_soft_wake; }
+
+void midi_io_shutdown(void) {
+    /* Drain what core1 still has queued (bounded: a busy input keeps
+     * feeding the queues), then stop it. */
+    uint64_t t0 = time_us_64();
+    while (time_us_64() - t0 < 100000u &&
+           (me_out_pending(&g_engine, ME_OUT_A) || me_out_pending(&g_engine, ME_OUT_B)))
+        sleep_us(500);
+    sleep_us(700);                              /* last bytes leave the shift registers */
+    watchdog_disable();                         /* core1 feeds it; it is about to stop */
+    multicore_reset_core1();
+    gpio_put(PIN_BYPASS_RELAY, 0);              /* relays drop: IN A -> OUT A, passive */
+    gpio_put(PIN_LED_ACTIVITY, 0);
+}
+
+void midi_io_reboot(void) {
+    watchdog_hw->scratch[0] = SOFT_WAKE_MAGIC;
+    watchdog_reboot(0, 0, 1);
+    for (;;) tight_loop_contents();
+}
 uint32_t midi_io_last_rx_ms(void) { return s_last_rx_ms; }
 
 /* Drain one UART's RX FIFO into the engine. Inlined into core1_main. */

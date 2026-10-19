@@ -7,7 +7,11 @@
  *   rv3028.c, clock.c, logger.c (the flash log uses log_flash_ram.c).
  * SPI and I2C writes are fed to small ST7789 / SSD1306 controller emulators
  * that paint an RGBA framebuffer, so the real display drivers run as-is, and
- * I2C to 0x52 reaches an RV-3028 register emulation running on sim time.
+ * I2C to 0x52 reaches an RV-3028 register emulation running on sim time,
+ * and 0x36 a MAX17048 fuel gauge whose charge the page sets (charging on
+ * simulated USB raises it). GP24 reads the simulated USB (VBUS), and the
+ * level the firmware drives on PIN_PWR_KILL is reported to the page, which
+ * plays the push-button power controller.
  * midi_io.c (UARTs, core1, relays, watchdog) is replaced by sim_io.c.
  */
 #ifndef MIDIUM_SIM_HAL_H
@@ -51,6 +55,8 @@ void gpio_init(uint gpio);
 void gpio_set_dir(uint gpio, bool out);
 void gpio_put(uint gpio, bool value);
 void gpio_pull_up(uint gpio);
+void gpio_disable_pulls(uint gpio);
+bool gpio_get(uint gpio);
 void gpio_set_function(uint gpio, enum gpio_function fn);
 uint32_t gpio_get_all(void);
 
@@ -105,6 +111,16 @@ void     sim_hal_set_key(int idx, bool down);   /* 0 up 1 down 2 left 3 right 4 
 void     sim_hal_rtc_config(bool fitted, uint32_t secs_since_2000, bool porf);
 uint32_t sim_hal_rtc_secs(void);
 bool     sim_hal_rtc_valid(void);
+
+/* Power / battery emulation. */
+void     sim_hal_set_boot_keys(uint32_t idx_mask);  /* joystick contacts held at power-up (bit = 0 up .. 4 press) */
+bool     sim_hal_kill_active(void);                 /* firmware drives PIN_PWR_KILL to "off" */
+bool     sim_hal_relays(void);                      /* bypass relays energised (GP2 high) */
+void     sim_hal_power_cut(void);                   /* supply gone: timers stop, panel dark */
+void     sim_hal_batt_config(bool fitted, double soc_pct, bool usb);
+void     sim_hal_batt_set(double soc_pct);
+void     sim_hal_batt_usb(bool usb);
+double   sim_hal_batt_soc(void);
 
 /* Scheduler: run timers due at or before t. */
 void     sim_hal_run_timers(uint64_t t);

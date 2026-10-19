@@ -19,6 +19,7 @@
 #include "display.h"
 #include "midi_decode.h"
 #include "font5x7.h"
+#include "glyphs.h"
 
 #define TFT_COLS   26
 #define TFT_ROWS   10
@@ -149,7 +150,7 @@ static void tft_draw_row(int row, const cell_t *cells) {
         bool cur = (attr & ATTR_CURSOR) != 0;
         if (attr & ATTR_INVERSE) { bg = INV_BG_COLOUR; if (cls == CLS_NORMAL) fg = 0xFFFF; }
         else if (cur) bg = CUR_BG_COLOUR;
-        const uint8_t *g = &font5x7[(uint8_t)cells[c].ch * 5u];
+        const uint8_t *g = glyph5x7((uint8_t)cells[c].ch);
         for (int y = 0; y < CELL_H; y++) {
             uint8_t *p = &s_line[((size_t)y * w + (size_t)c * CELL_W) * 2u];
             uint8_t bit = (uint8_t)(1u << (y >> 1));
@@ -192,6 +193,17 @@ static void tft_draw_bitmap(int x, int y, int w, int h, const uint8_t *bits, int
     cs(false);
 }
 
+static void tft_power(bool on) {
+    if (on) {
+        write_cmd(0x11, NULL, 0);  sleep_ms(120);   /* SLPOUT */
+        write_cmd(0x29, NULL, 0);                   /* DISPON (backlight: set_brightness) */
+    } else {
+        pwm_set_chan_level(s_bl_slice, s_bl_chan, 0);
+        write_cmd(0x28, NULL, 0);                   /* DISPOFF */
+        write_cmd(0x10, NULL, 0);                   /* SLPIN */
+    }
+}
+
 const display_driver_t g_disp_tft = {
     .name = "TFT ST7789",
     .cols = TFT_COLS,
@@ -203,4 +215,5 @@ const display_driver_t g_disp_tft = {
     .cell_w = CELL_W,
     .cell_h = CELL_H,
     .draw_bitmap = tft_draw_bitmap,
+    .power = tft_power,
 };

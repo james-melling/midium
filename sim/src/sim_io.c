@@ -8,11 +8,17 @@
  * paced like the UART: a byte is popped only when the TX FIFO is empty and
  * leaves the shift register 320 us later. Bytes leaving OUT A / OUT B are
  * captured with their start-of-byte timestamp for the page.
+ *
+ * Power: midi_io_shutdown() stops "core1" and drops the relays, as on the
+ * RP2350; with the relays dropped (or the supply cut) IN A is wired to
+ * OUT A, so its bytes are copied to OUT A unchanged (passive thru) and IN B
+ * goes nowhere.
  */
 #include <string.h>
 #include "sim_hal.h"
 #include "midi_io.h"
 #include "sim_io.h"
+#include "pins.h"
 
 me_t g_engine;
 
@@ -43,6 +49,9 @@ static uint32_t s_last_rx_ms;
 static uint64_t s_led_until;
 static uint64_t s_core1_now;
 static bool     s_core1_running;
+static bool     s_relays;
+static bool     s_reboot;
+static bool     s_soft_wake;
 static uint32_t s_rx_total[ME_NUM_INS];
 
 void midi_io_init(me_settings_t *settings) {
@@ -56,10 +65,29 @@ void midi_io_init(me_settings_t *settings) {
     s_core1_now = time_us_64();
 }
 
-void midi_io_engage_relays(void) { sleep_ms(5); }
-void midi_io_start_core1(void) { s_core1_now = time_us_64(); s_core1_running = true; }
+void midi_io_engage_relays(void) { sleep_ms(5); gpio_put(PIN_BYPASS_RELAY, 1); s_relays = true; }
+void midi_io_start_core1(void) { s_core1_now = time_us_64(); s_core1_running = true; s_reboot = false; }
 uint32_t midi_io_last_rx_ms(void) { return s_last_rx_ms; }
 bool midi_io_watchdog_reset(void) { return false; }
+
+/* As src/midi_io.c: drain (bounded), stop core1, drop the relays. */
+void midi_io_shutdown(void) {
+    uint64_t t0 = time_us_64();
+    while (time_us_64() - t0 < 100000u &&
+           (me_out_pending(&g_engine, ME_OUT_A) || me_out_pending(&g_engine, ME_OUT_B)))
+        sleep_us(500);
+    sleep_us(700);
+    s_core1_running = false;
+    s_relays = false;
+    gpio_put(PIN_BYPASS_RELAY, 0);
+    s_led_until = 0;
+}
+void midi_io_reboot(void) { s_reboot = true; }          /* the page boots a fresh module */
+bool midi_io_soft_wake(void) { return s_soft_wake; }
+bool sim_io_reboot_requested(void) { return s_reboot; }
+void sim_io_set_soft_wake(bool w) { s_soft_wake = w; }
+void sim_io_power_cut(void) { s_core1_running = false; s_relays = false; s_led_until = 0; }
+bool sim_io_relays(void) { return s_relays; }
 
 /* ---- page-facing ---- */
 bool sim_io_rx_at(int in, uint8_t b, uint64_t t) {
@@ -146,8 +174,30 @@ static void tx_service(uint64_t now) {
     }
 }
 
+/* core1 stopped: the wires only. IN A reaches OUT A through the relay
+ * contacts when they are dropped; nothing else moves. */
+static void passive_until(uint64_t t) {
+    for (int in = 0; in < ME_NUM_INS; in++) {
+        uint64_t d;
+        while ((d = rx_done_time(in)) <= t) {
+            uint8_t b = s_rx[in][s_rxt[in] & (RXQ - 1u)].b;
+            s_rxt[in]++;
+            s_line_free[in] = d;
+            s_rx_total[in]++;
+            if (in == ME_IN_A && !s_relays) {
+                uint32_t i = s_caph[ME_OUT_A] & (CAPQ - 1u);
+                s_cap[ME_OUT_A][i] = b;
+                s_cap_t[ME_OUT_A][i] = (double)(d - BYTE_US);
+                s_caph[ME_OUT_A]++;
+                if (s_caph[ME_OUT_A] - s_capt[ME_OUT_A] > CAPQ) s_capt[ME_OUT_A] = s_caph[ME_OUT_A] - CAPQ;
+                s_cap_total[ME_OUT_A]++;
+            }
+        }
+    }
+}
+
 static void core1_run_until(uint64_t t) {
-    if (!s_core1_running) { s_core1_now = t; return; }
+    if (!s_core1_running) { passive_until(t); s_core1_now = t; return; }
     while (s_core1_now < t) {
         uint64_t step = s_core1_now + CORE1_STEP;
         if (step > t) step = t;

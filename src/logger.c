@@ -27,6 +27,22 @@ void logger_new_session(void) {
 void logger_init(const log_flash_t *fl) {
     log_init(&s_log, fl);
     logger_new_session();
+    log_commit_start(&s_log);
+}
+
+bool logger_prev_end(uint8_t *reason) {
+    *reason = s_log.prev_end;
+    return s_log.enabled && s_log.prev_known;
+}
+
+void logger_shutdown(uint8_t reason) {
+    if (!s_log.enabled || log_wiping(&s_log, NULL)) return;
+    logger_flush_now();
+    log_time_t t;
+    logger_time(time_us_64(), &t);
+    log_close_session(&s_log, &t, reason);
+    /* program the remaining pages (and any erase they need) */
+    for (int i = 0; i < 64 && log_pending(&s_log); i++) log_service(&s_log, true);
 }
 
 void logger_msg(const midi_msg_t *m) {

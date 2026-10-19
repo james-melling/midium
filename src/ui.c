@@ -15,6 +15,12 @@
  * Date & time:     PRESS edit; LEFT/RIGHT field, UP/DOWN change, PRESS set.
  * Logs:            sessions newest first; PRESS browse; LEFT back.
  * Log browser:     as the monitor without pinning; LEFT back to Logs.
+ * Power off:       Cancel / Power off (Cancel preselected).
+ *
+ * Over any screen: holding PRESS shows the power-off countdown (release to
+ * cancel; JOY_PRESS only ever comes from a short tap, see joystick.h), the
+ * auto-off warning (any key cancels it and does nothing else), the one-time
+ * low-battery popup (any key closes it), and the shutdown / off screens.
  */
 #include <stdio.h>
 #include <string.h>
@@ -38,6 +44,8 @@
 #include "rv3028.h"
 #include "logger.h"
 #include "timeutil.h"
+#include "power.h"
+#include "power_fsm.h"
 
 /* ------------------------------------------------------------------------ */
 /* Menu model                                                                */
@@ -67,7 +75,7 @@ struct menu {
 /* ------------------------------------------------------------------------ */
 /* UI state                                                                  */
 /* ------------------------------------------------------------------------ */
-typedef enum { SCR_MONITOR, SCR_MENU, SCR_DETAIL, SCR_MTC, SCR_DATETIME, SCR_LOGS, SCR_LOGDEL, SCR_BROWSE } screen_t;
+typedef enum { SCR_MONITOR, SCR_MENU, SCR_DETAIL, SCR_MTC, SCR_DATETIME, SCR_LOGS, SCR_LOGDEL, SCR_BROWSE, SCR_PWRCONF } screen_t;
 
 #define MENU_DEPTH 4
 static screen_t s_screen = SCR_MONITOR;
@@ -118,6 +126,14 @@ static uint8_t  s_del_sel;
 static uint32_t s_br_no;
 static log_pos_t s_br_pos;
 static bool     s_br_have;
+
+/* power: overlays on top of the current screen */
+typedef enum { OV_NONE = 0, OV_POWER, OV_HOLD, OV_AUTOOFF, OV_LOWBATT } overlay_t;
+static overlay_t s_ov;               /* overlay drawn last */
+static bool      s_hold;             /* power-off countdown running */
+static uint64_t  s_hold_t;
+static bool      s_lowbatt_popup;
+static uint8_t   s_pwr_sel;          /* Power off confirm: 0 Cancel, 1 Power off */
 
 /* short feedback line */
 static char     s_toast[CON_MAX_COLS + 1];
@@ -273,6 +289,7 @@ static void act_clear(void)      { monitor_clear(); s_paused = false; }
 static void open_mtc(void);
 static void open_datetime(void);
 static void open_logs(void);
+static void open_pwrconf(void);
 
 /* stats */
 static void fmt_count(int t, char *b, size_t n) { snprintf(b, n, "%lu", (unsigned long)monitor_type_count((midi_type_t)t)); }
@@ -331,6 +348,58 @@ static void fmt_istat(int which, char *b, size_t n) {
 static void fmt_uptime(int unused, char *b, size_t n) {
     (void)unused;
     tu_fmt_duration((uint32_t)(time_us_64() / 1000000u), b, n);
+}
+
+/* power settings */
+static int  get_usbpo(void)   { return g_settings.usb_power_on; }
+static void set_usbpo(int v)  { g_settings.usb_power_on = (uint8_t)v; }
+static void fmt_usbpo(int v, char *b, size_t n) {
+    bool wide = con_cols() >= 26;
+    if (v == USBPO_POWER_ON) snprintf(b, n, "%s", wide ? "Power on" : "on");
+    else snprintf(b, n, "%s", wide ? "Charge only" : "charge");
+}
+static int  get_aoff(void)    { return g_settings.auto_off_idx; }
+static void set_aoff(int v)   { g_settings.auto_off_idx = (uint8_t)v; power_activity(); }
+static void fmt_aoff(int v, char *b, size_t n) {
+    unsigned m = autooff_minutes((unsigned)v);
+    if (!m) snprintf(b, n, "Off");
+    else snprintf(b, n, con_cols() >= 26 ? "%u min" : "%um", m);
+}
+
+/* power / battery stats */
+static void fmt_power(int which, char *b, size_t n) {
+    const batt_info_t *bi = power_batt();
+    switch (which) {
+    case 0:                                       /* charge */
+        if (!bi->present) snprintf(b, n, "none");
+        else snprintf(b, n, "%u.%u%%", bi->soc_x10 / 10u, bi->soc_x10 % 10u);
+        break;
+    case 1:                                       /* cell voltage */
+        if (!bi->present) snprintf(b, n, "-");
+        else snprintf(b, n, "%u.%02u V", bi->mv / 1000u, (bi->mv % 1000u) / 10u);
+        break;
+    case 2:                                       /* supply */
+        if (bi->usb) snprintf(b, n, "%s", !bi->present ? "USB" : bi->charging ? "USB, charging" : "USB, full");
+        else snprintf(b, n, "%s", bi->present ? "battery" : "-");
+        break;
+    case 3: {                                     /* charge rate */
+        if (!bi->present) { snprintf(b, n, "-"); break; }
+        int32_t r = bi->crate_x1000 / 100;        /* 0.1 %/h */
+        unsigned a = (unsigned)(r < 0 ? -r : r);
+        snprintf(b, n, "%c%u.%u%%/h", r < 0 ? '-' : '+', a / 10u, a % 10u);
+        break;
+    }
+    case 4: {                                     /* auto-off countdown */
+        unsigned m = power_autooff_minutes();
+        if (!m) snprintf(b, n, "off");
+        else if (!bi->present || bi->usb) snprintf(b, n, "on USB");
+        else tu_fmt_duration(power_autooff_secs_left(), b, n);
+        break;
+    }
+    case 5: snprintf(b, n, "%s", power_last_off_text()); break;
+    case 6: if (bi->present) snprintf(b, n, "MAX17048"); else snprintf(b, n, "none"); break;
+    default: b[0] = 0; break;
+    }
 }
 
 /* about */
@@ -443,9 +512,18 @@ static const menu_item_t disp_items[] = {
 
 static const menu_item_t settings_items[] = {
     ACT("Date & time", open_datetime),
+    VAL("USB power-on", get_usbpo, set_usbpo, USBPO_CHARGE, USBPO_POWER_ON, 1, fmt_usbpo),
+    VAL("Auto-off (batt)", get_aoff, set_aoff, 0, AUTOOFF_CHOICES - 1, 1, fmt_aoff),
 };
 
 static const menu_item_t stats_items[] = {
+    INFO("Battery", fmt_power, 0),
+    INFO("Cell", fmt_power, 1),
+    INFO("Power", fmt_power, 2),
+    INFO("Batt rate", fmt_power, 3),
+    INFO("Auto-off", fmt_power, 4),
+    INFO("Uptime", fmt_uptime, 0),
+    INFO("Last off", fmt_power, 5),
     INFO("Messages", fmt_stat, 1),
     INFO("IN A bytes", fmt_istat, IST(ME_IN_A, 0)),
     INFO("IN A msgs", fmt_istat, IST(ME_IN_A, 1)),
@@ -496,7 +574,6 @@ static const menu_item_t stats_items[] = {
     INFO("Gen RT", fmt_stat, 8),
     INFO("Gen RT shed", fmt_stat, 9),
     INFO("Stalls", fmt_stat, 10),
-    INFO("Uptime", fmt_uptime, 0),
     ACT("Clear msg counts", act_clear),
 };
 
@@ -508,6 +585,8 @@ static const menu_item_t about_items[] = {
     INFO("Display", fmt_about, 4),
     INFO("RTC", fmt_about, 6),
     INFO("Last reset", fmt_about, 5),
+    INFO("Last off", fmt_power, 5),
+    INFO("Gauge", fmt_power, 6),
     INFO("Unpowered:", NULL, 0),
     INFO(" IN A -> OUT A", NULL, 0),
     INFO(" IN B not passed", NULL, 0),
@@ -530,6 +609,7 @@ static const menu_item_t main_items[] = {
     SUB("Settings", &settings_menu),
     SUB("Stats", &stats_menu),
     SUB("About", &about_menu),
+    ACT("Power off", open_pwrconf),
 };
 static const menu_t main_menu = MENU("Menu", main_items);
 
@@ -867,20 +947,56 @@ static bool mtc_header(uint64_t now, char *hdr, size_t n, uint8_t *attr) {
     return true;
 }
 
+/* Battery field for the monitor header: an icon (charge level, or a bolt
+ * while charging) and the percentage, 4 cells on the OLED (" 82"), 5 on the
+ * TFT (" 82%"). While charging the number alternates with CHG every 2 s; at
+ * or below BATT_WARN_PCT on battery it alternates with LOW every second,
+ * out of the header's inverse (red on the TFT). Returns the width, 0 = no
+ * gauge (no battery UI at all). */
+static int batt_field(uint64_t now, char *b, size_t n, uint8_t *attr) {
+    const batt_info_t *bi = power_batt();
+    if (!bi->present) return 0;
+    bool wide = con_cols() >= 26;
+    int w = wide ? 4 : 3;
+    char num[8];
+    snprintf(num, sizeof num, wide ? "%u%%" : "%u", bi->soc_pct);
+    const char *txt = num;
+    char icon = bi->charging ? CH_BOLT : CH_BATT(batt_level(bi->soc_pct));
+    if (power_batt_warn()) {
+        *attr = CLS_ERROR;
+        if ((now / 1000000u) & 1u) txt = "LOW";
+    } else if (bi->charging && ((now / 2000000u) & 1u)) {
+        txt = "CHG";
+    }
+    snprintf(b, n, "%c%*s", icon, w, txt);
+    return w + 1;
+}
+
 static void render_header(uint64_t now, bool paused) {
-    char hdr[CON_MAX_COLS + 24];
+    char hdr[CON_MAX_COLS + 24], bf[12];
     int cols = con_cols();
+    bool wide = cols >= 26;
     bool act = (uint32_t)(now / 1000u) - midi_io_last_rx_ms() < 150u && midi_io_last_rx_ms() != 0;
     uint8_t attr = CLS_HEADER | ATTR_INVERSE;
+    uint8_t battr = attr;
+    int bw = batt_field(now, bf, sizeof bf, &battr);
     if (!mtc_header(now, hdr, sizeof hdr, &attr)) {
         char ra[4], rb[4];
         route_summary(&g_settings.route, ME_OUT_A, ra, sizeof ra);
         route_summary(&g_settings.route, ME_OUT_B, rb, sizeof rb);
-        snprintf(hdr, sizeof hdr, "%-7s A:%-2s B:%s", paused ? "PAUSED" : MIDIUM_NAME, ra, rb);
+        /* the OLED drops one space to make room for the battery */
+        snprintf(hdr, sizeof hdr, (bw && !wide) ? "%-6s A:%-2s B:%s" : "%-7s A:%-2s B:%s",
+                 paused ? "PAUSED" : MIDIUM_NAME, ra, rb);
         con_row(0, attr, hdr);
-        if (cols > 22 && gen_clock_running()) con_print(0, cols - 3, attr, "C");
+        if (wide && gen_clock_running()) con_print(0, cols - 3, attr, "C");
+        /* TFT: battery before the clock marker; OLED: before the activity star */
+        if (bw) con_print(0, cols - 1 - bw - (wide ? 2 : 0), battr, bf);
     } else {
         con_row(0, attr, hdr);
+        if (battr == (CLS_HEADER | ATTR_INVERSE)) battr = attr;   /* dimmed with a stopped MTC */
+        int len = (int)strlen(hdr);
+        if (bw && len < cols - 1 - bw) con_print(0, cols - 1 - bw, battr, bf);
+        else if (bw && len < cols - 2) { bf[1] = 0; con_print(0, cols - 2, battr, bf); }   /* icon only */
     }
     con_print(0, cols - 1, attr, act ? "*" : " ");
 }
@@ -1453,11 +1569,168 @@ static void render_browse(void) {
 }
 
 /* ------------------------------------------------------------------------ */
+/* Power: confirm page, countdown, warnings, shutdown / off screens          */
+/* ------------------------------------------------------------------------ */
+static void open_pwrconf(void) {
+    s_pwr_sel = 0;
+    set_screen(SCR_PWRCONF);
+}
+
+static void pwrconf_event(joy_event_t e) {
+    switch (e) {
+    case JOY_UP:
+    case JOY_DOWN: s_pwr_sel = (uint8_t)val_wrap_step(s_pwr_sel, 1, 0, 1); break;
+    case JOY_LEFT: back_to_menu(); break;
+    case JOY_RIGHT:
+    case JOY_PRESS:
+        if (s_pwr_sel == 1) power_request_off(LOG_END_CLEAN);
+        else back_to_menu();
+        break;
+    default: break;
+    }
+}
+
+static void render_pwrconf(void) {
+    bool wide = con_cols() >= 26;
+    con_row(0, CLS_ERROR | ATTR_INVERSE, "Power off?");
+    con_row(1, CLS_NORMAL, wide ? "The log is saved first." : "Log is saved first.");
+    con_row(2, CLS_DIM, wide ? "Off: IN A -> OUT A only" : "Off: IN A->OUT A only");
+    con_row(3, CLS_NORMAL, "");
+    con_row(4, (uint8_t)(CLS_NORMAL | (s_pwr_sel == 0 ? ATTR_INVERSE : 0)), "  Cancel");
+    con_row(5, (uint8_t)(CLS_ERROR | (s_pwr_sel == 1 ? ATTR_INVERSE : 0)), "  Power off");
+    for (int r = 6; r < con_rows() - 1; r++) con_row(r, CLS_NORMAL, "");
+    con_row(con_rows() - 1, CLS_DIM, "UP/DN choose PRESS ok");
+}
+
+/* A whole-screen message: title bar, lines from row 2, footer. */
+static void render_panel(uint8_t tattr, const char *title, const char *const *lines, int nl, const char *foot) {
+    con_row(0, tattr, title);
+    con_row(1, CLS_NORMAL, "");
+    int r = 2;
+    for (int i = 0; i < nl && r < con_rows() - 1; i++, r++)
+        con_row(r, (uint8_t)(i == 0 ? CLS_NORMAL : CLS_DIM), lines[i] ? lines[i] : "");
+    for (; r < con_rows() - 1; r++) con_row(r, CLS_NORMAL, "");
+    con_row(con_rows() - 1, CLS_DIM, foot ? foot : "");
+}
+
+/* Progress bar across row r, permille filled (inverse cells). */
+static void render_bar(int r, unsigned permille, uint8_t cls) {
+    int cols = con_cols(), w = cols - 2;
+    int fill = (int)((permille * (unsigned)w + 500u) / 1000u);
+    con_row(r, CLS_DIM, "");
+    con_print(r, 0, CLS_DIM, "[");
+    for (int i = 0; i < w; i++) con_print(r, 1 + i, i < fill ? (uint8_t)(cls | ATTR_INVERSE) : CLS_DIM, i < fill ? " " : "-");
+    con_print(r, cols - 1, CLS_DIM, "]");
+}
+
+static void render_hold(uint64_t now) {
+    bool wide = con_cols() >= 26;
+    uint64_t el = now - s_hold_t, tot = (uint64_t)PWR_COUNTDOWN_MS * 1000u;
+    if (el > tot) el = tot;
+    unsigned pm = (unsigned)(el * 1000u / tot);
+    unsigned left_ds = (unsigned)((tot - el + 99999u) / 100000u);     /* tenths of s, rounded up */
+    char t[24];
+    con_row(0, CLS_ERROR | ATTR_INVERSE, "Power off");
+    con_row(1, CLS_NORMAL, "");
+    con_row(2, CLS_NORMAL, wide ? "Power off... keep holding" : "Power off... hold on");
+    con_row(3, CLS_NORMAL, "release to cancel");
+    con_row(4, CLS_NORMAL, "");
+    render_bar(5, pm, CLS_ERROR);
+    snprintf(t, sizeof t, "%u.%u s", left_ds / 10u, left_ds % 10u);
+    con_row(6, CLS_DIM, "");
+    con_print(6, (con_cols() - (int)strlen(t)) / 2, CLS_NORMAL, t);
+    for (int r = 7; r < con_rows(); r++) con_row(r, CLS_NORMAL, "");
+}
+
+static void render_autooff(void) {
+    bool wide = con_cols() >= 26;
+    uint32_t left = 0;
+    power_autooff_warning(&left);
+    char l1[24];
+    snprintf(l1, sizeof l1, "Powering off in %lu s", (unsigned long)left);
+    const char *lines[] = { l1, wide ? "No MIDI and no keys for" : "No MIDI or keys for", NULL };
+    char l2[24];
+    snprintf(l2, sizeof l2, "%u min, on battery.", (unsigned)power_autooff_minutes());
+    lines[2] = l2;
+    render_panel(CLS_PC | ATTR_INVERSE, "Auto power off", lines, 3, "Any key: stay on");
+    unsigned span = AUTOOFF_WARN_MS / 1000u, gone = left < span ? span - (unsigned)left : 0u;
+    render_bar(con_rows() - 3, gone * 1000u / span, CLS_PC);
+}
+
+static void render_lowbatt(void) {
+    bool wide = con_cols() >= 26;
+    char l1[24], l3[28];
+    snprintf(l1, sizeof l1, "%u%% left", power_batt()->soc_pct);
+    snprintf(l3, sizeof l3, wide ? "Powers off safely at %u%%" : "Powers off at %u%%", (unsigned)BATT_OFF_PCT);
+    const char *lines[] = { l1, "Connect USB-C power", l3 };
+    render_panel(CLS_ERROR | ATTR_INVERSE, "Battery low", lines, 3, "PRESS ok");
+}
+
+static void render_power(uint64_t now) {
+    bool wide = con_cols() >= 26;
+    (void)now;
+    switch (power_state()) {
+    case PWR_SHUTDOWN: {
+        uint8_t r = power_off_reason();
+        const char *why = r == LOG_END_LOWBATT ? "Battery empty." : r == LOG_END_AUTOOFF ? (wide ? "Auto-off: no activity." : "Auto-off (idle).") : "";
+        const char *lines[] = { "Saving the log...", why };
+        render_panel(CLS_ERROR | ATTR_INVERSE, "Shutting down", lines, 2, "");
+        break;
+    }
+    case PWR_OFF_MSG:
+    case PWR_KILLED: {
+        const char *lines[] = { "Safe to unplug.", "", wide ? "Relays: IN A -> OUT A" : "Relays: IN A->OUT A", "(passive thru)" };
+        render_panel(CLS_DIM | ATTR_INVERSE, "Off", lines, 4, "");
+        break;
+    }
+    case PWR_IDLE: {
+        const char *lines[] = { "Safe to unplug.", "", "Press the joystick", "to power on." };
+        render_panel(CLS_DIM | ATTR_INVERSE, "Off", lines, 4, wide ? "Relays: IN A -> OUT A" : "IN A -> OUT A only");
+        break;
+    }
+    case PWR_CHARGE_ONLY: {
+        const batt_info_t *bi = power_batt();
+        char l1[24];
+        if (bi->present) snprintf(l1, sizeof l1, "%c %u%%  %s", bi->charging ? CH_BOLT : CH_BATT(batt_level(bi->soc_pct)),
+                                  bi->soc_pct, bi->charging ? "charging" : "full");
+        else snprintf(l1, sizeof l1, "USB power");
+        const char *lines[] = { l1, "", "Press the joystick", "to power on." };
+        render_panel(CLS_NOTE | ATTR_INVERSE, "Charging", lines, 4, "MIDIum is off");
+        break;
+    }
+    default:
+        break;
+    }
+}
+
+/* Which overlay (if any) covers the screen now. */
+static overlay_t overlay_now(void) {
+    if (power_state() != PWR_RUN) return OV_POWER;
+    if (s_hold) return OV_HOLD;
+    if (power_autooff_warning(NULL)) return OV_AUTOOFF;
+    if (s_lowbatt_popup) return OV_LOWBATT;
+    return OV_NONE;
+}
+
+/* ------------------------------------------------------------------------ */
 /* Events and rendering                                                      */
 /* ------------------------------------------------------------------------ */
 void ui_event(joy_event_t e) {
     if (e == JOY_NONE) return;
+    if (power_state() != PWR_RUN) return;            /* shutting down / off */
     uint64_t now = time_us_64();
+    power_activity();
+    s_need_render = true;
+    switch (e) {
+    case JOY_HOLD:        s_hold = true; s_hold_t = now; return;
+    case JOY_HOLD_CANCEL: s_hold = false; return;     /* no other effect */
+    case JOY_HOLD_OFF:    s_hold = false; power_request_off(LOG_END_CLEAN); return;
+    default: break;
+    }
+    if (s_hold) return;
+    /* a key that cancels the auto-off warning or closes the popup does nothing else */
+    if (s_ov == OV_AUTOOFF) return;
+    if (s_lowbatt_popup) { s_lowbatt_popup = false; return; }
     /* consecutive UP / DOWN events of one held key (auto-repeat) */
     if ((e == JOY_UP || e == JOY_DOWN) && e == s_rep_e && now - s_rep_t < 450000u) s_rep_n++;
     else s_rep_n = 0;
@@ -1472,6 +1745,7 @@ void ui_event(joy_event_t e) {
     case SCR_LOGS:     logs_event(e); break;
     case SCR_LOGDEL:   logdel_event(e); break;
     case SCR_BROWSE:   browse_event(e); break;
+    case SCR_PWRCONF:  pwrconf_event(e); break;
     default:           menu_event(e); break;
     }
     s_need_render = true;
@@ -1491,6 +1765,30 @@ static uint32_t live_signature(uint64_t now) {
 void ui_render(uint64_t now, bool history_changed) {
     static uint64_t last;
     static uint32_t last_sig;
+    if (power_take_lowbatt_popup()) s_lowbatt_popup = true;
+    overlay_t ov = overlay_now();
+    if (ov != s_ov) {
+        /* the MTC page draws bitmaps: give its rows back to the text console
+         * under an overlay, and redraw it whole afterwards */
+        if (s_screen == SCR_MTC) {
+            if (s_ov == OV_NONE) con_set_gfx_rows(0);
+            else if (ov == OV_NONE) open_mtc();
+        }
+        s_ov = ov;
+        s_need_render = true;
+    }
+    if (ov != OV_NONE) {
+        if (!s_need_render && now - last < 100000u) return;
+        last = now;
+        s_need_render = false;
+        switch (ov) {
+        case OV_POWER:   if (!power_display_off()) render_power(now); break;
+        case OV_HOLD:    render_hold(now); break;
+        case OV_AUTOOFF: render_autooff(); break;
+        default:         render_lowbatt(); break;
+        }
+        return;
+    }
     uint32_t sig = (s_screen == SCR_MONITOR || s_screen == SCR_MTC) ? live_signature(now) : 0;
     bool sig_changed = sig != last_sig;
     bool hist = history_changed && (s_screen == SCR_MONITOR);
@@ -1506,6 +1804,7 @@ void ui_render(uint64_t now, bool history_changed) {
     case SCR_LOGS:     render_logs(now); break;
     case SCR_LOGDEL:   render_logdel(); break;
     case SCR_BROWSE:   render_browse(); break;
+    case SCR_PWRCONF:  render_pwrconf(); break;
     default:           render_menu(now); break;
     }
 }

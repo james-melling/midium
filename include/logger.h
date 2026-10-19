@@ -19,8 +19,17 @@
 #define LOGGER_FLUSH_US 2000000u
 #define LOGGER_QUIET_US 100000u
 
-/* fl = NULL: logging disabled. Starts the boot session. */
+/* fl = NULL: logging disabled. Notes how the previous session ended, then
+ * starts the boot session and queues its start page (so every power-up is
+ * in the log, even one that sees no MIDI). */
 void   logger_init(const log_flash_t *fl);
+/* How the session before this power-up ended: LOG_END_* (LOG_END_NONE = it
+ * has no close record: power loss or crash). false if there was none. */
+bool   logger_prev_end(uint8_t *reason);
+/* Clean shutdown: close the live session with reason (LOG_END_*) and write
+ * everything still in RAM to flash (blocking: a few ms, plus a sector erase
+ * if one is due). Nothing is logged afterwards. */
+void   logger_shutdown(uint8_t reason);
 void   logger_msg(const midi_msg_t *m);
 void   logger_task(uint64_t now_us);
 void   logger_new_session(void);

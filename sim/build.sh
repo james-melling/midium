@@ -23,7 +23,7 @@ fi
 FW="midi_engine.c midi_parser.c midi_decode.c msc_decode.c settings.c monitor.c
     generator.c console.c ui.c joystick.c disp_tft.c disp_oled.c debug_log.c
     timeutil.c mtc.c msg_filter.c valedit.c bigdigits.c log_store.c log_flash_ram.c
-    logger.c rv3028.c clock.c"
+    logger.c rv3028.c clock.c max17048.c power_fsm.c power.c"
 SRCS=""
 for f in $FW; do SRCS="$SRCS $ROOT/src/$f"; done
 SRCS="$SRCS $SIM/src/sim_hal.c $SIM/src/sim_io.c $SIM/src/sim_main.c"
@@ -34,7 +34,10 @@ EXPORTS='["_sim_init","_sim_tick","_sim_key","_sim_midi_in","_sim_midi_in_at","_
 "_sim_rx_pending","_sim_rx_flush","_sim_out_read","_sim_now_us","_sim_framebuffer","_sim_fb_w",
 "_sim_fb_h","_sim_fb_version","_sim_brightness","_sim_display_on","_sim_led","_sim_display_name",
 "_sim_route_bits","_sim_clock_running","_sim_stat","_sim_rtc_config","_sim_rtc_now","_sim_rtc_valid",
-"_sim_flash_ptr","_sim_flash_size","_sim_flash_restored","_sim_log_sessions","_sim_log_used_pct","_malloc","_free"]'
+"_sim_flash_ptr","_sim_flash_size","_sim_flash_restored","_sim_log_sessions","_sim_log_used_pct",
+"_sim_boot_keys","_sim_soft_wake","_sim_power_kill","_sim_power_state","_sim_relays","_sim_power_cut",
+"_sim_reboot_requested","_sim_batt_config","_sim_batt_set","_sim_batt_usb","_sim_batt_soc","_sim_idle_skip","_sim_autooff_left",
+"_malloc","_free"]'
 EXPORTS=$(echo "$EXPORTS" | tr -d '\n')
 
 # Same warning set as the firmware build (CMakeLists.txt), as errors. clang adds
@@ -43,7 +46,7 @@ EXPORTS=$(echo "$EXPORTS" | tr -d '\n')
 # clang-only diagnostics are turned off.
 emcc -std=c11 -O2 \
     -Wall -Wextra -Wshadow -Wdouble-promotion -Wformat=2 -Wno-missing-format-attribute -Wno-format-nonliteral -Werror \
-    -DMIDIUM_VERSION="\"$VERSION\"" -DMIDIUM_DISPLAY=0 -DMIDIUM_OLED_SSD1306=1 \
+    -DMIDIUM_VERSION="\"$VERSION\"" -DMIDIUM_DISPLAY=0 -DMIDIUM_OLED_SSD1306=1 -DMIDIUM_SIM=1 -DMIDIUM_PWR_CTRL=1 \
     -I"$SIM/include" -I"$ROOT/include" -I"$ROOT/src" \
     $SRCS \
     -sMODULARIZE=1 -sEXPORT_NAME=MidiumSim -sSINGLE_FILE=1 -sSINGLE_FILE_BINARY_ENCODE=0 \

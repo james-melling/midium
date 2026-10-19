@@ -1,4 +1,4 @@
-"""NSK MT-1 "MIDIum" - photoreal POV-Ray mockups (same look as the NSK RC-4 renders).
+"""melling.audio MIDIum MT-1 - photoreal POV-Ray mockups.
 
 Usage:  python3 render.py [view ...] [--preview]
 Views:  hero, in_end, top, context   (default: all four exterior views)
@@ -24,11 +24,15 @@ from PIL import Image, ImageDraw
 HERE = os.path.dirname(os.path.abspath(__file__))
 BUILD = os.path.join(HERE, "build")
 os.makedirs(BUILD, exist_ok=True)
-sys.path.insert(0, "/home/claude/shared/nsk_rc_source/brand")
-import nsklogo  # noqa: E402
+def gothic(weight):
+    """URW Gothic (stand-in for the melling.audio brand font Century Gothic): fonts/ next to this script first,
+    else the system urw-base35 package (Debian/Ubuntu: fonts-urw-base35)."""
+    local = os.path.join(HERE, "fonts", f"URWGothic-{weight}.otf")
+    return local if os.path.exists(local) else f"/usr/share/fonts/opentype/urw-base35/URWGothic-{weight}.otf"
 
-FONT = FontProperties(fname="/usr/share/fonts/opentype/urw-base35/URWGothic-Demi.otf")
-FONT_BOOK = FontProperties(fname="/usr/share/fonts/opentype/urw-base35/URWGothic-Book.otf")
+
+FONT = FontProperties(fname=gothic("Demi"))
+FONT_BOOK = FontProperties(fname=gothic("Book"))
 
 # ============================================================== geometry / layout (mm)
 L_EXT, W, H = 120.0, 78.0, 43.0      # Hammond 1455K1201 extrusion: length x width x height
@@ -54,21 +58,29 @@ TOP = {   # top face, (u, v) = (x along length from IN end, z from front edge)
 def glass_c():
     return TOP["lcd_c"][0] + TOP["glass_dx"], TOP["lcd_c"][1]
 DIN_PITCH = 22.0
+# Neutrik etherCON NE8FBH (B-series, horizontal PCB mount, latch lock) - from Neutrik drawing 20003890 (NE8FBH):
+# housing 25.0 wide, 25.6 from the PCB to the top of the PUSH latch, axis 12.5 above the PCB, 21.6 deep behind the
+# panel-side face of the housing + 2.7 nose through the panel. Panel cut-out (rear view): >= D22 hole + 2x >= D3.2 holes
+# for M2.5 front screws, 19.8 x 19.8 apart on the diagonal (seen from the front: upper-left and lower-right). Max panel 3 mm.
+# Outline details below the drawing's resolution (flange corner shapes, rear body/latch-arm widths) are estimates.
+ETH_CUT_D, ETH_SCREW_HOLE_D, ETH_SCREW = 22.0, 3.2, 9.9
+ETH_NOSE_R, ETH_BORE_R, ETH_NOSE_L = 10.9, 9.6, 2.7
+ETH_DEPTH, ETH_AXIS, ETH_FLANGE_D = 21.6, 12.5, 6.1    # body depth behind the panel, axis above its PCB, housing front block depth
 END_A = {  # IN end, seen from outside: px right of centre, py up from body bottom
-    "din": [("IN A", -22.0, 25.9), ("IN B", 0.0, 25.9)],
-    "rj45": ("XRC", 22.5, 22.55),
-    "group": ("MIDI", -22.0, 0.0),     # etched bracket + group label under the two DIN legends
+    "din": [("IN A", -24.6, 25.9), ("IN B", -2.6, 25.9)],
+    "ethercon": ("XRC", 21.6, 24.84),  # axis = XRC board (slot S2) top 12.34 + 12.5; see ETH_Y in the internals section
+    "group": ("MIDI", -24.6, -2.6),    # etched bracket + group label under the two DIN legends
 }
 END_B = {  # OUT end, seen from outside
     "din": [("OUT A", -22.0, 25.9), ("OUT B", 0.0, 25.9)],
     "usbc": ("USB / CHG", 22.5, 22.5),
     "sd": ("SD", 22.5, 16.8),          # microSD push-push slot under the USB-C
     "group": ("MIDI", -22.0, 0.0),
+    "maker": ("melling.audio", 22.5, 5.9),   # small maker etch: under the USB / CHG legend, on the MIDI bracket row
 }
 LABEL_CAP, LABEL_Y = 2.3, 11.5     # end-panel legend cap height, legend centre height (py)
 GROUP_CAP, GROUP_Y, GROUP_LINE = 1.8, 7.4, 0.28   # group label cap height, bracket line centre (py), line weight
 DIN_FLANGE_D, DIN_HOLE_D = 19.0, 16.0
-RJ_CUT = (16.4, 13.8)
 USB_CUT = (9.8, 4.0)
 SD_CUT = (12.6, 1.7)               # microSD card slot (internals design study)
 JACK_HOLE_D = 6.2
@@ -91,11 +103,13 @@ def text_geom(s, cap, x=0.0, y=0.0, ha="left", va="baseline", font=FONT):
     return affinity.translate(g, x + dx, y + dy)
 
 
-def logo_geom(width, x, y, ha="right"):
-    g = unary_union([gg for _, _, gg in nsklogo.logo_polys(width)])
-    w = g.bounds[2]
-    dx = {"left": 0, "center": -w / 2, "right": -w}[ha]
-    return affinity.translate(g, x + dx, y)
+def iter_polys(geom):
+    """Yield the Polygons of a (Multi)Polygon / GeometryCollection."""
+    if isinstance(geom, Polygon):
+        yield geom
+    else:
+        for g in getattr(geom, "geoms", []):
+            yield from iter_polys(g)
 
 
 def tri(cx, cy, size, ang):
@@ -127,13 +141,16 @@ def end_artwork(spec):
     g = []
     for lab, x, y in spec.get("din", []):
         g.append(text_geom(lab, LABEL_CAP, x, LABEL_Y, ha="center", va="center"))
-    for key in ("rj45", "jack", "usbc"):
+    for key in ("ethercon", "jack", "usbc"):
         if key in spec:
             lab, x, y = spec[key]
             g.append(text_geom(lab, LABEL_CAP, x, LABEL_Y, ha="center", va="center"))
     if "sd" in spec:   # small legend to the right of the slot
         lab, x, y = spec["sd"]
         g.append(text_geom(lab, 1.8, x + SD_CUT[0] / 2 + 1.6, y, ha="left", va="center"))
+    if "maker" in spec:   # brand stand-in font: URW Gothic Book (Century Gothic not available here)
+        lab, x, y = spec["maker"]
+        g.append(text_geom(lab, 1.4, x, y, ha="center", va="center", font=FONT_BOOK))
     if "group" in spec:   # |____ MIDI ____|  bracket spanning the DIN pair, label in a gap at the middle
         lab, xa, xb = spec["group"]
         x0, x1, xm = xa - 7.0, xb + 7.0, (xa + xb) / 2
@@ -151,7 +168,7 @@ def raster(geom, x0, y0, w, h, path, ppm=28, ss=2, rgb=(214, 214, 208)):
     Wp, Hp = int(round(w * P)), int(round(h * P))
     a = Image.new("L", (Wp, Hp), 0)
     d = ImageDraw.Draw(a)
-    for poly in nsklogo.iter_polys(geom):
+    for poly in iter_polys(geom):
         d.polygon([((x - x0) * P, (y0 + h - y) * P) for x, y in poly.exterior.coords], fill=255)
         for r in poly.interiors:
             d.polygon([((x - x0) * P, (y0 + h - y) * P) for x, y in r.coords], fill=0)
@@ -350,21 +367,52 @@ def din_socket(px, py, flange=True):
   translate <{px:.3f},{py:.3f},0> }}"""
 
 
-def rj45(px, py):
-    w, h = RJ_CUT
-    hw, hh = w / 2 - 0.25, h / 2 - 0.25
-    contacts = " ".join(f"box {{ <{-3.57 + i * 1.02 - 0.18:.3f},2.3,6>, <{-3.57 + i * 1.02 + 0.18:.3f},2.55,13> rotate x*-14 translate <0,0,0> texture {{ T_Gold }} }}" for i in range(8))
+def _eth_flange_pts():
+    """Housing front block outline (front view, axis at the origin): D-ish body with screw ears upper-left and lower-right."""
+    g = Polygon([(-9.97, -12.5), (9.9, -12.5), (11.35, -10.5), (11.35, 6.1), (9.9, 9.0), (7.5, 11.2), (4.3, 12.4),
+                 (-9.9, 12.4), (-11.5, 10.0), (-11.5, -5.0), (-9.97, -7.4)])
+    g = g.union(Point(-ETH_SCREW, ETH_SCREW).buffer(2.55, 24)).union(Point(ETH_SCREW, -ETH_SCREW).buffer(2.55, 24))
+    g = g.buffer(-0.4, 8).buffer(0.4, 8)
+    pts = list(orient(g, 1.0).exterior.coords)
+    return pts
+
+
+def ethercon(px, py):
+    """Neutrik etherCON NE8FBH, nickel housing, black insert + PUSH latch, 2x M2.5 front screws.
+    Local panel frame: outer panel face z=0, outward -z, panel back face z=PANEL_T. (px, py) = jack axis."""
+    t0, t1, t2 = PANEL_T, PANEL_T + ETH_FLANGE_D, PANEL_T + ETH_DEPTH
+    fp = _eth_flange_pts()
+    prism = (f"prism {{ linear_sweep linear_spline {-t1:.3f}, {-t0 - 0.01:.3f}, {len(fp)}, "
+             + ", ".join(f"<{x:.3f},{y:.3f}>" for x, y in fp) + " rotate x*-90 }")
+    opening = "box { <-5.95,-3.4,-3>, <5.95,3.4,15.6> } box { <-3.3,-5.6,-3>, <3.3,-3.2,15.6> }"
+    contacts = " ".join(f"box {{ <{-3.57 + i * 1.02 - 0.17:.3f},-0.12,0>, <{-3.57 + i * 1.02 + 0.17:.3f},0.12,6.5> rotate x*12 translate <0,3.0,7.0> texture {{ T_Gold }} }}" for i in range(8))
+    rn = ETH_NOSE_R
+    font = os.path.join(HERE, "fonts", "JetBrainsMono-Medium.ttf")
     return f"""union {{
-  difference {{
-    box {{ <{-hw:.3f},{-hh:.3f},0.35>, <{hw:.3f},{hh:.3f},20> }}
-    box {{ <-5.95,-2.3,0>, <5.95,3.4,17> }}          // plug opening
-    box {{ <-3.1,-4.9,0>, <3.1,-2.2,17> }}           // latch slot (tab down)
-    box {{ <-5.2,-4.9,0.3>, <-3.6,-3.6,1.2> }} box {{ <3.6,-4.9,0.3>, <5.2,-3.6,1.2> }}   // LED pockets
+  difference {{   // housing: front block behind the panel + nose through the D22 hole, lever slot in the nose top
+    merge {{ {prism}
+            cylinder {{ <0,0,{t0 + 0.02:.3f}>, <0,0,-0.8>, {rn:.3f} }} cylinder {{ <0,0,-0.8>, <0,0,-1.1>, {rn - 0.3:.3f} }}
+            torus {{ {rn - 0.3:.3f}, 0.3 rotate x*90 translate <0,0,-0.8> }} }}
+    cylinder {{ <0,0,-2>, <0,0,{t1 - 0.5:.3f}>, {ETH_BORE_R:.3f} }}
+    box {{ <-2.6,9.3,-2>, <2.6,11.3,{t1 + 1:.3f}> }}
+    cylinder {{ <{-ETH_SCREW},{ETH_SCREW},{t0 - 1:.3f}>, <{-ETH_SCREW},{ETH_SCREW},{t1 + 1:.3f}>, 1.05 }}
+    cylinder {{ <{ETH_SCREW},{-ETH_SCREW},{t0 - 1:.3f}>, <{ETH_SCREW},{-ETH_SCREW},{t1 + 1:.3f}>, 1.05 }}
+    texture {{ T_Nickel }} }}
+  difference {{   // black insert (RJ45 jack, latch window at the bottom) + rear body and latch-spring arm
+    merge {{ cylinder {{ <0,0,0.4>, <0,0,{t1:.3f}>, {ETH_BORE_R - 0.02:.3f} }}
+            box {{ <-9.93,-12.5,{t1 - 0.01:.3f}>, <9.93,9.7,{t2:.3f}> }}
+            box {{ <-6.5,9.6,{t1 - 0.01:.3f}>, <6.5,12.1,{t2:.3f}> }} }}
+    {opening}
     texture {{ T_BlackPlastic }} }}
-  box {{ <-5.95,-4.9,16.9>, <5.95,3.4,17> texture {{ T_Cavity }} }}
+  box {{ <-5.95,-5.6,15.5>, <5.95,3.4,15.6> texture {{ T_Cavity }} }}
   {contacts}
-  box {{ <-5.1,-4.8,0.9>, <-3.7,-3.7,1.3> texture {{ pigment {{ rgb <0.25,0.45,0.2> }} finish {{ ambient 0 diffuse 0.5 specular 0.6 roughness 0.01 }} }} }}
-  box {{ <3.7,-4.8,0.9>, <5.1,-3.7,1.3> texture {{ pigment {{ rgb <0.5,0.38,0.12> }} finish {{ ambient 0 diffuse 0.5 specular 0.6 roughness 0.01 }} }} }}
+  box {{ <-8.0,-1.7,0.0>, <-6.3,1.7,0.6> texture {{ T_Nickel }} }} box {{ <6.3,-1.7,0.0>, <8.0,1.7,0.6> texture {{ T_Nickel }} }}
+  box {{ <-2.4,9.7,-4.0>, <2.4,10.6,{t1:.3f}> texture {{ T_Nickel }} }}          // latch lever through the nose top
+  object {{ {rbox2d(9.4, 2.8, 0.9, -4.4, -3.7)} translate <0,11.7,0> texture {{ T_BlackPlastic }} }}   // PUSH tab
+  text {{ ttf "{font}" "PUSH" 0.08, 0 scale <1.45,1.45,1> translate <-1.74,11.18,-4.47>
+         texture {{ pigment {{ rgb 0.78 }} finish {{ ambient 0 diffuse 0.8 }} }} }}
+  object {{ {screw(-ETH_SCREW, ETH_SCREW, 24)} }}
+  object {{ {screw(ETH_SCREW, -ETH_SCREW, 71)} }}
   translate <{px:.3f},{py:.3f},0> }}"""
 
 
@@ -399,9 +447,11 @@ def end_panel(spec, tex, with_parts=True):
     cuts = []
     for _, x, y in spec.get("din", []):
         cuts.append(f"cylinder {{ <{x:.3f},{y:.3f},-1>, <{x:.3f},{y:.3f},3>, {DIN_HOLE_D / 2:.3f} }}")
-    if "rj45" in spec:
-        _, x, y = spec["rj45"]
-        cuts.append(f"object {{ {rbox2d(RJ_CUT[0], RJ_CUT[1], 0.7, -1, 3)} translate <{x:.3f},{y:.3f},0> }}")
+    if "ethercon" in spec:   # D22 + 2x D3.2 (M2.5 front screws)
+        _, x, y = spec["ethercon"]
+        cuts.append(f"cylinder {{ <{x:.3f},{y:.3f},-1>, <{x:.3f},{y:.3f},3>, {ETH_CUT_D / 2:.3f} }}")
+        for sx, sy in ((-ETH_SCREW, ETH_SCREW), (ETH_SCREW, -ETH_SCREW)):
+            cuts.append(f"cylinder {{ <{x + sx:.3f},{y + sy:.3f},-1>, <{x + sx:.3f},{y + sy:.3f},3>, {ETH_SCREW_HOLE_D / 2:.3f} }}")
     if "jack" in spec:
         _, x, y = spec["jack"]
         cuts.append(f"cylinder {{ <{x:.3f},{y:.3f},-1>, <{x:.3f},{y:.3f},3>, {JACK_HOLE_D / 2:.3f} }}")
@@ -423,8 +473,8 @@ def end_panel(spec, tex, with_parts=True):
     if with_parts:
         for _, x, y in spec.get("din", []):
             parts.append(din_socket(x, y))
-        if "rj45" in spec:
-            parts.append(rj45(*spec["rj45"][1:]))
+        if "ethercon" in spec:
+            parts.append(ethercon(*spec["ethercon"][1:]))
         if "jack" in spec:
             parts.append(jack35(*spec["jack"][1:]))
         if "usbc" in spec:
@@ -618,8 +668,14 @@ PCB_Z0, PCB_Z1 = W / 2 - 36.9, W / 2 + 36.9   # 73.8 wide, 1.6 mm into each slot
 DIN_AXIS = 10.0                            # RA PCB DIN: socket axis above the board (part-dependent, ~10)
 DIN_Y = PCB_Y1 + DIN_AXIS
 DIN_BODY = (18.0, 20.0, 20.0)              # depth (x), width (z), height above board
-RJ_H = 13.3                                # RA RJ45, tab down, body height
-RJ_Y = PCB_Y1 + RJ_H / 2
+# XRC etherCON: on the main PCB its axis would be PCB_Y1 + 12.5 = 28.4 and its housing/latch arm (24.6-24.9 above
+# its PCB) would reach 40.5, into the TFT (38.7) and its carrier. It sits instead on a small XRC board in slot S2,
+# 3.5 lower, with a notch in the main PCB around it and a 2.0 mm DF40 board-to-board link up to the main PCB.
+XRC_SLOT = 1                               # S2
+XB_Y0 = SLOTS[XRC_SLOT] - SLOT_W / 2
+XB_Y1 = XB_Y0 + PCB_T
+ETH_Y = XB_Y1 + ETH_AXIS                   # 24.84 = etherCON axis (panel hole centre)
+assert abs(END_A["ethercon"][2] - ETH_Y) < 0.01, (END_A["ethercon"], ETH_Y)
 USB_Y, USB_CH = 22.5, 1.63                 # USB-C centre; top-mount receptacle centre above its board
 RISER_T = 1.0
 RISER_Y1 = USB_Y - USB_CH
@@ -629,7 +685,7 @@ SD_Y = PCB_Y1 + 0.9
 STANDOFF_L = 16.0
 TB_Y0 = PCB_Y1 + STANDOFF_L
 TB_Y1 = TB_Y0 + PCB_T
-TB = (20.0, 100.5, 5.0, 73.0)               # UI board outline x0 x1 z0 z1
+TB = (22.5, 100.5, 5.0, 73.0)               # UI board outline x0 x1 z0 z1 (x0 clears the etherCON rear at 21.6)
 STANDOFFS = [(26.0, 8.0), (26.0, 70.0), (96.0, 8.0), (94.0, 69.5)]   # rear-right moved off (96, 60): CHG LED now there
 LCD_Y0, LCD_BL, LCD_Y1 = 38.7, 39.7, 41.2   # 2.8in panel: bottom, backlight/glass interface, glass top (2.5 thick)
 _GX, _GZ = glass_c()
@@ -640,13 +696,19 @@ CARRIER = (_GX - TOP["lcd_glass"][0] / 2 - 1.5, LCD_FX + 1.5, _GZ - TOP["lcd_gla
 BATT = dict(x0=28.0, x1=88.0, z0=20.0, z1=58.0, y0=2.5, t=8.0)   # 803860-class 1S pouch, ~2000 mAh
 SECTION_Z = 42.0
 
-END_A_INT = dict(END_A, din=[(n, x, DIN_Y) for n, x, _ in END_A["din"]], rj45=("XRC", END_A["rj45"][1], RJ_Y))
+END_A_INT = dict(END_A, din=[(n, x, DIN_Y) for n, x, _ in END_A["din"]])
 END_B_INT = dict(END_B, din=[(n, x, DIN_Y) for n, x, _ in END_B["din"]], usbc=("USB / CHG", END_B["usbc"][1], USB_Y),
                  sd=("SD", END_B["usbc"][1], SD_Y))
 
 # panel-local (px) -> body z
 def zA(px): return W / 2 - px
 def zB(px): return W / 2 + px
+ETH_PX = END_A["ethercon"][1]
+ETH_Z = zA(ETH_PX)                          # 17.4
+# main-PCB notch round the etherCON: housing front block (+-12.5, x 0..6.1) and rear body (+-9.93, to x 21.6)
+NOTCH = [(PCB_X0 - 1, PCB_Z0 - 1, ETH_FLANGE_D + 0.5, ETH_Z + 13.0),
+         (PCB_X0 - 1, PCB_Z0 - 1, ETH_DEPTH + 0.8, ETH_Z + 9.93 + 0.6)]
+XB = (PCB_X0, 26.5, PCB_Z0, ETH_Z + 12.6)  # XRC board outline x0 x1 z0 z1 (front edge in slot S2)
 XFORM_A = f"rotate y*90 translate <{-PANEL_T - 0.02:.3f},0,{W / 2:.3f}>"
 XFORM_B = f"rotate y*-90 translate <{L_EXT + PANEL_T + 0.02:.3f},0,{W / 2:.3f}>"
 
@@ -816,8 +878,8 @@ MAIN_PARTS = [
     ("K3", lambda: pk_gull(4.4, 3.8, 2.1, 2, 2.54, 7.0), 43.0, 26.0, 0, ""),
     ("K4", lambda: pk_gull(4.4, 3.8, 2.1, 2, 2.54, 7.0), 34.0, 16.5, 0, ""),
     ("K5", lambda: pk_gull(4.4, 3.8, 2.1, 2, 2.54, 7.0), 40.0, 16.5, 0, ""),
-    ("U10", lambda: pk_gull(2.9, 1.6, 1.1, 3, 0.95, 2.8), 22.4, 20.2, 90, "TVS"),
-    ("F1", lambda: pk_chip(3.2, 2.5, 0.9, "T_Beige"), 22.4, 14.0, 90, "PTC"),
+    ("U10", lambda: pk_gull(2.9, 1.6, 1.1, 3, 0.95, 2.8), 25.2, 20.2, 90, "TVS"),
+    ("F1", lambda: pk_chip(3.2, 2.5, 0.9, "T_Beige"), 25.2, 14.0, 90, "PTC"),
     ("U15", lambda: pk_gull(2.9, 1.6, 1.1, 3, 0.95, 2.8), 47.5, 17.0, 0, ""),
     ("U11", lambda: pk_qfn(4.0, 4.0, 0.8, 6, 6, 0.5), 86.0, 58.0, 0, "CHG"),
     ("L1", lambda: pk_inductor(4.0, 4.0, 2.1), 86.0, 64.6, 0, ""),
@@ -862,7 +924,7 @@ TC2050 = (109.0, 51.5)   # SWD Tag-Connect TC2050-IDC-NL footprint (centre), lon
 
 # Functional blocks for the plan view (x0, z0, x1, z1, label, colour)
 BLOCKS = [
-    (19.6, 9.0, 51.0, 31.6, "XRC: 5x PhotoMOS, TVS, PTC", (255, 170, 40)),
+    (23.0, 9.0, 51.0, 31.6, "XRC: 5x PhotoMOS, TVS, PTC", (255, 170, 40)),
     (22.0, 34.4, 50.0, 66.6, "MIDI IN A/B: opto + bypass RL1", (90, 200, 255)),
     (54.0, 28.0, 75.6, 47.2, "MCU: RP2350 + QSPI + 12 MHz + RTC", (255, 90, 90)),
     (70.0, 43.0, 93.0, 67.6, "POWER: charger, gauge, buck-boost", (120, 235, 120)),
@@ -957,7 +1019,7 @@ GOLD = (214, 172, 84)
 
 
 def _font(px, demi=True):
-    return ImageFont.truetype("/usr/share/fonts/opentype/urw-base35/URWGothic-" + ("Demi" if demi else "Book") + ".otf", max(6, int(px)))
+    return ImageFont.truetype(gothic("Demi" if demi else "Book"), max(6, int(px)))
 
 
 class Silk:
@@ -1022,9 +1084,9 @@ def main_silk(path, pads_by_part):
     bus(s, (66.0, 40.5), (97.0, 38.0), 2, 0.6)             # OUT B
     bus(s, (62.0, 44.0), (62.0, 67.0), 10, 0.5, along="x")  # UI FFC
     bus(s, (54.0, 40.0), (53.5, 40.0), 4, 0.6)
-    s.line([(4.0, 61.0), (20.0, 61.0), (25.0, 56.0), (35.0, 56.0), (40.0, 51.0), (60.0, 51.0), (66.0, 45.0), (95.0, 45.0),
+    s.line([(4.0, 63.6), (20.0, 63.6), (27.6, 56.0), (35.0, 56.0), (40.0, 51.0), (60.0, 51.0), (66.0, 45.0), (95.0, 45.0),
             (100.0, 40.0), (100.0, 22.0), (106.0, 17.0)], TRACE, 0.5)   # bypass thru path IN A -> OUT A (NC contacts)
-    s.line([(4.0, 59.4), (20.0, 59.4), (25.0, 54.4), (34.5, 54.4), (39.5, 49.4), (59.4, 49.4), (65.4, 43.4), (94.4, 43.4),
+    s.line([(4.0, 62.0), (20.0, 62.0), (27.6, 54.4), (34.5, 54.4), (39.5, 49.4), (59.4, 49.4), (65.4, 43.4), (94.4, 43.4),
             (98.6, 39.2), (100.4, 37.4), (101.6, 36.2), (101.6, 22.6), (106.0, 18.2)], TRACE, 0.5)
     s.line([(104.0, 61.5), (95.0, 61.5), (90.0, 58.0)], TRACE, 1.2)     # VBUS
     s.line([(95.5, 30.0), (95.5, 50.0), (90.0, 55.0)], TRACE, 1.2)      # VBAT
@@ -1049,7 +1111,7 @@ def main_silk(path, pads_by_part):
         s.circle(x, z, 1.35, fill=(8, 10, 9))
     import random
     rnd = random.Random(7)
-    keep = [part_bbox(p) for _, p in pads_by_part] + [(0, 0, 21, 78), (99, 0, 120, 78), (100, 53, 120, 70)]
+    keep = [part_bbox(p) for _, p in pads_by_part] + [(0, 0, 23.5, 78), (99, 0, 120, 78), (100, 53, 120, 70)]
     n = 0
     while n < 160:
         x, z = rnd.uniform(22, 99), rnd.uniform(5, 73)
@@ -1070,11 +1132,15 @@ def main_silk(path, pads_by_part):
         a, b, c, d = part_bbox(next(p for r, p in pads_by_part if r == ref))
         s.text(ref, (a + c) / 2, b - 1.3, 1.0)
     # board legends
-    s.text("NSK MT-1  MIDIum  MAIN", 66.0, 74.0, 1.5)
+    s.text("melling.audio  MIDIum MT-1  MAIN REV A", 59.0, 74.25, 1.2)   # 1.2 cap so it clears the J9 outline below it
     s.text("REV A   4L 1.6 mm   ENIG", 66.0, 5.0, 1.0, demi=False)
     s.text("BYPASS: IN A > OUT A WHEN UNPOWERED", 56.0, 25.0, 0.8, demi=False)
     s.text("BATT 1S  +  -", 96.0, 34.6, 0.8)
-    s.text("IN A", 20.8, 70.5, 1.0); s.text("IN B", 20.8, 49.6, 1.0); s.text("XRC", 20.8, 6.0, 1.0)
+    s.text("IN A", 20.8, zA(END_A["din"][0][1]) + 9.0, 1.0); s.text("IN B", 20.8, zA(END_A["din"][1][1]) + 8.6, 1.0)
+    s.text("XRC", 25.2, 6.0, 1.0)
+    # notch edge keep-out (etherCON on the XRC board below)
+    (_, _, nx0, nz0), (_, _, nx1, nz1) = NOTCH
+    s.line([(PCB_X0, nz0 + 0.6), (nx0 + 0.6, nz0 + 0.6), (nx0 + 0.6, nz1 + 0.6), (nx1 + 0.6, nz1 + 0.6), (nx1 + 0.6, PCB_Z0)], SILK, 0.15)
     s.text("OUT A", 98.0, 4.0, 1.0); s.text("OUT B", 99.0, 50.6, 0.9)
     s.img.save(path)
     return s
@@ -1093,7 +1159,7 @@ def ui_silk(path, pads_by_part):
         s.circle(x, z, 1.35, fill=(8, 10, 9))
     s.rect(max(CARRIER[0], x0 + 0.5), CARRIER[2], CARRIER[1], CARRIER[3], outline=SILK, width=0.15)
     s.text("LCD CARRIER", (max(CARRIER[0], x0) + CARRIER[1]) / 2, _GZ, 2.0)
-    s.text("NSK MT-1  UI  REV A", 55.0, 9.0, 1.3)
+    s.text("MIDIum MT-1  UI  REV A", 55.0, 9.0, 1.3)
     jx, jz = TOP["joy_c"]
     s.text("SW1", jx, jz - 7.2, 1.0)
     s.text("MIDI", TOP["led_act"][0], TOP["led_act"][1] + 2.2, 0.9); s.text("CHG", TOP["led_chg"][0], TOP["led_chg"][1] + 2.2, 0.9)
@@ -1162,7 +1228,7 @@ def _sec(item, tex=None):
         return item
     if tex is None:
         head = item[:400]
-        tex = ("T_SecFR4" if (item.startswith("box") and "T_Mask" in head) else
+        tex = ("T_SecFR4" if ((item.startswith("box") or "/*pcb*/" in head) and "T_Mask" in item[:1200]) else
                "T_SecCell" if ("T_Pouch" in head or "T_Kapton" in head or "T_Foam" in head) else "T_SecPart")
     return f"intersection {{ {item} plane {{ -z, {-SECTION_Z:.3f} texture {{ {tex} }} }} }}"
 
@@ -1174,10 +1240,11 @@ def _union(items):
 def main_assembly():
     """Main PCB with every board-mounted part (incl. panel connectors, riser, standoffs). Returns (pov, pads_by_part)."""
     s, pads_by_part = [], []
-    s.append(bx(PCB_X0, PCB_Y0, PCB_Z0, PCB_X1, PCB_Y1, PCB_Z1, "T_Mask"))
-    s.append(f"""box {{ <0,0,0>, <1,1,0.001> texture {{ pigment {{ image_map {{ png "{os.path.join(BUILD, 'tex_pcb_main.png')}" interpolate 2 once }} }}
+    notch = " ".join(bx(x0, PCB_Y0 - 1, z0, x1, PCB_Y1 + 1, z1) for x0, z0, x1, z1 in NOTCH)
+    s.append(f"difference {{ /*pcb*/ {bx(PCB_X0, PCB_Y0, PCB_Z0, PCB_X1, PCB_Y1, PCB_Z1)} {notch} texture {{ T_Mask }} }}")
+    s.append(f"""difference {{ box {{ <0,0,0>, <1,1,0.001> texture {{ pigment {{ image_map {{ png "{os.path.join(BUILD, 'tex_pcb_main.png')}" interpolate 2 once }} }}
       finish {{ ambient 0 diffuse 0.62 specular 0.35 roughness 0.018 reflection {{ 0.02 }} }} }}
-  scale <{PCB_X1 - PCB_X0:.3f},{PCB_Z1 - PCB_Z0:.3f},1> rotate x*90 translate <{PCB_X0:.3f},{PCB_Y1 + 0.004:.3f},{PCB_Z0:.3f}> }}""")
+  scale <{PCB_X1 - PCB_X0:.3f},{PCB_Z1 - PCB_Z0:.3f},1> rotate x*90 translate <{PCB_X0:.3f},{PCB_Y1 + 0.004:.3f},{PCB_Z0:.3f}> }} {notch} }}""")
     for ref, fn, x, z, rot, lab in MAIN_PARTS:
         o, p = place(fn, x, z, rot, 1, PCB_Y1)
         s.append(o); pads_by_part.append((ref, p))
@@ -1191,9 +1258,6 @@ def main_assembly():
     for _, px, py in END_A_INT["din"]:
         s.append(f"object {{ {din_socket(px, py, flange=False)} {XFORM_A} }}")
         s.append(din_housing_A(zA(px)))
-    _, px, py = END_A_INT["rj45"]
-    s.append(f"object {{ {rj45(px, py)} {XFORM_A} }}")
-    s.append(bx(18.2, PCB_Y1, zA(px) - 7.6, 18.6, PCB_Y1 + 11.0, zA(px) + 7.6, "T_BlackPlastic"))
     for _, px, py in END_B_INT["din"]:
         s.append(f"object {{ {din_socket(px, py, flange=False)} {XFORM_B} }}")
         s.append(din_housing_B(zB(px)))
@@ -1220,6 +1284,21 @@ def main_assembly():
     return _union(s), pads_by_part
 
 
+def xrc_assembly():
+    """XRC board in slot S2 under the main PCB notch: etherCON NE8FBH (front-fixed to the IN panel with 2x M2.5)
+    + DF40 2.0 mm board-to-board to the main PCB underside. Moves with the IN panel in the exploded view."""
+    x0, x1, z0, z1 = XB
+    s = [bx(x0, XB_Y0, z0, x1, XB_Y1, z1, "T_Mask")]
+    _, px, py = END_A_INT["ethercon"]
+    s.append(f"object {{ {ethercon(px, py)} {XFORM_A} }}")
+    dz = ETH_Z
+    s.append(bx(23.4, XB_Y1, dz - 4.6, 25.8, XB_Y1 + 0.95, dz + 4.6, "T_Beige"))          # DF40 receptacle
+    s.append(bx(23.6, XB_Y1 + 0.95, dz - 4.3, 25.6, PCB_Y0, dz + 4.3, "T_BlackPlastic"))   # DF40 header (main PCB)
+    for zz in (dz - 6.4, dz + 6.4):   # a couple of 0603 ESD/filter parts beside it
+        o, _ = place(lambda: pk_chip(*P0603), 24.6, zz, 90, 1, XB_Y1); s.append(o)
+    return _union(s)
+
+
 def ui_assembly(knob_bezel=False):
     """UI board (on 16 mm standoffs above the main board), display carrier, panel, FPC, FFC, joystick + knob."""
     x0, x1, z0, z1 = TB
@@ -1240,7 +1319,7 @@ def ui_assembly(knob_bezel=False):
     lx, lz = T["lcd_c"]; gw, gh = T["lcd_glass"]; aw, ah = T["lcd_active"]
     gx, gz = glass_c()
     s.append(f"""difference {{
-  union {{ {bx(x0 + 0.5, TB_Y1, cz0, cx1, LCD_Y0, cz1)} {bx(cx0, 37.0, cz0, x0 + 0.6, LCD_Y0, cz1)}
+  union {{ {bx(x0 + 0.5, TB_Y1, cz0, cx1, LCD_Y0, cz1)} {bx(cx0, 38.0, cz0, x0 + 0.6, LCD_Y0, cz1)}
           {bx(cx0, LCD_Y0 - 0.01, cz0, cx1, LCD_Y0 + 1.4, cz0 + 1.2)} {bx(cx0, LCD_Y0 - 0.01, cz1 - 1.2, cx1, LCD_Y0 + 1.4, cz1)}
           {bx(cx0, LCD_Y0 - 0.01, cz0, cx0 + 1.2, LCD_Y0 + 1.4, cz1)} }}
   {bx(x0 + 3.0, TB_Y1 - 1, cz0 + 2.5, cx1 - 2.5, LCD_Y0 - 1.2, cz1 - 2.5)}
@@ -1383,12 +1462,13 @@ def int_scene(view, path, aspect):
     out = [HEADER, INT_DECL]
     fx = f"translate <{-CX:.3f},{FOOT:.3f},{-CZ:.3f}>"
     main, _ = main_assembly()
+    xrc = xrc_assembly()
     if view == "cutaway":
         c = INT_CAMS[view]
         out.append(cam_persp(c["loc"], c["look"], c["angle"]))
         pa, pb = panels_int(CUTAWAY)
         ui, _ = ui_assembly(knob_bezel=False)
-        out.append(f"union {{ {shell_int(CUTAWAY)} {pa} {pb} {main} {ui} {lightpipes(collar=False)} {battery_assembly()} {feet()} {fx} }}")
+        out.append(f"union {{ {shell_int(CUTAWAY)} {pa} {pb} {main} {xrc} {ui} {lightpipes(collar=False)} {battery_assembly()} {feet()} {fx} }}")
     elif view == "exploded":
         c = INT_CAMS[view]
         out.append(cam_persp(c["loc"], c["look"], c["angle"]))
@@ -1399,6 +1479,7 @@ def int_scene(view, path, aspect):
         out.append(f"""union {{
   union {{ {shell_int()} {lightpipes()} {cover_lens()} {feet()} translate <0,{L},0> }}
   object {{ {pa} translate <{E['panel_a']},{L},0> }}
+  object {{ {xrc} translate <{E['panel_a']},{L},0> }}
   object {{ {pb} translate <{E['panel_b']},{L},0> }}
   object {{ {main} translate <{E['main']},{L},0> }}
   object {{ {ui} translate <{E['main']},{L + E['ui_dy']},0> }}
@@ -1408,7 +1489,7 @@ def int_scene(view, path, aspect):
         Wm = PLAN_W
         out.append(f"camera {{ orthographic location <0,300,0> direction <0,-1,0> up <0,0,{Wm / aspect:.3f}> right <{Wm:.3f},0,0> }}")
         out.append("disc { <0,260,0>, y, 170 pigment { rgb 0 } finish { ambient 0 diffuse 0 } no_image no_shadow no_radiosity }")
-        out.append(f"union {{ {main} {fx} }}")
+        out.append(f"union {{ {main} {xrc} {fx} }}")
     elif view == "section":
         Wm = SEC_W
         cx, cy = SEC_CENTRE
@@ -1419,8 +1500,9 @@ def int_scene(view, path, aspect):
         try:
             pa, pb = panels_int()
             main, _ = main_assembly()
+            xrc = xrc_assembly()
             ui, _ = ui_assembly(knob_bezel=True)
-            items = [_sec(shell_int(), "T_AlCut"), _sec(pa, "T_AlCut"), _sec(pb, "T_AlCut"), main, ui,
+            items = [_sec(shell_int(), "T_AlCut"), _sec(pa, "T_AlCut"), _sec(pb, "T_AlCut"), main, xrc, ui,
                      _sec(lightpipes()), _sec(cover_lens()), battery_assembly(), _sec(feet())]
         finally:
             SEC_WRAP = None
@@ -1533,7 +1615,8 @@ def _annotate_plan(im, w, h, k, F):
     row(top_items, ytop, True)
     row(bot_items, ybot, False)
     # connectors at the ends
-    left = [("IN A  DIN (J3)", P(-1.0, zA(-22.0))), ("IN B  DIN (J2)", P(-1.0, zA(0.0))), ("XRC  RJ45 (J1)", P(-1.0, zA(22.5)))]
+    left = [("IN A  DIN (J3)", P(-1.0, zA(END_A["din"][0][1]))), ("IN B  DIN (J2)", P(-1.0, zA(END_A["din"][1][1]))),
+            ("XRC  etherCON (J1)\nown board, slot S2", P(-6.5, ETH_Z))]
     right = [("OUT A  DIN (J4)", P(L_EXT + 1.0, zB(-22.0))), ("OUT B  DIN (J5)", P(L_EXT + 1.0, zB(0.0))),
              ("USB-C on riser\n+ microSD (J6/J7)", P(L_EXT + 1.0, zB(22.5)))]
     for txt, (x, y) in left:
@@ -1550,12 +1633,15 @@ def _annotate_plan(im, w, h, k, F):
         if x % 20 == 0:
             d.text((px, yr + 26 * k), str(x), font=F(20, False), fill=INK2, anchor="mm")
     d.line([P(0, -3.5), P(L_EXT, -3.5)], fill=INK2, width=max(1, int(2 * k)))
-    d.text((int(60 * k), int(52 * k)), "NSK MT-1 MIDIum  |  main PCB floorplan (top side, plan view)", font=F(38), fill=INK, anchor="lm")
-    d.text((int(60 * k), int(96 * k)), "118.8 x 73.8 mm, 4-layer 1.6 mm, slot S3. Ruler: mm from the IN-end inner face. "
-           "White lines: slot bottoms / rib faces.", font=F(23, False), fill=INK2, anchor="lm")
+    d.text((int(60 * k), int(52 * k)), "melling.audio MIDIum MT-1  |  main PCB floorplan (top side, plan view)", font=F(38), fill=INK, anchor="lm")
+    d.text((int(60 * k), int(96 * k)), "118.8 x 73.8 mm, 4-layer 1.6 mm, slot S3. Notch at the IN-end front corner for the etherCON "
+           "(own board in S2). Ruler: mm from the IN-end inner face. White lines: slot bottoms / rib faces.", font=F(23, False), fill=INK2, anchor="lm")
 
 
-SEC_NOTES = []
+SEC_NOTES = [f"XRC etherCON NE8FBH (IN end, z = {ETH_Z:.1f}, in front of this cut): axis {ETH_Y:.2f}, on its own board in slot S2 "
+             f"({XB_Y0:.2f}-{XB_Y1:.2f}).",
+             f"Housing top {XB_Y1 + 24.9:.1f} / latch arm {XB_Y1 + 24.6:.1f} vs TFT carrier underside 38.0. On the main PCB (S3) "
+             f"it would reach {PCB_Y1 + 24.6:.1f}, into the TFT (38.7)."]
 
 
 def _annotate_section(im, w, h, k, F):
@@ -1570,7 +1656,7 @@ def _annotate_section(im, w, h, k, F):
         (f"DIN body top {DIN_Y + 10:.1f}", P(110.0, DIN_Y + 10.0)),
         (f"UI board {TB_Y0:.1f}-{TB_Y1:.1f} (16 mm standoffs)", P(97.0, (TB_Y0 + TB_Y1) / 2)),
         (f"DIN axis {DIN_Y:.1f} (= panel hole centres)", P(119.0, DIN_Y)),
-        (f"RJ45 {RJ_Y:.1f} / USB-C {USB_Y:.1f} axis", P(119.0, USB_Y)),
+        (f"USB-C axis {USB_Y:.1f}", P(119.0, USB_Y)),
         (f"Main PCB {PCB_Y0:.1f}-{PCB_Y1:.1f}, slot S3 ({SLOTS[MAIN_SLOT]:.1f})", P(100.0, (PCB_Y0 + PCB_Y1) / 2)),
         (f"Battery {BATT['y0']:.1f}-{BATT['y0'] + BATT['t']:.1f} ({PCB_Y0 - BATT['y0'] - BATT['t']:.1f} swell gap)", P(80.0, BATT['y0'] + BATT['t'] / 2)),
         (f"Foam {FLOOR_IN:.1f}-{BATT['y0']:.1f}, floor {FLOOR_IN:.1f}", P(70.0, (FLOOR_IN + BATT['y0']) / 2)),
@@ -1581,11 +1667,11 @@ def _annotate_section(im, w, h, k, F):
     for i, c in enumerate(SLOTS):
         x0, y = P(1.0, c)
         x1, _ = P(4.0, c)
-        col = (230, 120, 40) if i == MAIN_SLOT else (200, 200, 200)
+        col = (230, 120, 40) if i == MAIN_SLOT else (70, 150, 240) if i == XRC_SLOT else (200, 200, 200)
         d.line([(x0, y), (x1, y)], fill=col, width=max(2, int(4 * k)))
-    d.text((int(60 * k), int(52 * k)), f"NSK MT-1 MIDIum  |  section A-A at z = {SECTION_Z:.0f} mm, looking at the rear wall", font=F(38), fill=INK, anchor="lm")
+    d.text((int(60 * k), int(52 * k)), f"melling.audio MIDIum MT-1  |  section A-A at z = {SECTION_Z:.0f} mm, looking at the rear wall", font=F(38), fill=INK, anchor="lm")
     d.text((int(60 * k), int(96 * k)), "Heights in mm above the extrusion bottom (feet add 2). Ticks inside the IN panel: the eight PCB slots, "
-           "orange = S3 (main PCB). Main PCB + UI board slide in as one stack.", font=F(23, False), fill=INK2, anchor="lm")
+           "orange = S3 (main PCB), blue = S2 (XRC board). Main PCB + UI board slide in as one stack.", font=F(23, False), fill=INK2, anchor="lm")
     y = P(0, -9.0)[1]
     for i, t in enumerate(SEC_NOTES):
         d.text((int(60 * k), y + i * 34 * k), t, font=F(22, False), fill=INK2, anchor="lm")
@@ -1609,6 +1695,7 @@ def annotate(view, png, w, h):
             return project_persp(c["loc"], c["look"], c["angle"], w, h, (x + dx - CX, y + dy + FOOT, z - CZ))
         left = [
             ("IN end panel\nIN A, IN B, XRC", P(-PANEL_T, 36.0, 66.0, E["panel_a"], Lf)),
+            ("etherCON NE8FBH (XRC)\non XRC board, slot S2", P(-PANEL_T - 4.4, ETH_Y + 12.0, ETH_Z, E["panel_a"], Lf)),
             ("Extrusion\nHammond 1455K1201", P(4.0, H - 6.0, 0.0, 0, Lf)),
             ("1S LiPo 803860, 2000 mAh\non foam pad, kapton wrap", P(BATT["x0"], BATT["y0"] + BATT["t"] - 4.0, BATT["z0"] + 6, 0, 0.02 - FOOT - FLOOR_IN)),
             ("Cover lens\nbonded in window", P(TOP["lcd_c"][0] - TOP["lcd_window"][0] / 2 + 3.0, H, TOP["lcd_c"][1] - 10.0, 0, Lf)),
@@ -1627,7 +1714,7 @@ def annotate(view, png, w, h):
         f = F(29)
         _labels(d, left, int(60 * k), "left", f, k, top=int(200 * k), bottom=int(h - 90 * k), gap=int(120 * k))
         _labels(d, right, int(w - 60 * k), "right", f, k, top=int(200 * k), bottom=int(h - 90 * k), gap=int(120 * k))
-        d.text((int(70 * k), int(60 * k)), "NSK MT-1 MIDIum  |  internal layout, exploded", font=F(40), fill=INK, anchor="lm")
+        d.text((int(70 * k), int(60 * k)), "melling.audio MIDIum MT-1  |  internal layout, exploded", font=F(40), fill=INK, anchor="lm")
         d.text((int(70 * k), int(105 * k)), "Design study: main PCB slid half out of its slot, UI board lifted, battery dropped", font=F(26, False), fill=INK2, anchor="lm")
         im.save(png.replace(".png", "_labels.png"))
         return

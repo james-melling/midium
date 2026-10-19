@@ -5,3 +5,5 @@ test/test_midium
 .DS_Store
 __pycache__/
 *.pyc
+hardware/renders/fonts/URWGothic-*.otf
+hardware/renders/build/

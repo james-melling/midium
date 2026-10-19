@@ -31,9 +31,9 @@ FONT = FontProperties(fname="/usr/share/fonts/opentype/urw-base35/URWGothic-Demi
 FONT_BOOK = FontProperties(fname="/usr/share/fonts/opentype/urw-base35/URWGothic-Book.otf")
 
 # ============================================================== geometry / layout (mm)
-L_EXT, W, H = 120.0, 78.0, 43.0      # Hammond 1455N1201-style extrusion: length x width x height
+L_EXT, W, H = 120.0, 78.0, 43.0      # Hammond 1455K1201 extrusion: length x width x height
 FOOT = 2.0                           # rubber feet height -> body sits at y = FOOT .. FOOT + H
-WALL = 2.2                           # extrusion wall
+WALL = 1.5                           # extrusion wall (1455K: 1.5)
 R_EDGE = 3.6                         # long-edge radius of the extrusion
 PANEL_T, PANEL_OVER, PANEL_CH = 1.6, 0.5, 0.4   # end panel thickness, overhang all round, front chamfer
 PANEL_W, PANEL_H, PANEL_R = W + 2 * PANEL_OVER, H + 2 * PANEL_OVER, R_EDGE + PANEL_OVER
@@ -41,26 +41,32 @@ SCREWS = [(sx * 35.0, sy) for sx in (-1, 1) for sy in (4.0, 39.0)]  # end-panel 
 TOP_Y = FOOT + H
 
 TOP = {   # top face, (u, v) = (x along length from IN end, z from front edge)
-    "lcd_c": (38.0, 46.0), "lcd_glass": (50.0, 27.95), "lcd_active": (42.72, 22.68), "lcd_window": (50.8, 28.75),
-    "joy_c": (90.0, 46.0), "joy_bezel_d": 13.0, "joy_cap_d": 8.6, "joy_arrow_r": 11.6,
-    "led_act": (81.0, 69.0), "led_chg": (97.0, 69.0), "led_d": 3.0,
-    "word": dict(text="MIDIum", cap=8.0, x=13.0, y=14.0),
-    "model": dict(text="NSK MT-1", cap=2.4, x=104.0, y=8.6),
-    "logo": dict(w=40.0, x=104.0, y=14.0),
+    # 2.8in 320x240 IPS (ST7789) used landscape. Assumed panel: outline 69.2 x 50.0 x 2.5, active area 57.6 x 43.2,
+    # AA borders 3.2 (far short edge) / 8.4 (FPC + driver ledge short edge, +x) / 3.4 (long edges). FPC exits +x.
+    # lcd_c = centre of the active area = centre of the lid window; the glass centre sits glass_dx further to +x.
+    "lcd_c": (41.3, 39.0), "lcd_active": (57.6, 43.2), "lcd_window": (59.6, 45.2), "lcd_glass": (69.2, 50.0), "glass_dx": 2.6,
+    "joy_c": (94.0, 40.5), "joy_bezel_d": 13.0, "joy_cap_d": 8.6, "joy_arrow_r": 11.6,
+    "led_act": (84.5, 60.0), "led_chg": (98.5, 60.0), "led_d": 3.0,
+    "word": dict(text="MIDIum", cap=6.5, x=94.0, y=16.4),    # centred under the joystick, baseline = window bottom edge
 }
+
+
+def glass_c():
+    return TOP["lcd_c"][0] + TOP["glass_dx"], TOP["lcd_c"][1]
 DIN_PITCH = 22.0
 END_A = {  # IN end, seen from outside: px right of centre, py up from body bottom
-    "din": [("IN A", -22.0, 23.0), ("IN B", 0.0, 23.0)],
-    "rj45": ("XRC", 22.5, 22.5),
+    "din": [("IN A", -22.0, 25.9), ("IN B", 0.0, 25.9)],
+    "rj45": ("XRC", 22.5, 22.55),
     "group": ("MIDI", -22.0, 0.0),     # etched bracket + group label under the two DIN legends
 }
 END_B = {  # OUT end, seen from outside
-    "din": [("OUT A", -22.0, 23.0), ("OUT B", 0.0, 23.0)],
-    "usbc": ("USB / CHG", 22.5, 23.0),
+    "din": [("OUT A", -22.0, 25.9), ("OUT B", 0.0, 25.9)],
+    "usbc": ("USB / CHG", 22.5, 22.5),
+    "sd": ("SD", 22.5, 16.8),          # microSD push-push slot under the USB-C
     "group": ("MIDI", -22.0, 0.0),
 }
-LABEL_CAP, LABEL_Y = 2.3, 10.2     # end-panel legend cap height, legend centre height (py)
-GROUP_CAP, GROUP_Y, GROUP_LINE = 1.8, 6.4, 0.28   # group label cap height, bracket line centre (py), line weight
+LABEL_CAP, LABEL_Y = 2.3, 11.5     # end-panel legend cap height, legend centre height (py)
+GROUP_CAP, GROUP_Y, GROUP_LINE = 1.8, 7.4, 0.28   # group label cap height, bracket line centre (py), line weight
 DIN_FLANGE_D, DIN_HOLE_D = 19.0, 16.0
 RJ_CUT = (16.4, 13.8)
 USB_CUT = (9.8, 4.0)
@@ -100,9 +106,7 @@ def tri(cx, cy, size, ang):
 
 def top_artwork():
     T = TOP
-    g = [text_geom(T["word"]["text"], T["word"]["cap"], T["word"]["x"], T["word"]["y"])]
-    g.append(text_geom(T["model"]["text"], T["model"]["cap"], T["model"]["x"], T["model"]["y"], ha="right"))
-    g.append(logo_geom(T["logo"]["w"], T["logo"]["x"], T["logo"]["y"]))
+    g = [text_geom(T["word"]["text"], T["word"]["cap"], T["word"]["x"], T["word"]["y"], ha="center")]
     jx, jy = T["joy_c"]; r = T["joy_arrow_r"]
     for ang in (0, 90, 180, 270):
         a = math.radians(ang)
@@ -127,6 +131,9 @@ def end_artwork(spec):
         if key in spec:
             lab, x, y = spec[key]
             g.append(text_geom(lab, LABEL_CAP, x, LABEL_Y, ha="center", va="center"))
+    if "sd" in spec:   # small legend to the right of the slot
+        lab, x, y = spec["sd"]
+        g.append(text_geom(lab, 1.8, x + SD_CUT[0] / 2 + 1.6, y, ha="left", va="center"))
     if "group" in spec:   # |____ MIDI ____|  bracket spanning the DIN pair, label in a gap at the middle
         lab, xa, xb = spec["group"]
         x0, x1, xm = xa - 7.0, xb + 7.0, (xa + xb) / 2
@@ -154,79 +161,43 @@ def raster(geom, x0, y0, w, h, path, ppm=28, ss=2, rgb=(214, 214, 208)):
     img.save(path)
 
 
-# ============================================================== screen UI texture (320 x 170, landscape)
-F5x7 = {
- "A": ".###.#...##...#######...##...##...#", "B": "####.#...##...#####.#...##...#####.",
- "C": ".###.#...##....#....#....#...#.###.", "D": "###..#..#.#...##...##...##..#.###..",
- "E": "######....#....####.#....#....#####", "F": "######....#....####.#....#....#....",
- "G": ".###.#...##....#.####...##...#.####", "H": "#...##...##...#######...##...##...#",
- "I": ".###...#....#....#....#....#...###.", "J": "..###...#....#....#....#.#..#..##..",
- "K": "#...##..#.#.#..##...#.#..#..#.#...#", "L": "#....#....#....#....#....#....#####",
- "M": "#...###.###.#.##.#.##...##...##...#", "N": "#...##...###..##.#.##..###...##...#",
- "O": ".###.#...##...##...##...##...#.###.", "P": "####.#...##...#####.#....#....#....",
- "Q": ".###.#...##...##...##.#.##..#..##.#", "R": "####.#...##...#####.#.#..#..#.#...#",
- "S": ".#####....#.....###.....#....#####.", "T": "#####..#....#....#....#....#....#..",
- "U": "#...##...##...##...##...##...#.###.", "V": "#...##...##...##...##...#.#.#...#..",
- "W": "#...##...##...##.#.##.#.##.#.#.#.#.", "X": "#...##...#.#.#...#...#.#.#...##...#",
- "Y": "#...##...#.#.#...#....#....#....#..", "Z": "#####....#...#...#...#...#....#####",
- "0": ".###.#...##..###.#.###..##...#.###.", "1": "..#...##....#....#....#....#...###.",
- "2": ".###.#...#....#...#...#...#...#####", "3": "#####" "...#." "..#.." "...#." "....#" "#...#" ".###.",
- "4": "...#...##..#.#.#..#.#####...#....#.", "5": "######....####.....#....##...#.###.",
- "6": "..##..#...#....####.#...##...#.###.", "7": "#####....#...#...#...#....#....#...",
- "a": "".join([".....", ".....", ".###.", "....#", ".####", "#...#", ".####"]), "8": ".###.#...##...#.###.#...##...#.###.", "9": ".###.#...##...#.####....#...#..##..",
- "b": "#....#....#.##.##..##...##...#####.", "m": "..........##.#.#.#.##.#.##...##...#",
- "n": "..........#.##.##..##...##...##...#", "o": "...........###.#...##...##...#.###.",
- "p": "..........####.#...#####.#....#....", "u": "..........#...##...##...##..##.##.#",
- ":": "....." ".##.." ".##.." "....." ".##.." ".##.." ".....", ".": "....." "....." "....." "....." "....." ".##.." ".##..",
- "#": ".#.#..#.#.#####.#.#.#####.#.#..#.#.", "=": "..........#####.....#####..........",
- "-": "...............#####...............", "%": "##...##..#...#...#...#...#..##...##",
- ">": ".#.....#.....#.....#...#...#...#...", "/": "......#...#...#...#...#............",
- " ": "." * 35,
-}
-
-
-def draw_text(img, s, x, y, col, scale=2):
-    px = img.load()
-    for i, ch in enumerate(s):
-        g = F5x7.get(ch, F5x7[" "])
-        for r in range(7):
-            for c in range(5):
-                if g[r * 5 + c] == "#":
-                    for dy in range(scale):
-                        for dx in range(scale):
-                            X, Y = x + (i * 6 + c) * scale + dx, y + r * scale + dy
-                            if 0 <= X < img.width and 0 <= Y < img.height:
-                                px[X, Y] = col
+# ============================================================== screen UI texture (2.8in IPS, 320 x 240, landscape)
+# JetBrains Mono Medium 13 px, anti-aliased, 8 x 15 cell -> 40 cols x 16 rows (row 0 = header). Same look as
+# /tmp/claude-0/fontcmp/font_screen_comparison.png (JetBrains row, 2.8in panel).
+SCREEN_FONT = os.path.join(HERE, "fonts", "JetBrainsMono-Medium.ttf")
+SCR_C = dict(hdr=(255, 170, 0), note=(60, 230, 90), cc=(60, 200, 255), pc=(255, 220, 60), msc=(240, 80, 240),
+             rt=(150, 150, 150), tag=(150, 150, 150), bar=(30, 70, 160), hi=(25, 40, 90), w=(240, 240, 240))
+SCR_LINES = [("A", "12:41:03.512", "NOTE ON  1 C4  100", "note"), ("A", "12:41:03.640", "CC 3 #7=127", "cc"),
+             ("A", "12:41:04.001", "PC 1 12", "pc"), ("B", "12:41:04.220", "MSC LTG GO Q12.5 L1 @1", "msc"),
+             ("A", "12:41:04.731", "NOTE OFF 1 C4  0", "note"), ("B", "12:41:05.010", "MSC SND STOP @1", "msc"),
+             ("A", "12:41:05.300", "PB 1 +2048", "cc"), ("B", "12:41:05.902", "MMC PLAY @7F", "msc"),
+             ("A", "12:41:06.115", "SYSEX 212b 43 10 4C", "msc"), ("A", "12:41:06.480", "NOTE ON  1 E4  90", "note"),
+             ("B", "12:41:07.033", "MSC LTG GO Q13 L1 @1", "msc"), ("A", "12:41:07.250", "CC 1 #64=0", "cc"),
+             ("A", "12:41:07.611", "PC 2 3", "pc"), ("B", "12:41:08.004", "MSC SND GO Q4 @1", "msc"),
+             ("A", "12:41:08.300", "NOTE OFF 1 E4  0", "note"), ("B", "12:41:08.912", "MSC LTG GO Q14 L1 @1", "msc")]
 
 
 def screen_texture(path, up=4):
-    img = Image.new("RGB", (320, 170), (4, 6, 10))
+    from PIL import ImageFont as _IF
+    Wp, Hp, cw, lh = 320, 240, 8, 15
+    cols, rows = Wp // cw, Hp // lh
+    font = _IF.truetype(SCREEN_FONT, 13)
+    img = Image.new("RGB", (Wp, Hp), (0, 0, 0))
     d = ImageDraw.Draw(img)
-    d.rectangle([0, 0, 319, 19], fill=(22, 34, 56))
-    draw_text(img, "MIDIum", 5, 3, (255, 255, 255))
-    # routing summary: input A -> outs a+b, input B -> outs a+b
-    draw_text(img, "A:", 5 + 8 * 12, 3, (170, 180, 195)); draw_text(img, "ab", 5 + 10 * 12, 3, (60, 235, 110))
-    draw_text(img, "B:", 5 + 13 * 12, 3, (170, 180, 195)); draw_text(img, "ab", 5 + 15 * 12, 3, (60, 235, 110))
-    # battery icon
-    d.rectangle([286, 4, 311, 15], outline=(220, 225, 230), width=2)
-    d.rectangle([312, 7, 314, 12], fill=(220, 225, 230))
-    d.rectangle([289, 7, 303, 12], fill=(60, 235, 110))
-    G, C, Y, M, K = (40, 235, 100), (40, 215, 240), (255, 214, 10), (245, 80, 235), (150, 155, 160)
-    rows = [("21.480", "A", "NOTE ON 1 C4 100", G), ("21.512", "A", "CC 3 #7=127", C), ("21.733", "A", "PC 1 12", Y),
-            ("22.004", "B", "MSC LTG GO Q12.5", M), ("22.010", "A", "NOTE OFF 1 C4 0", G), ("22.391", "B", "MSC SND STOP", M),
-            ("22.500", "A", "CLOCK 120bpm", K), ("22.617", "A", "CC 3 #7=96", C)]
-    y0, pitch = 23, 18
-    for i, (ts, src, msg, col) in enumerate(rows):
-        y = y0 + i * pitch
-        if i == len(rows) - 1:
-            d.rectangle([0, y - 2, 313, y + 15], fill=(18, 26, 36))
-        draw_text(img, ts, 3, y + 4, (95, 100, 110), scale=1)
-        draw_text(img, src, 44, y + 1, (120, 128, 140), scale=2)
-        draw_text(img, msg, 62, y + 1, col, scale=2)
-    d.rectangle([316, 22, 318, 169], fill=(25, 30, 38))
-    d.rectangle([316, 120, 318, 168], fill=(110, 120, 135))
-    img = img.resize((320 * up, 170 * up), Image.NEAREST)
-    img.save(path)
+    put = lambda cx, cy, t, col: d.text((cx * cw, cy * lh), t, fill=col, font=font)
+    d.rectangle([0, 0, Wp, lh - 1], fill=SCR_C["bar"])
+    put(0, 0, "MIDIum  A:ab B:ab", SCR_C["hdr"])
+    put(cols - 3, 0, "76%", SCR_C["w"])
+    body = SCR_LINES[-(rows - 1):]
+    for i, (src, t, msg, k) in enumerate(body):
+        r = i + 1
+        if i == len(body) - 1:
+            d.rectangle([0, r * lh, Wp, r * lh + lh - 1], fill=SCR_C["hi"])
+        put(0, r, src, SCR_C["tag"])
+        put(2, r, t, SCR_C["rt"])
+        put(2 + len(t) + 1, r, msg[:cols - len(t) - 3], SCR_C[k])
+    img.save(path.replace(".png", "_native.png"))
+    img.resize((Wp * up, Hp * up), Image.NEAREST).save(path)
 
 
 # ============================================================== POV helpers
@@ -458,6 +429,12 @@ def end_panel(spec, tex, with_parts=True):
             parts.append(jack35(*spec["jack"][1:]))
         if "usbc" in spec:
             parts.append(usbc(*spec["usbc"][1:]))
+        if "sd" in spec:   # microSD socket mouth behind the slot (the socket itself lives on the main PCB)
+            _, x, y = spec["sd"]
+            parts.append(f"""union {{
+  difference {{ box {{ <-7.2,-1.5,1.62>, <7.2,1.5,5> }} box {{ <-6.4,-0.65,1.0>, <6.4,0.65,4.6> }} texture {{ T_Nickel }} }}
+  box {{ <-6.4,-0.65,4.4>, <6.4,0.65,4.6> texture {{ T_Cavity }} }}
+  translate <{x:.3f},{y:.3f},0> }}""")
     else:
         for _, x, y in spec.get("din", []):
             parts.append(f"object {{ {din_flange()} translate <{x:.3f},{y:.3f},0> }}")
@@ -469,6 +446,7 @@ def end_panel(spec, tex, with_parts=True):
 def device():
     T = TOP
     lx, lz = T["lcd_c"]; ww, wh = T["lcd_window"]; gw, gh = T["lcd_glass"]; aw, ah = T["lcd_active"]
+    gx, gz = glass_c()
     jx, jz = T["joy_c"]
     s = []
     outer = profile_pts()
@@ -489,7 +467,7 @@ difference {{
   scale <{L_EXT},{W},1> rotate x*90 translate <0,{TOP_Y + 0.012:.3f},0> no_shadow }}""")
     # display: glass module, active area image (emissive), set 0.7 below the top surface
     gy = TOP_Y - 0.7
-    s.append(f"""box {{ <{lx - gw / 2:.3f},{gy - 1.6:.3f},{lz - gh / 2:.3f}>, <{lx + gw / 2:.3f},{gy:.3f},{lz + gh / 2:.3f}> texture {{ T_Glass }} }}
+    s.append(f"""box {{ <{gx - gw / 2:.3f},{gy - 1.6:.3f},{gz - gh / 2:.3f}>, <{gx + gw / 2:.3f},{gy:.3f},{gz + gh / 2:.3f}> texture {{ T_Glass }} }}
 box {{ <0,0,0>, <1,1,0.001>
   texture {{ pigment {{ image_map {{ png "{os.path.join(BUILD, 'tex_screen.png')}" interpolate 2 once }} }}
             finish {{ ambient 0 emission 1.05 diffuse 0 specular 0.9 roughness 0.0015 reflection {{ 0.04, 0.08 fresnel }} }} }}
@@ -652,9 +630,13 @@ STANDOFF_L = 16.0
 TB_Y0 = PCB_Y1 + STANDOFF_L
 TB_Y1 = TB_Y0 + PCB_T
 TB = (20.0, 100.5, 5.0, 73.0)               # UI board outline x0 x1 z0 z1
-STANDOFFS = [(26.0, 8.0), (26.0, 70.0), (96.0, 8.0), (96.0, 60.0)]
-LCD_Y0, LCD_BL, LCD_Y1 = 39.0, 40.1, 41.2   # panel bottom, backlight/glass interface, glass top
-CARRIER = (11.5, 64.5, 30.5, 61.5)
+STANDOFFS = [(26.0, 8.0), (26.0, 70.0), (96.0, 8.0), (94.0, 69.5)]   # rear-right moved off (96, 60): CHG LED now there
+LCD_Y0, LCD_BL, LCD_Y1 = 38.7, 39.7, 41.2   # 2.8in panel: bottom, backlight/glass interface, glass top (2.5 thick)
+_GX, _GZ = glass_c()
+LCD_FX = _GX + TOP["lcd_glass"][0] / 2      # +x short edge of the glass, where the FPC exits
+FPC_W = 13.5                                # 24-pin 0.5 mm FPC (assumed)
+J1_X = LCD_FX + 5.1                         # UI-board ZIF that takes the panel FPC
+CARRIER = (_GX - TOP["lcd_glass"][0] / 2 - 1.5, LCD_FX + 1.5, _GZ - TOP["lcd_glass"][1] / 2 - 1.5, _GZ + TOP["lcd_glass"][1] / 2 + 1.5)
 BATT = dict(x0=28.0, x1=88.0, z0=20.0, z1=58.0, y0=2.5, t=8.0)   # 803860-class 1S pouch, ~2000 mAh
 SECTION_Z = 42.0
 
@@ -863,14 +845,14 @@ for (x, z, r) in [(81.4, 55.6, 90), (90.6, 55.6, 90), (90.6, 60.0, 90), (71.8, 4
 BOTTOM_PARTS = [("C", lambda: pk_chip(*P0805), x, z, 0, "") for x, z in ((99.0, 27.0), (99.0, 33.0))]
 
 UI_PARTS = [
-    ("SW1", pk_skrh, 90.0, 46.0, 0, "SKRH 5-WAY"),
-    ("D1", lambda: pk_led(1.6, 0.8, 0.55), 81.0, 69.0, 0, ""),
-    ("D2", lambda: pk_led(1.6, 0.8, 0.55), 97.0, 69.0, 0, ""),
-    ("J1", lambda: pk_zif(12.0, 4.5, 2.0), 68.9, 46.0, -90, "LCD"),
-    ("U1", lambda: pk_gull(2.9, 1.6, 1.1, 3, 0.95, 2.8), 78.0, 34.0, 0, "ESD"),
+    ("SW1", pk_skrh, TOP["joy_c"][0], TOP["joy_c"][1], 0, "SKRH 5-WAY"),
+    ("D1", lambda: pk_led(1.6, 0.8, 0.55), TOP["led_act"][0], TOP["led_act"][1], 0, ""),
+    ("D2", lambda: pk_led(1.6, 0.8, 0.55), TOP["led_chg"][0], TOP["led_chg"][1], 0, ""),
+    ("J1", lambda: pk_zif(16.0, 4.5, 2.0), J1_X, _GZ, 90, "LCD"),
+    ("U1", lambda: pk_gull(2.9, 1.6, 1.1, 3, 0.95, 2.8), 88.0, 27.0, 0, "ESD"),
 ]
-for (x, z, r) in [(78.0, 38.0, 0), (78.0, 40.0, 0), (84.0, 58.0, 0), (84.0, 60.0, 0), (81.0, 65.8, 0), (97.0, 65.8, 0),
-                  (74.0, 52.0, 90), (76.0, 52.0, 90)]:
+for (x, z, r) in [(86.0, 24.0, 0), (90.0, 24.0, 0), (84.5, 57.4, 0), (98.5, 57.4, 0), (86.0, 50.5, 90), (90.0, 50.5, 90),
+                  (92.0, 50.5, 90), (98.0, 50.5, 90)]:
     UI_PARTS.append(("R", lambda: pk_chip(*P0402, body="T_ResBody"), x, z, r, ""))
 UI_BOTTOM = [("J2", lambda: pk_zif(14.0, 4.0, 2.0), 62.0, 70.5, 0, "")]
 
@@ -1101,18 +1083,20 @@ def main_silk(path, pads_by_part):
 def ui_silk(path, pads_by_part):
     x0, x1, z0, z1 = TB
     s = Silk(x0, z0, x1, z1)
-    bus(s, (68.0, 46.0), (62.0, 68.0), 8, 0.5, along="x", bend="zx")
-    bus(s, (85.0, 46.0), (66.0, 66.0), 5, 0.5, along="x", bend="zx")
+    bus(s, (J1_X + 3.0, _GZ), (62.0, 68.0), 10, 0.5, along="z")
+    bus(s, (TOP["joy_c"][0], TOP["joy_c"][1] + 6.5), (68.0, 66.0), 5, 0.5, along="x", bend="zx")
     for ref, pads in pads_by_part:
         for p in pads:
             s.rect(*p, fill=GOLD)
     for x, z in STANDOFFS:
         s.circle(x, z, 2.7, fill=GOLD)
         s.circle(x, z, 1.35, fill=(8, 10, 9))
-    s.rect(CARRIER[0] + 9.0, CARRIER[2], CARRIER[1], CARRIER[3], outline=SILK, width=0.15)
-    s.text("LCD CARRIER", 42.5, 46.0, 2.0)
-    s.text("NSK MT-1  UI  REV A", 82.0, 9.0, 1.3)
-    s.text("SW1", 90.0, 39.2, 1.0); s.text("MIDI", 81.0, 71.5, 0.9); s.text("CHG", 97.0, 71.5, 0.9)
+    s.rect(max(CARRIER[0], x0 + 0.5), CARRIER[2], CARRIER[1], CARRIER[3], outline=SILK, width=0.15)
+    s.text("LCD CARRIER", (max(CARRIER[0], x0) + CARRIER[1]) / 2, _GZ, 2.0)
+    s.text("NSK MT-1  UI  REV A", 55.0, 9.0, 1.3)
+    jx, jz = TOP["joy_c"]
+    s.text("SW1", jx, jz - 7.2, 1.0)
+    s.text("MIDI", TOP["led_act"][0], TOP["led_act"][1] + 2.2, 0.9); s.text("CHG", TOP["led_chg"][0], TOP["led_chg"][1] + 2.2, 0.9)
     s.img.save(path)
 
 
@@ -1254,26 +1238,27 @@ def ui_assembly(knob_bezel=False):
     # display carrier: black PC frame, sits on the UI board, lip over the IN-end DINs, pocket for the panel
     cx0, cx1, cz0, cz1 = CARRIER
     lx, lz = T["lcd_c"]; gw, gh = T["lcd_glass"]; aw, ah = T["lcd_active"]
+    gx, gz = glass_c()
     s.append(f"""difference {{
   union {{ {bx(x0 + 0.5, TB_Y1, cz0, cx1, LCD_Y0, cz1)} {bx(cx0, 37.0, cz0, x0 + 0.6, LCD_Y0, cz1)}
           {bx(cx0, LCD_Y0 - 0.01, cz0, cx1, LCD_Y0 + 1.4, cz0 + 1.2)} {bx(cx0, LCD_Y0 - 0.01, cz1 - 1.2, cx1, LCD_Y0 + 1.4, cz1)}
           {bx(cx0, LCD_Y0 - 0.01, cz0, cx0 + 1.2, LCD_Y0 + 1.4, cz1)} }}
   {bx(x0 + 3.0, TB_Y1 - 1, cz0 + 2.5, cx1 - 2.5, LCD_Y0 - 1.2, cz1 - 2.5)}
-  {bx(cx1 - 3.0, TB_Y1 - 1, lz - 6.0, cx1 + 1, LCD_Y0 - 1.2, lz + 6.0)}
+  {bx(cx1 - 3.0, TB_Y1 - 1, gz - FPC_W / 2 - 0.8, cx1 + 1, LCD_Y0 - 1.2, gz + FPC_W / 2 + 0.8)}
   texture {{ T_Carrier }} }}""")
     # TFT panel: backlight + glass, active area image (emissive)
-    s.append(bx(lx - gw / 2, LCD_Y0, lz - gh / 2, lx + gw / 2, LCD_BL, lz + gh / 2, "T_Backlight"))
-    s.append(bx(lx - gw / 2, LCD_BL, lz - gh / 2, lx + gw / 2, LCD_Y1, lz + gh / 2, "T_Glass"))
+    s.append(bx(gx - gw / 2, LCD_Y0, gz - gh / 2, gx + gw / 2, LCD_BL, gz + gh / 2, "T_Backlight"))
+    s.append(bx(gx - gw / 2, LCD_BL, gz - gh / 2, gx + gw / 2, LCD_Y1, gz + gh / 2, "T_Glass"))
     s.append(f"""box {{ <0,0,0>, <1,1,0.001>
   texture {{ pigment {{ image_map {{ png "{os.path.join(BUILD, 'tex_screen.png')}" interpolate 2 once }} }}
             finish {{ ambient 0 emission 1.05 diffuse 0 specular 0.9 roughness 0.0015 reflection {{ 0.04, 0.08 fresnel }} }} }}
   scale <{aw:.3f},{ah:.3f},1> rotate x*90 translate <{lx - aw / 2:.3f},{LCD_Y1 + 0.002:.3f},{lz - ah / 2:.3f}> }}""")
     # FPC: exits the +x short edge, folds down round the carrier end into J1 (ZIF on the UI board)
-    fx = lx + gw / 2
-    fpc = [(fx - 1.0, LCD_BL - 0.15, lz), (fx + 0.8, LCD_BL - 0.2, lz), (fx + 1.7, LCD_BL - 1.3, lz), (fx + 1.75, 36.4, lz),
-           (fx + 2.4, TB_Y1 + 0.95, lz), (fx + 3.6, TB_Y1 + 0.95, lz), (fx + 5.0, TB_Y1 + 0.95, lz)]
-    s.append(ribbon(fpc, (0, 0, 11.0), "T_Flex"))
-    s.append(bx(fx + 3.2, TB_Y1 + 0.8, lz - 5.5, fx + 4.6, TB_Y1 + 1.1, lz + 5.5, "T_Stiff"))
+    fx = LCD_FX
+    fpc = [(fx - 1.0, LCD_BL - 0.15, gz), (fx + 0.8, LCD_BL - 0.2, gz), (fx + 1.7, LCD_BL - 1.3, gz), (fx + 1.75, 36.4, gz),
+           (fx + 2.4, TB_Y1 + 0.95, gz), (fx + 3.6, TB_Y1 + 0.95, gz), (fx + 5.0, TB_Y1 + 0.95, gz)]
+    s.append(ribbon(fpc, (0, 0, FPC_W), "T_Flex"))
+    s.append(bx(fx + 3.2, TB_Y1 + 0.8, gz - FPC_W / 2, fx + 4.6, TB_Y1 + 1.1, gz + FPC_W / 2, "T_Stiff"))
     # FFC to the main board: J9 (main, top) -> J2 (UI, underside), 20-way 0.5 mm, C-loop towards the rear wall
     fy0, fy1 = PCB_Y1 + 1.0, TB_Y0 - 1.0
     ffc = [(62.0, fy0, 71.6), (62.0, fy0, 72.6), (62.0, fy0 + 2.5, 73.6), (62.0, (fy0 + fy1) / 2, 73.9),
@@ -1514,7 +1499,7 @@ def _annotate_plan(im, w, h, k, F):
     b = BATT
     _dashed_rect(od, P(b["x0"], b["z0"]), P(b["x1"], b["z1"]), (120, 190, 255, 255), lw)
     _dashed_rect(od, P(TB[0], TB[2]), P(TB[1], TB[3]), (255, 255, 255, 230), max(2, int(3 * k)), dash=8, gapl=8)
-    lx, lz = TOP["lcd_c"]; gw, gh = TOP["lcd_glass"]
+    lx, lz = glass_c(); gw, gh = TOP["lcd_glass"]
     _dashed_rect(od, P(lx - gw / 2, lz - gh / 2), P(lx + gw / 2, lz + gh / 2), (255, 255, 255, 160), max(2, int(2 * k)), dash=5, gapl=6)
     for (x0, z0, x1, z1, lab, col) in BLOCKS:
         od.rectangle([P(x0, z1), P(x1, z0)], fill=col + (38,), outline=col + (255,), width=lw)
@@ -1584,7 +1569,7 @@ def _annotate_section(im, w, h, k, F):
         (f"SKRH top {TB_Y1 + 3.3:.1f}, knob stem via lid", P(sw - 4.0, TB_Y1 + 3.3)),
         (f"DIN body top {DIN_Y + 10:.1f}", P(110.0, DIN_Y + 10.0)),
         (f"UI board {TB_Y0:.1f}-{TB_Y1:.1f} (16 mm standoffs)", P(97.0, (TB_Y0 + TB_Y1) / 2)),
-        (f"DIN axis {DIN_Y:.1f} (exterior: 23.0)", P(119.0, DIN_Y)),
+        (f"DIN axis {DIN_Y:.1f} (= panel hole centres)", P(119.0, DIN_Y)),
         (f"RJ45 {RJ_Y:.1f} / USB-C {USB_Y:.1f} axis", P(119.0, USB_Y)),
         (f"Main PCB {PCB_Y0:.1f}-{PCB_Y1:.1f}, slot S3 ({SLOTS[MAIN_SLOT]:.1f})", P(100.0, (PCB_Y0 + PCB_Y1) / 2)),
         (f"Battery {BATT['y0']:.1f}-{BATT['y0'] + BATT['t']:.1f} ({PCB_Y0 - BATT['y0'] - BATT['t']:.1f} swell gap)", P(80.0, BATT['y0'] + BATT['t'] / 2)),
@@ -1626,12 +1611,12 @@ def annotate(view, png, w, h):
             ("IN end panel\nIN A, IN B, XRC", P(-PANEL_T, 36.0, 66.0, E["panel_a"], Lf)),
             ("Extrusion\nHammond 1455K1201", P(4.0, H - 6.0, 0.0, 0, Lf)),
             ("1S LiPo 803860, 2000 mAh\non foam pad, kapton wrap", P(BATT["x0"], BATT["y0"] + BATT["t"] - 4.0, BATT["z0"] + 6, 0, 0.02 - FOOT - FLOOR_IN)),
-            ("Cover lens\nbonded in window", P(14.0, H, 46.0 - 12.0, 0, Lf)),
+            ("Cover lens\nbonded in window", P(TOP["lcd_c"][0] - TOP["lcd_window"][0] / 2 + 3.0, H, TOP["lcd_c"][1] - 10.0, 0, Lf)),
         ]
         right = [
-            ("1.9in TFT in PC carrier\nFPC folds to UI board", P(20.0, LCD_Y1, 58.0, E["main"], Lf + E["ui_dy"])),
-            ("UI board: 5-way\njoystick + 2 LEDs", P(96.0, TB_Y1, 10.0, E["main"], Lf + E["ui_dy"])),
-            ("FFC to main PCB, 20-way\n0.5 mm, under rear edge", P(62.0, TB_Y1, TB[3] - 0.3, E["main"], Lf + E["ui_dy"])),
+            ("2.8in IPS TFT, 320x240\nin PC carrier, FPC to UI board", P(CARRIER[0] + 14.0, LCD_Y1, CARRIER[3] - 4.0, E["main"], Lf + E["ui_dy"])),
+            ("UI board: 5-way\njoystick + 2 LEDs", P(96.0, TB_Y1, 14.0, E["main"], Lf + E["ui_dy"])),
+            ("FFC to main PCB J9, 20-way\n0.5 mm, under rear edge", P(88.0, TB_Y1, TB[3] - 0.5, E["main"], Lf + E["ui_dy"])),
             ("Main PCB, 4-layer\nslides in slot S3", P(70.0, PCB_Y1, PCB_Z0 + 4, E["main"], Lf)),
             ("M2.5 x 16\nstandoffs", P(96.0, TB_Y0 - 3.0, 8.0, E["main"], Lf)),
             ("RA PCB DIN\nsockets", P(112.0, DIN_Y + 8.0, 17.0, E["main"], Lf)),

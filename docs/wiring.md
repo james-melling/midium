@@ -1,4 +1,4 @@
-# MIDIum (NSK MT-1) breadboard wiring, milestone 1
+# MIDIum (NSK MT-1) breadboard wiring (v0.4: milestone 1 + RTC)
 
 Prototype on a **Raspberry Pi Pico 2** (RP2350). Everything runs at 3.3 V except
 the relay coils (5 V from VBUS). The pin map matches `include/pins.h`. If you
@@ -16,8 +16,8 @@ with USB at the top).
 | GP2 | 4 | Bypass relay drive (HIGH = energised) | NPN base, via 1 kΩ |
 | GP4 | 6 | UART1 TX: MIDI OUT B | OUT B driver |
 | GP5 | 7 | UART1 RX: MIDI IN B | U2 H11L1 pin 4 (output) |
-| GP6 | 9 | I2C1 SDA | OLED SDA (later also the RTC and fuel gauge) |
-| GP7 | 10 | I2C1 SCL | OLED SCL |
+| GP6 | 9 | I2C1 SDA | OLED SDA, RV-3028 RTC SDA (later also the fuel gauge) |
+| GP7 | 10 | I2C1 SCL | OLED SCL, RV-3028 RTC SCL |
 | GP8 | 11 | Joystick UP | joystick, other side to GND |
 | GP9 | 12 | Joystick DOWN | joystick |
 | GP10 | 14 | SPI1 SCK, microSD (reserved, M2) | not fitted |
@@ -197,6 +197,31 @@ other chip.
    100 nF from RST to GND, so it resets itself at power-up. Current boards
    reset themselves, and the RC does no harm on either.
 
+## 5a. Real-time clock (RV-3028-C7, I2C address 0x52)
+
+In the prototype the RTC is the **RV-3028-C7 evaluation board** from the parts
+order. It shares I2C1 with the OLED (both are 3.3 V parts; one set of
+pull-ups on the bus is enough, the OLED module usually has them).
+
+| RTC board pin | Pico |
+|---|---|
+| VDD (3V3) | 3V3(OUT), pin 36 |
+| GND (VSS) | GND |
+| SDA | GP6, pin 9 |
+| SCL | GP7, pin 10 |
+| VBACKUP | backup cell or supercap if fitted (see below), else leave as the board ships |
+| INT, CLKOUT, EVI | not connected |
+
+Without a backup supply the RTC loses the time when USB is unplugged, and
+the firmware shows "lost - set it" under Settings > Date & time (the chip
+sets its PORF flag). With a backup supply on VBACKUP (for example a CR2032,
+or a supercap charged by the board), the firmware switches the chip to
+**direct switching mode** (DSM: it runs from VBACKUP whenever VDD drops
+below it) and writes that to the RTC's EEPROM once. It never enables the
+trickle charger, so a primary cell is safe; a supercap needs the board's own
+charging arrangement. The firmware runs without the RTC too (software clock,
+"not set" at every power-up).
+
 ## 6. TFT (ST7789 1.9", 170x320, SPI)
 
 Used in landscape (320 x 170). It is detected only when **no** OLED answers on
@@ -260,3 +285,5 @@ device on OUT A makes step 3 easier.
 | 7 | Dense-stream test. | From the laptop, send a continuous stream on IN: a running-status CC sweep at full rate plus repeated 1 kB sysex dumps for 60 s. At the same time, run Note sweep and Clock out from the MIDIum. | The laptop on OUT B receives every input byte (compare counts or capture and diff). Generated notes and clocks are merged in without corrupting the stream: no stray data, no broken running status. Stats: `Drops out A/B` = 0, `IN A UART err` = 0, `IN A orphans` = 0, `IN A merge drop` = 0. `Mon overflow` may count if the screen can't keep up. That affects the display only, never thru. |
 | 8 | Second source into IN B (another interface output, or a loop from OUT B of a second device). | Menu > Routing > `A+B merge -> both`. Send from both sources at once, including sysex on each. | Both streams arrive merged on OUT A and OUT B, every message intact (sysex never interleaved). The monitor tags each line A or B, and the header reads `A:ab B:ab`. Stats > `IN B merge drop` stays 0 unless the two inputs together send more than one MIDI line can carry. |
 | 9 | Remove USB power mid-stream. | | Relays drop out and IN A goes hard-wired to OUT A again. IN B stops. |
+| 10 | RTC eval board on GP6 / GP7. | Menu > Settings > Date & time. | `RTC RV-3028`. If `Time` says "lost - set it", press, set the date and time (LEFT / RIGHT field, UP / DOWN value), press. With a backup cell, unplug USB for a minute: the time is still right afterwards. |
+| 11 | Same. | Send some MSC from the laptop, then Menu > Logs. | The newest session is marked LIVE with the right start time; press it to browse the messages. Power-cycle: the session is still there and a new one starts. |

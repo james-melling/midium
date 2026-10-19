@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "midi_parser.h"
+#include "mtc.h"
 
 void monitor_init(void);
 
@@ -26,5 +27,10 @@ uint32_t monitor_total_msgs(void);
 uint32_t monitor_input_msgs(int in);  /* messages from ME_IN_A / ME_IN_B */
 uint32_t monitor_stray_bytes(void);
 void     monitor_clear(void);
+
+/* MTC readers, one per input (fed with every message, unfiltered). */
+const mtc_t *monitor_mtc(int in);
+/* Input with the most recent MTC (quarter or full frame), -1 if none ever. */
+int      monitor_mtc_active(void);
 
 #endif /* MIDIUM_MONITOR_H */

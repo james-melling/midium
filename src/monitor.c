@@ -9,6 +9,8 @@
 #include "msc_decode.h"
 #include "settings.h"
 #include "debug_log.h"
+#include "logger.h"
+#include "mtc.h"
 #include "config.h"
 
 static midi_parser_t s_parser[ME_NUM_INS];
@@ -19,31 +21,24 @@ static uint32_t      s_total;
 static uint32_t      s_total_src[ME_NUM_INS];
 static bool          s_changed;
 
+static mtc_t s_mtc[ME_NUM_INS];
+
 static void on_msg(const midi_msg_t *m, void *ctx) {
     (void)ctx;
     if (m->type < MT_COUNT) s_counts[m->type]++;
     s_total++;
     if (m->src < ME_NUM_INS) s_total_src[m->src]++;
     dbg_log_msg(m);
-    /* Input filter (Display > Show inputs), errors included: they belong to
-     * one input too. */
-    if (g_settings.show_inputs == SHOW_IN_A && m->src != ME_IN_A) return;
-    if (g_settings.show_inputs == SHOW_IN_B && m->src != ME_IN_B) return;
-    /* "Hide realtime" filters at insertion: at 120 BPM the clock alone would
-     * flush a 128-entry history in under 3 seconds. Still counted above. */
-    if (g_settings.hide_realtime && midi_is_noisy_realtime(m)) return;
-    /* MSC filters, also at insertion. Errors always stay visible. A device
-     * filter passes that device_ID and the all-call ID (7F), which every
-     * device must obey; group IDs are not matched (membership unknown). */
-    if ((g_settings.msc_only || g_settings.msc_dev_filter >= 0) && m->type != MT_ERROR) {
-        unsigned have = m->sx_len < MIDI_SX_STORE ? m->sx_len : MIDI_SX_STORE;
-        if (m->type == MT_SYSEX && msc_is_msc(m->sx, have)) {
-            int f = g_settings.msc_dev_filter;
-            if (f >= 0 && m->sx[2] != (uint8_t)f && m->sx[2] != MSC_DEV_ALL) return;
-        } else if (g_settings.msc_only) {
-            return;
-        }
+    /* Every message goes to the flash log and the MTC reader, unfiltered. */
+    logger_msg(m);
+    if (m->src < ME_NUM_INS) {
+        if (m->type == MT_MTC_QF) mtc_quarter_frame(&s_mtc[m->src], m->d1, m->t_us);
+        else if (m->type == MT_SYSEX) mtc_full_frame(&s_mtc[m->src], m->sx, m->sx_len < MIDI_SX_STORE ? m->sx_len : MIDI_SX_STORE, m->t_us);
     }
+    /* Display filters (Display > Filters) apply as messages arrive: at
+     * 120 BPM the clock alone would flush a 128-entry history in under 3 s.
+     * Hidden messages are still counted above. */
+    if (!msg_filter_pass(&g_settings.filter, m)) return;
     s_hist[s_seq % HISTORY_LEN] = *m;
     s_seq++;
     s_changed = true;
@@ -61,6 +56,7 @@ static void push_error(uint8_t src, uint8_t code, uint64_t t) {
 
 void monitor_init(void) {
     for (int i = 0; i < ME_NUM_INS; i++) {
+        mtc_init(&s_mtc[i]);
         midi_parser_init(&s_parser[i], on_msg, NULL);
         s_parser[i].src = (uint8_t)i;
     }
@@ -111,3 +107,11 @@ uint32_t monitor_type_count(midi_type_t t) { return t < MT_COUNT ? s_counts[t] :
 uint32_t monitor_total_msgs(void) { return s_total; }
 uint32_t monitor_input_msgs(int in) { return (in >= 0 && in < ME_NUM_INS) ? s_total_src[in] : 0; }
 uint32_t monitor_stray_bytes(void) { return s_parser[ME_IN_A].stray_data + s_parser[ME_IN_B].stray_data; }
+
+const mtc_t *monitor_mtc(int in) { return (in >= 0 && in < ME_NUM_INS) ? &s_mtc[in] : NULL; }
+
+int monitor_mtc_active(void) {
+    uint64_t a = mtc_last_us(&s_mtc[ME_IN_A]), b = mtc_last_us(&s_mtc[ME_IN_B]);
+    if (!a && !b) return -1;
+    return b > a ? ME_IN_B : ME_IN_A;
+}

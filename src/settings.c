@@ -1,6 +1,6 @@
 /*
- * settings.c - defaults and routing presets. Flash persistence arrives in
- * milestone 2.
+ * settings.c - defaults and routing presets. Settings persistence is still
+ * to come (M2).
  */
 #include "settings.h"
 
@@ -57,14 +57,12 @@ void settings_defaults(settings_t *s) {
     s->route.src[ME_OUT_A][ME_SRC_GEN] = true;
     s->route.src[ME_OUT_B][ME_SRC_GEN] = true;
 
-    s->hide_realtime = true;
+    s->pin_latest = true;
     s->note_c3 = false;
-    s->time_column = false;
+    s->time_col = TIMECOL_OFF;
     s->brightness = 80;
     s->usb_log = true;
-    s->msc_only = false;
-    s->msc_dev_filter = -1;
-    s->show_inputs = SHOW_IN_BOTH;
+    msg_filter_defaults(&s->filter);
 
     s->gen_channel = 1;
     s->cc_number = 7;

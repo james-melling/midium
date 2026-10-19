@@ -235,7 +235,7 @@ td:first-child { white-space: nowrap; }
   <header class="top">
     <div>
       <h1>MIDIum <span>NSK MT-1 simulator</span></h1>
-      <p>The screen, menus, monitor, generator and thru / merge engine below are the real v0.3 firmware, compiled to WebAssembly. Inject traffic on IN A and IN B, drive the joystick, and watch what leaves OUT A and OUT B.</p>
+      <p>The screen, menus, monitor, generator and thru / merge engine below are the real v0.4 firmware, compiled to WebAssembly. Inject traffic on IN A and IN B, drive the joystick, and watch what leaves OUT A and OUT B.</p>
     </div>
     <div class="top-ctl">
       <div class="seg" role="group" aria-label="Display fitted">
@@ -270,6 +270,7 @@ td:first-child { white-space: nowrap; }
           <span>Display <b id="st-disp">-</b></span>
           <span>Uptime <b id="st-up">0:00:00</b></span>
           <span>Monitor <b id="st-msgs">0</b> msgs</span>
+          <span>Log <b id="st-log">-</b></span>
         </div>
       </section>
 
@@ -284,10 +285,14 @@ td:first-child { white-space: nowrap; }
           <table>
             <thead><tr><th>Where</th><th>Up / Down</th><th>Left</th><th>Right</th><th>Press</th></tr></thead>
             <tbody>
-              <tr><td>Monitor</td><td>scroll history (pauses, header shows PAUSED)</td><td>back to live</td><td>time column on / off</td><td>open menu; on a highlighted MSC / sysex line, open its detail page</td></tr>
+              <tr><td>Monitor</td><td>scroll history (pauses); the newest message stays pinned on the bottom line, the cursor can land on it</td><td>back to live</td><td>time column: off / uptime / time of day</td><td>open menu; on a selected MSC / sysex line, open its detail page</td></tr>
               <tr><td>Detail page</td><td>scroll</td><td>back to monitor</td><td>next page</td><td>next page</td></tr>
               <tr><td>Menu</td><td>move (wraps)</td><td>back</td><td>select / toggle / edit</td><td>select / toggle / edit</td></tr>
-              <tr><td>Editing a value</td><td>change value</td><td>done</td><td>done</td><td>done</td></tr>
+              <tr><td>Editing a value</td><td>change value (wraps at both ends; hold to repeat, faster on big ranges)</td><td>done</td><td>done</td><td>done</td></tr>
+              <tr><td>MTC display</td><td>-</td><td>back</td><td>-</td><td>back</td></tr>
+              <tr><td>Date &amp; time</td><td>change field (wraps)</td><td>previous field / cancel</td><td>next field</td><td>edit, then set</td></tr>
+              <tr><td>Logs</td><td>move (wraps)</td><td>back</td><td>open</td><td>open session / new session / delete</td></tr>
+              <tr><td>Log browser</td><td>scroll</td><td>back to Logs</td><td>time column</td><td>detail page of an MSC / sysex line</td></tr>
               <tr><td>Editing MSC cue</td><td>change the part in &lt; &gt;</td><td>integer part, or done</td><td>decimal part, or done</td><td>done</td></tr>
             </tbody>
           </table>
@@ -314,7 +319,7 @@ td:first-child { white-space: nowrap; }
     </div>
   </div>
 
-  <p class="foot" id="foot">Default routing is the firmware default: IN A goes to both outputs and IN B is monitored only. Change it on the device under Menu &gt; Routing. Settings live in RAM, as on the M1 hardware, so a power cycle or display change resets them.</p>
+  <p class="foot" id="foot">Default routing is the firmware default: IN A goes to both outputs and IN B is monitored only. Change it on the device under Menu &gt; Routing. Settings live in RAM, as on the hardware so far, so a power cycle or display change resets them. The clock starts from this computer's time, and the flash log (emulated in RAM with the real format code) survives power cycles until the page is reloaded.</p>
 </div>
 
 <script>/*__MIDIUM_SIM_JS__*/</script>
@@ -358,7 +363,7 @@ td:first-child { white-space: nowrap; }
   /* ---------------- traffic ---------------- */
   var ports = [mkPort(0), mkPort(1)];
   function mkPort(p) {
-    return { p: p, ch: p, note: 0, prog: 0, mal: 0, bpm: 120, streams: {} };
+    return { p: p, ch: p, note: 0, prog: 0, mal: 0, bpm: 120, streams: {}, mtcRate: 1, mtcRev: false, tc: null };
   }
   var MELODY = [60, 64, 67, 72, 69, 65, 62, 59];
   var NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
@@ -402,6 +407,13 @@ td:first-child { white-space: nowrap; }
       ];
       at(P.p, v[P.mal++ % v.length]);
     },
+    locate: function (P) {
+      // MTC full frame: tape / playback locates to 10:00:00:00; a running MTC
+      // stream on this input carries on from there.
+      P.tc = { h: 10, m: 0, s: 0, f: 0 };
+      if (P.streams.mtc) P.streams.mtc.k = 0;
+      at(P.p, mtcFull(P.tc, P.mtcRate));
+    },
     sysex: function (P) {
       var d = [0xF0, 0x43, 0x00 | P.ch, 0x7E, 0x01, 0x40], sum = 0;
       var seed = 7 + P.p * 13;
@@ -410,6 +422,37 @@ td:first-child { white-space: nowrap; }
       at(P.p, d);
     }
   };
+
+  /* ---------------- MIDI time code helpers ---------------- */
+  var MTC_FPS = [24, 25, 30000 / 1001, 30], MTC_NAMES = ["24", "25", "29.97df", "30"];
+  function tcStep(t, rate, dir) {
+    var fps = rate === 0 ? 24 : rate === 1 ? 25 : 30, df = rate === 2;
+    if (dir > 0) {
+      if (++t.f >= fps) { t.f = 0; if (++t.s >= 60) { t.s = 0; if (++t.m >= 60) { t.m = 0; t.h = (t.h + 1) % 24; } } }
+      if (df && t.s === 0 && t.f < 2 && t.m % 10 !== 0) t.f = 2;
+    } else {
+      var atStart = t.f === 0 || (df && t.s === 0 && t.f === 2 && t.m % 10 !== 0);
+      if (!atStart) { t.f--; return; }
+      t.f = fps - 1;
+      if (t.s > 0) { t.s--; return; }
+      t.s = 59;
+      if (t.m > 0) { t.m--; return; }
+      t.m = 59; t.h = (t.h + 23) % 24;
+    }
+  }
+  function mtcFull(t, rate) { return [0xF0, 0x7F, 0x7F, 0x01, 0x01, (rate << 5) | t.h, t.m, t.s, t.f, 0xF7]; }
+  function mtcButtons(P) {
+    for (var r = 0; r < 4; r++) {
+      var b = document.getElementById("b-" + (P.p ? "B" : "A") + "-mtc" + r);
+      if (b) b.setAttribute("aria-pressed", P.streams.mtc && P.mtcRate === r ? "true" : "false");
+    }
+  }
+  function mtcRun(P, rate) {
+    if (P.streams.mtc && P.mtcRate === rate) { delete P.streams.mtc; }     // same rate again: stop
+    else if (P.streams.mtc) { P.mtcRate = rate; }                          // change rate on the fly
+    else { P.mtcRate = rate; var s = P.streams.mtc = {}; STREAMS.mtc.start(P, s); }
+    mtcButtons(P);
+  }
 
   /* Continuous streams, generated a little ahead of sim time. */
   var STREAMS = {
@@ -426,25 +469,28 @@ td:first-child { white-space: nowrap; }
       fill: function (P, s, horizon) { while (s.next <= horizon) { at(P.p, [0xFE], 0, s.next); s.next += 300000; } }
     },
     mtc: {
+      // MIDI time code: quarter frames at the chosen rate, forward or rewinding.
+      // Forward: pieces 0..7 describe the frame when piece 0 went out; reverse:
+      // pieces 7..0 describe the frame when piece 7 went out (2 frames per set).
       start: function (P, s) {
-        s.h = 1; s.m = 0; s.sec = 0; s.f = 0; s.q = 0; s.next = now() + 2000;
-        at(P.p, [0xF0, 0x7F, 0x7F, 0x01, 0x01, 0x20 | s.h, s.m, s.sec, s.f, 0xF7]);   // full frame, 25 fps
+        if (!P.tc) P.tc = { h: 1, m: 0, s: 0, f: 0 };
+        s.k = 0; s.next = now() + 2000; s.enc = null;
+        at(P.p, mtcFull(P.tc, P.mtcRate));        // locate to the start point first
       },
       fill: function (P, s, horizon) {
+        var per = 1e6 / (MTC_FPS[P.mtcRate] * 4);
         while (s.next <= horizon) {
-          var q = s.q, v;
-          switch (q) {
-            case 0: v = s.f & 15; break; case 1: v = s.f >> 4; break;
-            case 2: v = s.sec & 15; break; case 3: v = s.sec >> 4; break;
-            case 4: v = s.m & 15; break; case 5: v = s.m >> 4; break;
-            case 6: v = s.h & 15; break; default: v = ((s.h >> 4) & 1) | (1 << 1); break;  // rate bits 01 = 25 fps
+          if (s.k === 0) { s.dir = P.mtcRev ? -1 : 1; s.enc = { h: P.tc.h, m: P.tc.m, s: P.tc.s, f: P.tc.f }; }
+          var piece = s.dir > 0 ? s.k : 7 - s.k, t = s.enc, v;
+          switch (piece) {
+            case 0: v = t.f & 15; break; case 1: v = t.f >> 4; break;
+            case 2: v = t.s & 15; break; case 3: v = t.s >> 4; break;
+            case 4: v = t.m & 15; break; case 5: v = t.m >> 4; break;
+            case 6: v = t.h & 15; break; default: v = ((t.h >> 4) & 1) | (P.mtcRate << 1); break;
           }
-          at(P.p, [0xF1, (q << 4) | v], 0, s.next);
-          s.next += 10000;     // 25 fps x 4 quarter frames per frame = 100 per second
-          if (++s.q === 8) {
-            s.q = 0; s.f += 2;
-            if (s.f >= 25) { s.f -= 25; if (++s.sec === 60) { s.sec = 0; if (++s.m === 60) { s.m = 0; s.h++; } } }
-          }
+          at(P.p, [0xF1, (piece << 4) | v], 0, s.next);
+          s.next += per;
+          if (++s.k === 8) { s.k = 0; for (var i = 0; i < 2; i++) tcStep(P.tc, P.mtcRate, s.dir); }
         }
       }
     },
@@ -483,7 +529,8 @@ td:first-child { white-space: nowrap; }
   var GROUPS = [
     ["Channel voice", [["note", "Note on / off"], ["cc", "CC 7 sweep"], ["pc", "Program change"], ["pb", "Pitch bend sweep"]]],
     ["Show control (MSC, device 1)", [["mscgo", "GO Q12.5 lighting"], ["mscstop", "STOP sound"], ["msclist", "GO Q7 L2 P3"], ["msctgo", "TIMED_GO Q4"], ["mscbad", "Malformed MSC"]]],
-    ["System", [["sysex", "SysEx dump 200 B"], ["~mtc", "MTC 25 fps"], ["~clock", "Clock"], ["~as", "Active sensing"], ["~dense", "Dense stream"]]]
+    ["Timecode (MTC)", [["@mtc0", "MTC 24"], ["@mtc1", "MTC 25"], ["@mtc2", "MTC 29.97df"], ["@mtc3", "MTC 30"], ["!rew", "Rewind"], ["locate", "Full frame locate 10:00:00:00"]]],
+    ["System", [["sysex", "SysEx dump 200 B"], ["~clock", "Clock"], ["~as", "Active sensing"], ["~dense", "Dense stream"]]]
   ];
   var inUi = [];
   function buildInputs() {
@@ -500,8 +547,9 @@ td:first-child { white-space: nowrap; }
       GROUPS.forEach(function (g) {
         h += '<div class="grp"><span>' + g[0] + "</span><div>";
         g[1].forEach(function (b) {
-          var tog = b[0][0] === "~", id = tog ? b[0].slice(1) : b[0];
-          h += '<button type="button" class="btn" id="b-' + L + "-" + id + '" data-a="' + id + '"' + (tog ? ' data-tog="1" aria-pressed="false"' : "") + ">" + b[1] + "</button>";
+          var c = b[0][0], tog = c === "~" || c === "@" || c === "!", id = tog ? b[0].slice(1) : b[0];
+          var kind = c === "~" ? ' data-tog="1"' : c === "@" ? ' data-mtc="' + id.slice(3) + '"' : c === "!" ? ' data-rew="1"' : "";
+          h += '<button type="button" class="btn" id="b-' + L + "-" + id + '" data-a="' + id + '"' + kind + (tog ? ' aria-pressed="false"' : "") + ">" + b[1] + "</button>";
           if (id === "clock") h += '<label class="bpm" for="bpm-' + L + '"><input id="bpm-' + L + '" type="number" min="30" max="300" value="' + P.bpm + '"> BPM</label>';
         });
         h += "</div></div>";
@@ -513,6 +561,8 @@ td:first-child { white-space: nowrap; }
         var b = ev.target.closest("button[data-a]");
         if (!b || !M) return;
         if (b.dataset.tog) streamToggle(P, b.dataset.a, b);
+        else if (b.dataset.mtc) mtcRun(P, +b.dataset.mtc);
+        else if (b.dataset.rew) { P.mtcRev = !P.mtcRev; b.setAttribute("aria-pressed", P.mtcRev ? "true" : "false"); }
         else ACTIONS[b.dataset.a](P);
       });
       el.querySelector("#ch-" + L).addEventListener("change", function (ev) { P.ch = +ev.target.value; });
@@ -754,6 +804,7 @@ td:first-child { white-space: nowrap; }
 
   /* ---------------- status ---------------- */
   var ledEl = document.getElementById("led-midi");
+  var stLog = document.getElementById("st-log");
   var stUp = document.getElementById("st-up"), stMsgs = document.getElementById("st-msgs"), stDisp = document.getElementById("st-disp");
   var lastBits = -1, lastRx = [0, 0], statT = 0;
   function updateStatus(dtMs) {
@@ -769,6 +820,7 @@ td:first-child { white-space: nowrap; }
     var s = Math.floor(now() / 1e6);
     stUp.textContent = Math.floor(s / 3600) + ":" + ("0" + Math.floor(s / 60) % 60).slice(-2) + ":" + ("0" + s % 60).slice(-2);
     stMsgs.textContent = M._sim_stat(6);
+    stLog.textContent = M._sim_log_sessions() + " sessions, " + M._sim_log_used_pct() + "% used";
     for (var p = 0; p < 2; p++) {
       var tot = M._sim_stat(p), d = tot - lastRx[p]; lastRx[p] = tot;
       var load = Math.min(100, d * 320 / (span * 10));   // % of line capacity
@@ -831,16 +883,32 @@ td:first-child { white-space: nowrap; }
     at(A, [0x80, 64, 0], 1400, t0);
   }
 
+  /* RTC: seeded from this computer's local time (seconds since 2000-01-01);
+     a time set on the device carries over power cycles. The flash log
+     image is kept across power cycles too, like the real flash. */
+  var rtcOffset = 0, flashImage = null;
+  function localSecs() {
+    var d = new Date();
+    return (Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds()) - Date.UTC(2000, 0, 1)) / 1000;
+  }
+
   function boot(k) {
     if (booting) return;
+    if (M) {
+      try {
+        var fp = M._sim_flash_ptr(), fs = M._sim_flash_size();
+        flashImage = M.HEAPU8.slice(fp, fp + fs);
+        if (M._sim_rtc_valid()) rtcOffset = M._sim_rtc_now() - localSecs();
+      } catch (e) { flashImage = null; }
+    }
     booting = true;
     kind = k;
     document.getElementById("d-tft").setAttribute("aria-pressed", k === 2 ? "true" : "false");
     document.getElementById("d-oled").setAttribute("aria-pressed", k === 1 ? "true" : "false");
     // stop streams, forget queued traffic: this is a power cycle
     events = [];
-    ports.forEach(function (P) { P.streams = {}; });
-    document.querySelectorAll("button[data-tog]").forEach(function (b) { b.setAttribute("aria-pressed", "false"); });
+    ports.forEach(function (P) { P.streams = {}; P.mtcRev = false; P.tc = null; });
+    document.querySelectorAll("button[data-tog], button[data-mtc], button[data-rew]").forEach(function (b) { b.setAttribute("aria-pressed", "false"); });
     for (var i = 0; i < 5; i++) { keyDownAt[i] = null; keyRelease[i] = false; }
     jbs.forEach(function (b) { b.classList.remove("down"); }); cap.removeAttribute("data-tilt");
     ctx.fillStyle = "#000"; ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -848,6 +916,8 @@ td:first-child { white-space: nowrap; }
       M = mod;
       outBuf = M._malloc(4096);
       outTimes = M._malloc(4096 * 8);
+      if (flashImage) { M.HEAPU8.set(flashImage, M._sim_flash_ptr()); M._sim_flash_restored(); }
+      M._sim_rtc_config(1, localSecs() + rtcOffset, 0);
       M._sim_init(k);
       setupDisplay();
       stDisp.textContent = M.UTF8ToString(M._sim_display_name());

@@ -8,6 +8,8 @@
 #include "sim_hal.h"
 #include "pins.h"
 #include "config.h"
+#include "timeutil.h"
+#include "rv3028.h"
 
 /* ------------------------------------------------------------------------ */
 /* Time                                                                      */
@@ -233,6 +235,73 @@ static void oled_cmd(uint8_t b) {
     }
 }
 
+/* ------------------------------------------------------------------------ */
+/* RV-3028-C7 RTC at 0x52 (registers as rv3028.h; time runs on sim time)    */
+/* ------------------------------------------------------------------------ */
+static struct {
+    bool     fitted;
+    uint8_t  reg[0x40];
+    uint8_t  ptr;
+    uint32_t base_secs;      /* RTC time at base_us */
+    uint64_t base_us;
+} R = { .fitted = true };
+static uint32_t s_rtc_seed_secs = 0;
+static bool     s_rtc_seed_porf = true;
+
+static uint32_t rtc_secs_now(void) { return R.base_secs + (uint32_t)((s_now - R.base_us) / 1000000u); }
+
+static void rtc_fill_time(void) {
+    tu_datetime_t d;
+    uint32_t secs = rtc_secs_now();
+    tu_from_secs(secs, &d);
+    R.reg[0] = tu_to_bcd(d.sec); R.reg[1] = tu_to_bcd(d.min); R.reg[2] = tu_to_bcd(d.hour);
+    R.reg[3] = tu_weekday(secs); R.reg[4] = tu_to_bcd(d.day); R.reg[5] = tu_to_bcd(d.month);
+    R.reg[6] = tu_to_bcd((uint8_t)(d.year - 2000u));
+}
+
+static void rtc_reset(void) {
+    memset(R.reg, 0, sizeof R.reg);
+    R.ptr = 0;
+    R.base_secs = s_rtc_seed_secs;
+    R.base_us = 0;
+    R.reg[RV3028_STATUS] = s_rtc_seed_porf ? RV3028_ST_PORF : 0;
+    R.reg[RV3028_EE_BACKUP] = 0x10;          /* factory: FEDE, switchover off */
+}
+
+void sim_hal_rtc_config(bool fitted, uint32_t secs, bool porf) {
+    R.fitted = fitted;
+    s_rtc_seed_secs = secs;
+    s_rtc_seed_porf = porf;
+}
+uint32_t sim_hal_rtc_secs(void) { return rtc_secs_now(); }
+bool sim_hal_rtc_valid(void) { return R.fitted && !(R.reg[RV3028_STATUS] & RV3028_ST_PORF); }
+
+static void rtc_write(const uint8_t *src, size_t len) {
+    if (len == 0) return;
+    R.ptr = src[0] & 0x3Fu;
+    bool time_written = false;
+    rtc_fill_time();
+    for (size_t i = 1; i < len; i++) {
+        uint8_t r = (uint8_t)((R.ptr + i - 1) & 0x3Fu);
+        if (r <= 6) time_written = true;
+        if (r == RV3028_STATUS) R.reg[r] = (uint8_t)((R.reg[r] & src[i]) & 0x7Fu);   /* flags clear by writing 0 */
+        else if (r == RV3028_EECMD) { /* EEPROM update completes at once */ }
+        else R.reg[r] = src[i];
+    }
+    if (time_written) {
+        tu_datetime_t d = {
+            (uint16_t)(2000u + tu_from_bcd(R.reg[6])), tu_from_bcd(R.reg[5] & 0x1Fu), tu_from_bcd(R.reg[4] & 0x3Fu),
+            tu_from_bcd(R.reg[2] & 0x3Fu), tu_from_bcd(R.reg[1] & 0x7Fu), tu_from_bcd(R.reg[0] & 0x7Fu),
+        };
+        if (tu_valid(&d)) { R.base_secs = tu_to_secs(&d); R.base_us = s_now; }   /* prescaler reset */
+    }
+}
+
+static void rtc_read(uint8_t *dst, size_t len) {
+    rtc_fill_time();
+    for (size_t i = 0; i < len; i++) dst[i] = R.reg[(R.ptr + i) & 0x3Fu];
+}
+
 uint i2c_init(i2c_inst_t *i2c, uint baud) { (void)i2c; return baud; }
 
 int i2c_read_timeout_us(i2c_inst_t *i2c, uint8_t addr, uint8_t *dst, size_t len, bool nostop, uint timeout_us) {
@@ -241,11 +310,19 @@ int i2c_read_timeout_us(i2c_inst_t *i2c, uint8_t addr, uint8_t *dst, size_t len,
         memset(dst, 0, len);
         return (int)len;
     }
+    if (i2c == DISPLAY_I2C && R.fitted && addr == RV3028_I2C_ADDR) {
+        rtc_read(dst, len);
+        return (int)len;
+    }
     return PICO_ERROR_GENERIC;       /* no ACK: nothing at this address */
 }
 
 int i2c_write_timeout_us(i2c_inst_t *i2c, uint8_t addr, const uint8_t *src, size_t len, bool nostop, uint timeout_us) {
     (void)nostop; (void)timeout_us;
+    if (i2c == DISPLAY_I2C && R.fitted && addr == RV3028_I2C_ADDR && len) {
+        rtc_write(src, len);
+        return (int)len;
+    }
     if (i2c != DISPLAY_I2C || !s_oled_fitted || addr != OLED_I2C_ADDR || len == 0) return PICO_ERROR_GENERIC;
     if (src[0] == 0x00) {
         for (size_t i = 1; i < len; i++) oled_cmd(src[i]);
@@ -276,5 +353,6 @@ void sim_hal_reset(int oled_fitted) {
     s_disp_on = false;
     s_keys_down = 0;
     s_now = 0;
+    rtc_reset();
     s_fb_ver++;
 }

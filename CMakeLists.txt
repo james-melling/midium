@@ -8,7 +8,7 @@ endif()
 # Pull in the Pico SDK (PICO_SDK_PATH env var or -DPICO_SDK_PATH=...)
 include(pico_sdk_import.cmake)
 
-project(midium VERSION 0.3.0 LANGUAGES C CXX ASM)
+project(midium VERSION 0.4.0 LANGUAGES C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
@@ -34,6 +34,16 @@ set(MIDIUM_SOURCES
     src/ui.c
     src/settings.c
     src/debug_log.c
+    src/timeutil.c
+    src/mtc.c
+    src/msg_filter.c
+    src/valedit.c
+    src/bigdigits.c
+    src/log_store.c
+    src/log_flash_rp2350.c
+    src/logger.c
+    src/rv3028.c
+    src/clock.c
 )
 
 add_executable(midium ${MIDIUM_SOURCES})
@@ -62,6 +72,7 @@ target_link_libraries(midium
     hardware_pwm
     hardware_watchdog
     hardware_sync
+    hardware_flash
 )
 
 # Debug log over USB CDC (milestone 3 replaces this with composite MIDI + MSC)

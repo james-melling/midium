@@ -3,9 +3,11 @@
  * reimplemented for the browser simulator (single-threaded, simulated clock).
  *
  * The firmware sources are compiled unchanged against these declarations:
- *   ui.c, generator.c, joystick.c, debug_log.c, disp_tft.c, disp_oled.c.
+ *   ui.c, generator.c, joystick.c, debug_log.c, disp_tft.c, disp_oled.c,
+ *   rv3028.c, clock.c, logger.c (the flash log uses log_flash_ram.c).
  * SPI and I2C writes are fed to small ST7789 / SSD1306 controller emulators
- * that paint an RGBA framebuffer, so the real display drivers run as-is.
+ * that paint an RGBA framebuffer, so the real display drivers run as-is, and
+ * I2C to 0x52 reaches an RV-3028 register emulation running on sim time.
  * midi_io.c (UARTs, core1, relays, watchdog) is replaced by sim_io.c.
  */
 #ifndef MIDIUM_SIM_HAL_H
@@ -98,6 +100,11 @@ uint32_t sim_hal_fb_version(void);
 int      sim_hal_brightness(void);   /* 0..100 as the driver set it */
 bool     sim_hal_display_on(void);
 void     sim_hal_set_key(int idx, bool down);   /* 0 up 1 down 2 left 3 right 4 press */
+
+/* RTC emulation (RV-3028 at 0x52): set before sim_hal_reset(). */
+void     sim_hal_rtc_config(bool fitted, uint32_t secs_since_2000, bool porf);
+uint32_t sim_hal_rtc_secs(void);
+bool     sim_hal_rtc_valid(void);
 
 /* Scheduler: run timers due at or before t. */
 void     sim_hal_run_timers(uint64_t t);

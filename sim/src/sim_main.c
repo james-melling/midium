@@ -29,6 +29,9 @@
 #include "generator.h"
 #include "ui.h"
 #include "debug_log.h"
+#include "clock.h"
+#include "logger.h"
+#include "log_flash_ram.h"
 
 #define CORE0_LOOP_US 100u   /* how often the sim runs one core0 loop pass */
 
@@ -36,6 +39,13 @@ static int s_kind;
 static bool s_in_loop;
 static uint64_t s_splash_until;
 static const display_driver_t *s_drv;
+
+/* The flash log region, emulated in RAM with the same layout as the
+ * RP2350 backend. The page keeps a copy across power cycles. */
+static uint8_t s_flash[LOG_FLASH_SIZE];
+static bool s_flash_restored;
+static log_ram_flash_t s_rf;
+static log_flash_t s_fl;
 
 /* As src/main.c (static there). */
 static void splash(void) {
@@ -58,6 +68,8 @@ static void core0_loop_pass(void) {
     while ((e = joystick_get()) != JOY_NONE) ui_event(e);
     bool changed = monitor_poll(512);
     gen_task(now);
+    clock_task(now);
+    logger_task(now);
     ui_render(now, changed);
     con_flush_step();
 }
@@ -92,9 +104,17 @@ EMSCRIPTEN_KEEPALIVE int sim_init(int kind) {
     joystick_init();
     monitor_init();
     gen_init();
-    /* main.c: sleep_ms(700) then con_clear() - done by sim_tick so the page
-     * can show the splash while core1 already passes MIDI. */
-    s_splash_until = time_us_64() + 700000u;
+    /* As main.c: RTC (latching the second boundary takes up to ~1.1 s of
+     * simulated time), then the log and the boot session. */
+    uint64_t t_splash = time_us_64();
+    clock_init();
+    log_ram_flash_init(&s_rf, &s_fl, s_flash, sizeof s_flash, !s_flash_restored);
+    s_flash_restored = false;
+    logger_init(&s_fl);
+    /* main.c then sleeps out the rest of 700 ms and clears - done by
+     * sim_tick so the page shows the splash while core1 passes MIDI. */
+    s_splash_until = t_splash + 700000u;
+    if (s_splash_until < time_us_64()) s_splash_until = time_us_64();
     return s_kind;
 }
 
@@ -169,3 +189,19 @@ EMSCRIPTEN_KEEPALIVE double sim_stat(int id) {
     default: return 0;
     }
 }
+
+/* ---- RTC and flash log persistence (page side) ---- */
+/* Call before sim_init: fitted, time (seconds since 2000-01-01 local), and
+ * whether the chip reports a power loss (time invalid). */
+EMSCRIPTEN_KEEPALIVE void sim_rtc_config(int fitted, double secs, int porf) {
+    sim_hal_rtc_config(fitted != 0, secs > 0 ? (uint32_t)secs : 0u, porf != 0);
+}
+EMSCRIPTEN_KEEPALIVE double sim_rtc_now(void) { return (double)sim_hal_rtc_secs(); }
+EMSCRIPTEN_KEEPALIVE int sim_rtc_valid(void) { return sim_hal_rtc_valid(); }
+EMSCRIPTEN_KEEPALIVE uint8_t *sim_flash_ptr(void) { return s_flash; }
+EMSCRIPTEN_KEEPALIVE int sim_flash_size(void) { return (int)sizeof s_flash; }
+/* The page copied a saved image into sim_flash_ptr(): do not format it. */
+EMSCRIPTEN_KEEPALIVE void sim_flash_restored(void) { s_flash_restored = true; }
+/* Log sessions / usage for the page. */
+EMSCRIPTEN_KEEPALIVE int sim_log_sessions(void) { return log_session_count(logger_log()); }
+EMSCRIPTEN_KEEPALIVE int sim_log_used_pct(void) { return (int)log_used_pct(logger_log()); }

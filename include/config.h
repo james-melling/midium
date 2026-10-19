@@ -6,7 +6,7 @@
 #define MIDIUM_CONFIG_H
 
 #ifndef MIDIUM_VERSION
-#define MIDIUM_VERSION "0.3.0"
+#define MIDIUM_VERSION "0.4.0"
 #endif
 
 #define MIDIUM_NAME   "MIDIum"
@@ -58,5 +58,15 @@
 
 /* Monitor */
 #define HISTORY_LEN 128
+
+/* Message log in the Pico 2's 4 MB QSPI flash: the top 3 MB (sector
+ * aligned). The firmware image must stay below LOG_FLASH_OFFSET (checked at
+ * boot: logging is disabled if it ever grows into the region). */
+#ifndef LOG_FLASH_OFFSET
+#define LOG_FLASH_OFFSET (1u * 1024u * 1024u)
+#endif
+#ifndef LOG_FLASH_SIZE
+#define LOG_FLASH_SIZE   (3u * 1024u * 1024u)
+#endif
 
 #endif /* MIDIUM_CONFIG_H */

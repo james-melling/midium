@@ -27,7 +27,7 @@
 
 static bool s_bus_ready;
 
-static void bus_init(void) {
+void i2c1_bus_init(void) {
     if (s_bus_ready) return;
     i2c_init(DISPLAY_I2C, I2C_BAUD);
     gpio_set_function(PIN_I2C_SDA, GPIO_FUNC_I2C);
@@ -44,7 +44,7 @@ static void bus_init(void) {
 static uint8_t s_addr = OLED_I2C_ADDR;
 
 bool oled_probe(void) {
-    bus_init();
+    i2c1_bus_init();
     static const uint8_t addrs[] = { OLED_I2C_ADDR, OLED_I2C_ADDR_ALT };
     for (size_t i = 0; i < sizeof addrs; i++) {
         uint8_t dummy;
@@ -65,7 +65,7 @@ static bool cmds(const uint8_t *c, size_t n) {
 }
 
 static bool oled_init(void) {
-    bus_init();
+    i2c1_bus_init();
     (void)oled_probe();                 /* pick 0x3C or 0x3D, also when forced */
     static const uint8_t init_seq[] = {
         0xAE,             /* display off */
@@ -112,9 +112,12 @@ static void oled_draw_row(int row, const cell_t *cells) {
     for (int c = 0; c < OLED_COLS; c++) {
         const uint8_t *g = &font5x7[(uint8_t)cells[c].ch * 5u];
         bool inv = (cells[c].attr & ATTR_INVERSE) != 0;
+        bool cur = (cells[c].attr & ATTR_CURSOR) != 0;
         for (int i = 0; i < 6; i++) {
             uint8_t v = (i < 5) ? g[i] : 0x00;
-            px[c * 6 + i] = inv ? (uint8_t)~v : v;
+            if (inv) v = (uint8_t)~v;
+            if (cur) v ^= 0x80;          /* cursor: underline (a dark line on an inverse bar) */
+            px[c * 6 + i] = v;
         }
     }
     /* extend inverse bars into the margins so highlighted rows look solid */
@@ -125,6 +128,32 @@ static void oled_draw_row(int row, const cell_t *cells) {
     uint8_t a[3] = { (uint8_t)(0xB0 | (row & 7)), (uint8_t)(col & 0x0F), (uint8_t)(0x10 | (col >> 4)) };
     cmds(a, 3);
     i2c_write_timeout_us(DISPLAY_I2C, s_addr, buf, sizeof buf, false, 20000);
+}
+
+static void oled_draw_bitmap(int x, int y, int w, int h, const uint8_t *bits, int stride, uint8_t attr) {
+    uint8_t buf[1 + 130];
+    bool inv = (attr & ATTR_INVERSE) != 0;
+    if (x < 0 || w <= 0 || x + w > OLED_COLS * 6 || y < 0 || (y & 7) || (h & 7)) return;
+    /* a bitmap that reaches a grid edge also paints that 1-px panel margin */
+    int lpad = x == 0 ? OLED_XPAD : 0, rpad = x + w == OLED_COLS * 6 ? 128 - OLED_XPAD - OLED_COLS * 6 : 0;
+    for (int page = y / 8; page < (y + h) / 8 && page < OLED_ROWS; page++) {
+        int k = 0;
+        buf[k++] = 0x40;
+        for (int i = 0; i < lpad; i++) buf[k++] = inv ? 0xFF : 0x00;
+        for (int i = 0; i < w; i++) {
+            uint8_t v = 0;
+            for (int b = 0; b < 8; b++) {
+                int r = page * 8 + b - y;
+                if ((bits[r * stride + (i >> 3)] >> (7 - (i & 7))) & 1u) v |= (uint8_t)(1u << b);
+            }
+            buf[k++] = inv ? (uint8_t)~v : v;
+        }
+        for (int i = 0; i < rpad; i++) buf[k++] = inv ? 0xFF : 0x00;
+        uint8_t col = (uint8_t)(OLED_COL_OFFSET + OLED_XPAD + x - lpad);
+        uint8_t a[3] = { (uint8_t)(0xB0 | page), (uint8_t)(col & 0x0F), (uint8_t)(0x10 | (col >> 4)) };
+        cmds(a, 3);
+        i2c_write_timeout_us(DISPLAY_I2C, s_addr, buf, (size_t)k, false, 20000);
+    }
 }
 
 static void oled_set_brightness(uint8_t pct) {
@@ -146,4 +175,7 @@ const display_driver_t g_disp_oled = {
     .draw_row = oled_draw_row,
     .set_brightness = oled_set_brightness,
     .has_colour = false,
+    .cell_w = 6,
+    .cell_h = 8,
+    .draw_bitmap = oled_draw_bitmap,
 };

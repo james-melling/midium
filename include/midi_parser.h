@@ -83,4 +83,7 @@ void midi_parser_feed(midi_parser_t *p, uint8_t b, uint64_t t_us);
  * cleared too, so following data bytes count as stray until a status. */
 void midi_parser_reset(midi_parser_t *p);
 
+/* midi_type_t for a status byte (F0 = sysex, F7 and undefined = MT_UNDEFINED). */
+uint8_t midi_type_of_status(uint8_t status);
+
 #endif /* MIDIUM_MIDI_PARSER_H */

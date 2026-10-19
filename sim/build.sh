@@ -18,9 +18,12 @@ if ! command -v emcc >/dev/null 2>&1; then
 fi
 
 # Firmware sources, unmodified. midi_io.c and main.c are replaced by
-# sim_io.c / sim_main.c; everything else is the real code.
+# sim_io.c / sim_main.c, and the QSPI flash log backend (log_flash_rp2350.c)
+# by the RAM NOR emulation (log_flash_ram.c); everything else is the real code.
 FW="midi_engine.c midi_parser.c midi_decode.c msc_decode.c settings.c monitor.c
-    generator.c console.c ui.c joystick.c disp_tft.c disp_oled.c debug_log.c"
+    generator.c console.c ui.c joystick.c disp_tft.c disp_oled.c debug_log.c
+    timeutil.c mtc.c msg_filter.c valedit.c bigdigits.c log_store.c log_flash_ram.c
+    logger.c rv3028.c clock.c"
 SRCS=""
 for f in $FW; do SRCS="$SRCS $ROOT/src/$f"; done
 SRCS="$SRCS $SIM/src/sim_hal.c $SIM/src/sim_io.c $SIM/src/sim_main.c"
@@ -30,7 +33,8 @@ VERSION=$(sed -n 's/^#define MIDIUM_VERSION "\(.*\)"/\1/p' "$ROOT/include/config
 EXPORTS='["_sim_init","_sim_tick","_sim_key","_sim_midi_in","_sim_midi_in_at","_sim_rx_free_at",
 "_sim_rx_pending","_sim_rx_flush","_sim_out_read","_sim_now_us","_sim_framebuffer","_sim_fb_w",
 "_sim_fb_h","_sim_fb_version","_sim_brightness","_sim_display_on","_sim_led","_sim_display_name",
-"_sim_route_bits","_sim_clock_running","_sim_stat","_malloc","_free"]'
+"_sim_route_bits","_sim_clock_running","_sim_stat","_sim_rtc_config","_sim_rtc_now","_sim_rtc_valid",
+"_sim_flash_ptr","_sim_flash_size","_sim_flash_restored","_sim_log_sessions","_sim_log_used_pct","_malloc","_free"]'
 EXPORTS=$(echo "$EXPORTS" | tr -d '\n')
 
 # Same warning set as the firmware build (CMakeLists.txt), as errors. clang adds
@@ -43,7 +47,7 @@ emcc -std=c11 -O2 \
     -I"$SIM/include" -I"$ROOT/include" -I"$ROOT/src" \
     $SRCS \
     -sMODULARIZE=1 -sEXPORT_NAME=MidiumSim -sSINGLE_FILE=1 -sSINGLE_FILE_BINARY_ENCODE=0 \
-    -sENVIRONMENT=web -sALLOW_MEMORY_GROWTH=0 -sINITIAL_MEMORY=16MB -sSTACK_SIZE=256KB \
+    -sENVIRONMENT=web -sALLOW_MEMORY_GROWTH=0 -sINITIAL_MEMORY=32MB -sSTACK_SIZE=256KB \
     -sFILESYSTEM=0 -sEXPORTED_FUNCTIONS="$EXPORTS" \
     -sEXPORTED_RUNTIME_METHODS='["UTF8ToString","HEAPU8","HEAPF64"]' \
     -o "$OUT/midium_sim.js"

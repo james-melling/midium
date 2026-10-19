@@ -42,6 +42,7 @@ static const uint16_t s_fg[CLS_COUNT] = {
 };
 #define BG_COLOUR      RGB565(0x00, 0x00, 0x00)
 #define INV_BG_COLOUR  RGB565(0x20, 0x50, 0xA0)   /* highlighted menu row */
+#define CUR_BG_COLOUR  RGB565(0x34, 0x38, 0x40)   /* cursor row (pinned monitor) */
 
 static uint8_t s_line[TFT_COLS * CELL_W * CELL_H * 2];   /* one text row, RGB565 BE */
 static uint s_bl_slice, s_bl_chan;
@@ -145,14 +146,17 @@ static void tft_draw_row(int row, const cell_t *cells) {
         uint8_t cls = ATTR_CLASS(attr);
         uint16_t fg = s_fg[cls < CLS_COUNT ? cls : 0];
         uint16_t bg = BG_COLOUR;
+        bool cur = (attr & ATTR_CURSOR) != 0;
         if (attr & ATTR_INVERSE) { bg = INV_BG_COLOUR; if (cls == CLS_NORMAL) fg = 0xFFFF; }
+        else if (cur) bg = CUR_BG_COLOUR;
         const uint8_t *g = &font5x7[(uint8_t)cells[c].ch * 5u];
         for (int y = 0; y < CELL_H; y++) {
             uint8_t *p = &s_line[((size_t)y * w + (size_t)c * CELL_W) * 2u];
             uint8_t bit = (uint8_t)(1u << (y >> 1));
+            bool uline = cur && y == CELL_H - 1;
             for (int x = 0; x < CELL_W; x++) {
                 int gx = x >> 1;
-                uint16_t col = (gx < 5 && (g[gx] & bit)) ? fg : bg;
+                uint16_t col = (uline || (gx < 5 && (g[gx] & bit))) ? fg : bg;
                 *p++ = (uint8_t)(col >> 8);
                 *p++ = (uint8_t)col;
             }
@@ -165,6 +169,29 @@ static void tft_draw_row(int row, const cell_t *cells) {
     cs(false);
 }
 
+static void tft_draw_bitmap(int x, int y, int w, int h, const uint8_t *bits, int stride, uint8_t attr) {
+    if (x < 0 || y < 0 || w <= 0 || h <= 0 || x + w > TFT_COLS * CELL_W || y + h > TFT_ROWS * CELL_H) return;
+    uint8_t cls = ATTR_CLASS(attr);
+    uint16_t fg = s_fg[cls < CLS_COUNT ? cls : 0], bg = BG_COLOUR;
+    if (attr & ATTR_INVERSE) { uint16_t t = fg; fg = bg; bg = t; }
+    uint16_t x0 = (uint16_t)(GRID_X + x), y0 = (uint16_t)(GRID_Y + y);
+    set_window(x0, y0, (uint16_t)(x0 + w - 1), (uint16_t)(y0 + h - 1));
+    write_pixels_begin();
+    int rows_per_chunk = (int)(sizeof s_line / 2u) / w;
+    for (int r0 = 0; r0 < h; r0 += rows_per_chunk) {
+        int nr = h - r0 < rows_per_chunk ? h - r0 : rows_per_chunk;
+        uint8_t *p = s_line;
+        for (int r = r0; r < r0 + nr; r++)
+            for (int i = 0; i < w; i++) {
+                uint16_t col = ((bits[r * stride + (i >> 3)] >> (7 - (i & 7))) & 1u) ? fg : bg;
+                *p++ = (uint8_t)(col >> 8);
+                *p++ = (uint8_t)col;
+            }
+        spi_write_blocking(TFT_SPI, s_line, (size_t)(p - s_line));
+    }
+    cs(false);
+}
+
 const display_driver_t g_disp_tft = {
     .name = "TFT ST7789",
     .cols = TFT_COLS,
@@ -173,4 +200,7 @@ const display_driver_t g_disp_tft = {
     .draw_row = tft_draw_row,
     .set_brightness = tft_set_brightness,
     .has_colour = true,
+    .cell_w = CELL_W,
+    .cell_h = CELL_H,
+    .draw_bitmap = tft_draw_bitmap,
 };

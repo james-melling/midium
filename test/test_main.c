@@ -1167,6 +1167,7 @@ int main(void) {
     test_parser();
     test_decode();
     test_msc();
+    test_m2();
     test_engine_directed();
     test_engine_two_inputs();
     test_engine_monitor();

@@ -8,9 +8,11 @@ tagged with its input, and can merge test messages into the outputs without
 breaking the stream. When it's unpowered or crashes, two relays wire IN A
 straight to OUT A. **IN B is not passed through when the box is unpowered.**
 
-This is the firmware (v0.3, milestone 1 plus the second input) for the
+This is the firmware (v0.4: milestone 1, the second input, and the first
+part of milestone 2: real-time clock, MTC reader and flash logging) for the
 breadboard prototype on a Raspberry Pi Pico 2 (RP2350). For the hookup, see
-[docs/wiring.md](docs/wiring.md).
+[docs/wiring.md](docs/wiring.md). A browser simulator runs the same code
+([sim/](sim/), page `sim/web/index.html`).
 
 ## Features
 
@@ -32,8 +34,31 @@ breadboard prototype on a Raspberry Pi Pico 2 (RP2350). For the hookup, see
   manufacturer ID, **MSC**, **MMC**, MTC quarter and full frame, song
   position, clock and transport. It keeps a 128-message history and per-type
   counters. Sysex is kept up to 128 bytes per message (the MSC limit). Each
-  line starts with its input, `A` or `B`. Display > Show inputs picks A+B,
-  A only or B only.
+  line starts with its input, `A` or `B`. The **newest message is pinned to
+  the bottom row**, highlighted, even while you scroll back through the
+  history above it (Display > Pin latest turns this off).
+* **Filters** (Display > Filters): show or hide each message type (notes,
+  poly AT, CC, program change, channel AT, pitch bend, other sysex, MSC,
+  MMC, MTC quarter frames, MTC full frames, song position / select, tune
+  request, clock, start / stop / continue, active sensing, system reset,
+  undefined, errors), with presets *All*, *Show control only* (MSC, MMC,
+  MTC full frame, start / stop / continue, program change), *No
+  realtime/TC* (the default: everything but clock, active sensing and MTC
+  quarter frames) and *None*. Also a MIDI channel filter, the input filter
+  (A+B, A only, B only) and the MSC device filter.
+* **MTC reader.** MIDI Time Code from either input is rebuilt from quarter
+  frames (forward and reverse, 24 / 25 / 29.97 drop-frame / 30 fps) and
+  full-frame locates. While it runs, the monitor header shows the time
+  (`01:00:03:12 25fps A`) instead of the routing, and *MTC display* shows it
+  full screen in large digits.
+* **Real-time clock** (RV-3028-C7 on the I2C bus) for time-of-day
+  timestamps to the millisecond, set from Settings > Date & time. Without
+  the RTC a software clock can be set by hand (lost at power off).
+* **Logging.** Every message received (all of them, whatever the display
+  filters say) is logged to the Pico's flash with its input and timestamp,
+  in sessions: a new session at every power-up and on demand. Menu > Logs
+  lists them and opens any one in a monitor-style browser, with the same
+  filters and detail pages.
 * **MIDI Show Control decoder** (MSC 1.1.1 including two-phase commit). Every
   command format and command in the spec is named. The monitor line reads
   like `MSC LTG GO Q12.5 L1 @1`, `MSC SND STOP`, `MSC LTG SET 3=255` or
@@ -57,7 +82,8 @@ breadboard prototype on a Raspberry Pi Pico 2 (RP2350). For the hookup, see
   (21 x 8 characters), or a 1.9" ST7789 colour TFT (26 x 10 characters,
   colour-coded by message type).
 * **USB debug log** (CDC serial). Each decoded message is printed with its
-  timestamp and input, and the log can be turned off in the menu.
+  timestamp and input, and the log can be turned off in the menu. The type
+  filters apply to it (input, channel and device filters do not).
 
 ## Building
 
@@ -83,12 +109,16 @@ Build options (pass to `cmake` with `-D`):
 | `MIDIUM_DISPLAY` | `0` | `0` = auto-detect (OLED if 0x3C answers, else TFT), `1` = OLED, `2` = TFT |
 | `MIDIUM_OLED_SSD1306` | `ON` | `OFF` for an SH1106 OLED (default is SSD1306, e.g. Adafruit 938) |
 
+The flash log region (`LOG_FLASH_OFFSET`, `LOG_FLASH_SIZE`, default the top
+3 MB of the Pico 2's 4 MB flash) is in `include/config.h`.
+
 TFT geometry (`TFT_X_OFFSET`, `TFT_Y_OFFSET`, `TFT_MADCTL`) is in
 `include/config.h`.
 
 ### Host unit tests
 
-The parser, decoder and thru/merge engine are plain C. They have a PC test
+The parser, decoders, thru/merge engine, MTC reader, filters, value
+editing, calendar code and flash log format are plain C. They have a PC test
 suite built with AddressSanitizer and UBSan:
 
 ```sh
@@ -104,6 +134,21 @@ and directed merge cases: the boundary rule, running-status restore per
 output, sysex protection, realtime inside sysex, stall timeouts with one and
 two inputs, routing latched at message starts, lane overflow (whole-message
 drops), and the per-input monitor ring.
+
+v0.4 adds: calendar conversion for every day 2000-2099; MTC frame counting
+(drop-frame: 107,892 frames per hour), quarter-frame reassembly at all four
+rates in both directions over 600 sets each (checked against a transmitter
+model, including the +2 / -2 frame offset and per-frame interpolation),
+partial sets, gaps, direction changes and full frames; every filter category,
+preset, channel, input and MSC device rule; value wrap-around and hold
+acceleration; the seven-segment glyphs; and the flash log: sessions written
+and read back forwards and backwards (with out-of-order timestamps and real
+time), reboot (index rebuilt from flash), empty sessions, a clock change
+mid-page, ring wrap-around (7x the region, oldest session partial), delete
+all, 24 power cuts mid-page (torn pages skipped, writing carries on), CRC
+errors in headers and payloads (at boot and while reading), garbage slots
+skipped, and 100,000 messages with the flash servicing only every third
+message.
 
 Randomised runs push 200-700 kB per input through the engine one byte time
 at a time: one input with heavy generator load; the single-input fast path
@@ -126,11 +171,15 @@ behind anything but other realtime), and that the TX backlog stays bounded.
 
 | Where | UP / DOWN | LEFT | RIGHT | PRESS |
 |---|---|---|---|---|
-| Monitor (home) | scroll history. Pauses the display and the header shows `PAUSED`. | back to live | time column on/off | open menu. When paused on a sysex / MSC line (highlighted): open its detail page |
-| Detail page | scroll | back to the monitor | next page (wraps) | next page (wraps) |
+| Monitor (home) | scroll history. Pauses the display and the header shows `PAUSED`. The first UP selects the pinned newest line; the next ones move the cursor (`A>`) up the history. | back to live | time column: off / uptime / time of day | open menu. When paused on a sysex / MSC line (cursor, or the pinned line selected): open its detail page |
+| Detail page | scroll | back (monitor or log browser) | next page (wraps) | next page (wraps) |
 | Menu | move (wraps) | back | select / toggle / edit | select / toggle / edit |
-| Editing a value | change value (hold to auto-repeat) | done | done | done |
-| Editing the MSC cue | change the part in `< >` | integer part, or done | decimal part, or done | done |
+| Editing a value | change value. **Wraps at both ends** (127 -> 0, 0 -> 127). Hold to auto-repeat; on ranges of more than 150 steps, steps of 10 after ~1.3 s and 100 after ~3.2 s (a big step stops on the end value before wrapping) | done | done | done |
+| Editing the MSC cue | change the part in `< >` (wraps) | integer part, or done | decimal part, or done | done |
+| MTC display | - | back | - | back |
+| Date & time | (editing) change the field in `< >`, wraps within its range (month 1-12, day 1 to the month's length, hour 0-23, ...) | previous field; on the year: cancel | next field | edit; while editing: set the clock |
+| Logs | move (wraps) | back | open | open the session / start a new session / delete all |
+| Log browser | scroll (older / newer) | back to Logs | time column | detail page of an MSC / sysex line |
 
 The monitor header shows the routing: `MIDIum  A:a  B:a` means both outputs
 take IN A; `A:ab B:ab` is the merge, `A:a  B:b` the split, `-` an output fed
@@ -139,9 +188,35 @@ means MIDI arrived on either input in the last 150 ms. On the TFT, a `C`
 means the clock generator is running. The onboard LED also blinks on every
 byte received.
 
+While MTC is running (a quarter frame in the last 250 ms) the header shows
+the time instead, with the rate and the input: `01:00:03;12 29.97df A` on
+the TFT (`rev` when running backwards), `01:00:03;12 29D A` on the OLED
+(`24`, `25`, `29D`, `30`, `R` for reverse). A `;` before the frames means
+drop-frame. When MTC stops, the last time stays for 2 s marked `STOP` (dimmed
+on the TFT), then the routing summary comes back. A full-frame locate shows
+the same way.
+
+In the pinned monitor the bottom row is always the newest message (inverse).
+Scrolling freezes the rows above it; new messages keep replacing the pinned
+line, and the history between the frozen rows and the newest message is
+reached by scrolling down. The cursor line is marked `A>` / `B>` (and a grey
+bar on the TFT, an underline on the OLED).
+
 ### Menu
 
 * **Monitor**: back to the monitor.
+* **MTC display**: the current MTC time full screen in seven-segment digits
+  (both displays), updated every frame, with RUNNING FWD / REV, STOPPED,
+  LOCATED (full frame only) or NO MTC, the rate, drop-frame or not, and the
+  input. Amber while running, grey when stopped. LEFT goes back.
+* **Logs**: `+ New log session`, then the sessions newest first, each with
+  its number, start date and time (or `up h:mm:ss` after power-up when the
+  clock was not set; `~` = its oldest part has been overwritten), duration
+  and message count, the current one marked LIVE; then `x Delete all logs`,
+  which asks again (Cancel is preselected). Press a session to browse it:
+  the same lines as the monitor, newest at the bottom (highlighted),
+  UP / DOWN to scroll, the current filters applied, PRESS on MSC / sysex for
+  the detail page.
 * **Generate**: Channel (1-16), Note test C4 (vel 100, off after 250 ms),
   Note sweep (C3-C5, 120 ms per note), CC number / CC value / Send CC,
   Program / Send PC, PB sweep, Clock BPM / Clock out, MIDI Start / Stop /
@@ -149,7 +224,7 @@ byte received.
   The footer shows what was just sent, decoded.
 * **Generate > MSC**: Send, Command, Format (ALL 7F, the general categories
   LTG / SND / MACH / VID / PROJ / PROC / PYRO, then every specific format),
-  Device (0-111, G1-G15, ALL), Cue (`integer.decimal`, 0-9999 . 0-99; `none`
+  Device (0-111, G1-G15, ALL; every value wraps), Cue (`integer.decimal`, 0-9999 . 0-99; `none`
   = no cue), Cue list (sent only with a cue), Time (TIMED_GO time, and SET
   fade time when not 0:00; sent as 25 fps), SET control / SET value (0-16383),
   FIRE macro. Defaults are GO, ALL format, all-call, cue 1. LOAD without a
@@ -160,17 +235,28 @@ byte received.
   columns only and leave generator routing alone. Changes take effect at
   each input's next message, so an output never gets half a message. (This
   replaces the old Thru menu: "Thru A off" is `OUT A <- IN A` off.)
-* **Display**: Hide realtime (default on), Note names (C4=60 or C3=60),
-  Time column, Brightness, USB log, Show inputs (A+B, A only, B only), Show
-  MSC only, MSC dev filter (all, or one device ID; all-call messages always
-  pass), Clear monitor.
+* **Display**: Pin latest (default on), **Filters >**, Note names (C4=60 or
+  C3=60), Time column (Off, Uptime `mm:ss.mmm`, Time of day
+  `hh:mm:ss.mmm`; `hh:mm:ss` on the OLED), Brightness, USB log, Clear
+  monitor.
+* **Display > Filters**: the presets (a `*` marks the one that matches),
+  then one on/off line per message type, then Channel (all, 1-16: hides
+  channel messages on other channels; system messages always pass), Show
+  inputs (A+B, A only, B only) and MSC dev filter (all, or one device ID;
+  all-call messages always pass). Presets leave the Errors line alone.
+* **Settings > Date & time**: whether the RTC was found, whether the time is
+  valid (`not set`, `lost - set it` after the RTC lost power), the backup
+  mode, and the current date and time. Press to set it (starts from the
+  current time, or the firmware build date).
 * **Stats**: total messages, then per input: bytes, messages, UART errors,
   monitor overflow, merge drops (whole messages dropped because that input's
   merge buffer was full), orphan data bytes and stalls. Then counts per
   message type, stray data, TX drops per output (should always be 0), input
-  realtime shed, generator counts, stalls, uptime.
+  realtime shed, generator counts, stalls, uptime. Log: % of the log flash
+  used, sessions, the live session's number and message count, records
+  dropped (RAM queue full), bad pages found, pages written, sector erases.
 * **About**: model, version, build date, which display was detected, the
-  last reset cause (power-on or watchdog), and a reminder that unpowered
+  RTC, last reset cause (power-on or watchdog), and a reminder that unpowered
   only IN A reaches OUT A (IN B is not passed).
 
 Notes on the display:
@@ -180,17 +266,18 @@ Notes on the display:
 * Note names use **C4 = 60** (Roland / scientific) by default. Display >
   Note names switches to **C3 = 60** (Yamaha). That setting will be saved
   once settings persistence lands in M2.
-* "Hide realtime" hides clock and active sensing from the monitor history,
-  but they are still counted in Stats. It applies as messages arrive, so a
-  running clock can't flush the history in a few seconds. "Show inputs",
-  "Show MSC only" and "MSC dev filter" work the same way. Errors are always
-  shown by the MSC filters; "Show inputs" hides the other input's errors too.
-  The USB log is not filtered by these.
+* Filters apply to the monitor as messages arrive (so a running clock can't
+  flush the history in a few seconds); messages already in the history stay.
+  Hidden messages are still counted in Stats and still logged to flash. In
+  the log browser the filters apply when you look, so changing them shows
+  a session differently. "Show inputs" hides the other input's errors too.
 * The monitor shows the two inputs, not what the generator sends (the
   footer in the menus shows that). The MSC / sysex detail page shows which
   input the message came from.
-* Timestamps (time column, USB log) are `mm:ss.mmm` since boot. Real time of
-  day arrives with the RTC in M2.
+* Timestamps: the time column shows uptime (`mm:ss.mmm` since boot) or the
+  time of day (from the RTC, or the clock set by hand; uptime is shown in its
+  place until the time is set). The log stores the time of day when it is
+  valid, else uptime. The USB log prints uptime.
 
 ## Thru / merge engine
 
@@ -258,11 +345,69 @@ it reaches (`me_input_byte`, `pump`, `me_service`, `me_out_pop`,
 `me_mon_push`, and the SDK's 64-bit divide) must sit at a 0x2000xxxx (SRAM)
 address, with no literal-pool references to 0x10xxxxxx.
 
+## Real-time clock
+
+The RV-3028-C7 sits on I2C1 with the OLED (address 0x52). At boot the
+firmware checks its PORF flag (power was lost: time invalid), sets 24-hour
+mode, and sets the backup switchover to direct switching mode (written to
+the RTC's EEPROM once; trickle charging is never enabled). It then watches
+the seconds register until it ticks and latches the microsecond timer at
+that moment (up to 1.1 s, during the splash), so a timestamp is the RTC
+second plus the timer since the latch, to within a few ms. It re-latches
+every 10 minutes. Setting the time writes the RTC (which restarts its
+second) and clears PORF. Without an RTC the same mapping runs from a time
+set by hand. Messages are stamped by core1 with the timer when their first
+byte arrives; the time of day is derived from that, so it is as exact as
+the uptime stamp.
+
+## Flash log
+
+The log lives in the Pico 2's QSPI flash, in the region set by
+`LOG_FLASH_OFFSET` / `LOG_FLASH_SIZE` in `include/config.h` (default: the
+top 3 MB; the firmware is about 140 kB, and logging is disabled at boot if
+the image ever reaches the region). The format code (`src/log_store.c`) is
+portable: the same code runs on the RP2350 (`src/log_flash_rp2350.c`), in
+the simulator and the host tests (`src/log_flash_ram.c`, a RAM emulation of
+NOR flash), and can later sit on a microSD archive.
+
+* **Layout.** 4 kB sectors (the erase unit) of 16 pages of 256 bytes. Each
+  page has a 32-byte header (magic, kind, record count, page sequence
+  number, session number, length, base uptime and base time of day, CRC-32)
+  and 224 bytes of records. The first page of a session also holds the
+  session's start time. A record is: input and flags, the time since the
+  previous record (variable length, microseconds), and the raw message
+  bytes with their status byte (sysex: the first 128 bytes plus the total
+  length, as the monitor keeps). A note on takes about 7 bytes, a clock or
+  a quarter frame 5-6, so a page holds 30-45 short messages and 3 MB about
+  450,000 of them (about 1.25 hours of continuous 25 fps MTC on one input;
+  weeks of cues and notes).
+* **Writing.** Records collect in a RAM page; full pages queue in RAM
+  (16 pages) and are programmed from the core0 main loop (~1 ms each). A
+  part-filled page is written after 2 s, so a power cut loses at most the
+  last 2 s. The next sector is erased ahead of time, when the inputs have
+  been quiet for 100 ms and the clock generator is off, or anyway once 8
+  pages are waiting. Erasing ahead drops the oldest sector: the ring
+  overwrites the oldest session first, which then shows `~`.
+* **Reading back.** At boot every page is checked (magic and CRC). The
+  newest valid page sets the write position; a page cut short by a power
+  cut or with a bad CRC is skipped (and counted in Stats), and the writer
+  steps over any slot that is not blank. Sessions are rebuilt from the
+  pages (the newest 128 are listed).
+* **Why flash writes don't touch thru.** While the flash is being written
+  it cannot be read, so nothing may execute from it. The SDK's usual
+  answer pauses the other core; MIDIum does not, because core1 runs the
+  thru path. Instead core1 never uses flash at all: its code and data are
+  in SRAM, it has no interrupts (it polls), and it uses no const tables.
+  core0 disables only its own interrupts for each erase / program and calls
+  the SDK routines, which run from RAM. The UI pauses for that time (~1 ms
+  per page, ~45 ms per sector erase); the 4096-entry monitor ring holds the
+  input meanwhile. Details in `src/log_flash_rp2350.c`.
+
 ## Code layout
 
 | Path | What |
 |---|---|
-| `include/pins.h` | the pin map (single source of truth): IN A = GP1 (UART0 RX), OUT A = GP0, IN B = GP5 (UART1 RX), OUT B = GP4, bypass relays = GP2 |
+| `include/pins.h` | the pin map (single source of truth): IN A = GP1 (UART0 RX), OUT A = GP0, IN B = GP5 (UART1 RX), OUT B = GP4, bypass relays = GP2, I2C1 (OLED, RTC 0x52) = GP6 / GP7 |
 | `include/config.h` | build options, TFT geometry, timings |
 | `src/midi_engine.c` | thru / merge engine: two input parsers, per-output mergers (portable, unit tested) |
 | `src/midi_io.c` | UART setup, bypass relays, core1 loop (both inputs), watchdog |
@@ -274,19 +419,29 @@ address, with no literal-pool references to 0x10xxxxxx.
 | `src/console.c` | character-grid console with dirty-row tracking |
 | `src/disp_oled.c`, `src/disp_tft.c` | display drivers |
 | `src/joystick.c` | 1 ms sampling, debounce, auto-repeat |
-| `src/ui.c` | monitor view and menus |
-| `src/settings.c` | settings and routing presets (RAM only for now) |
+| `src/ui.c` | monitor view, menus, MTC display, date & time, logs and log browser |
+| `src/settings.c` | settings, filter defaults and routing presets (RAM only for now) |
 | `src/debug_log.c` | USB CDC log (isolated for M3) |
+| `src/mtc.c` | MTC reader: quarter frames, full frames, drop-frame counting (portable, unit tested) |
+| `src/msg_filter.c` | monitor / log browser filters (portable, unit tested) |
+| `src/valedit.c` | wrap-around value stepping and hold acceleration for every editor (portable, unit tested) |
+| `src/bigdigits.c` | seven-segment digits for the MTC display (portable, unit tested) |
+| `src/timeutil.c` | calendar conversions and formatting (portable, unit tested) |
+| `src/rv3028.c`, `src/clock.c` | RTC driver; time of day (RTC second + microsecond timer, or software clock) |
+| `src/log_store.c` | flash log format: pages, sessions, ring, reader (portable, unit tested) |
+| `src/log_flash_rp2350.c`, `src/log_flash_ram.c` | log backends: QSPI flash, RAM NOR emulation |
+| `src/logger.c` | logging sessions on core0: stamps, flush and erase pacing |
+| `sim/` | browser simulator: the core0 code + engine in WebAssembly, `sim/build.sh` |
 | `test/` | host unit tests |
 
 ## Roadmap
 
 | Milestone | Scope |
 |---|---|
-| **M1** (this, v0.3) | Thru / merge engine with two inputs and a routing matrix, monitor, generator, menus, OLED / TFT, USB debug log |
-| **M2** | RV-3028 RTC (real timestamps), message log as a flash ring buffer plus microSD archive, settings saved to flash, battery fuel gauge (MAX17048) |
+| **M1** (v0.3) | Thru / merge engine with two inputs and a routing matrix, monitor, generator, menus, OLED / TFT, USB debug log |
+| **M2** (v0.4: first part) | Done: RV-3028 RTC (real timestamps), message log as a flash ring buffer with sessions, MTC reader and display, monitor filters. Still to do: microSD archive, settings saved to flash, battery fuel gauge (MAX17048) |
 | **M3** | USB composite device (class-compliant MIDI plus mass storage for logs), replacing the CDC debug log. XRC host/remote mode with selectable 5 V / 12 V VCC. GPI in and out (3.5 mm TRS) |
-| **M4** | Filter / transform rules: channel remap, per-type and per-channel filters, per output |
+| **M4** | Filter / transform rules on the MIDI outputs: channel remap, per-type and per-channel filters, per output (the v0.4 filters are display only) |
 
 ## Licence
 

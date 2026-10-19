@@ -2,8 +2,9 @@
  * settings.h - user settings. RAM only in milestone 1.
  *
  * TODO(M2): persist to flash (versioned struct + CRC in a reserved sector,
- * written with core1 parked in RAM via multicore_lockout). Keep everything
- * the user can change in this one struct so that is a single save/load.
+ * written the same way as the log: core0 interrupts off, core1 never parked;
+ * see src/log_flash_rp2350.c). Keep everything the user can change in this
+ * one struct so that is a single save/load.
  * TODO(M4): filter / transform rules will live alongside the routing matrix.
  */
 #ifndef MIDIUM_SETTINGS_H
@@ -12,19 +13,18 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "midi_engine.h"
+#include "msg_filter.h"
 
 typedef struct {
     me_settings_t route;     /* routing matrix: sources per output (read by core1) */
 
     /* display */
-    bool    hide_realtime;   /* hide clock + active sensing in the monitor */
+    bool    pin_latest;      /* monitor: newest message always on the bottom row */
     bool    note_c3;         /* false: C4 = 60, true: C3 = 60 */
-    bool    time_column;     /* monitor shows mm:ss.mmm column */
+    uint8_t time_col;        /* monitor time column: TIMECOL_* */
     uint8_t brightness;      /* 10..100 % */
     bool    usb_log;         /* printf decoded messages over USB CDC */
-    bool    msc_only;        /* monitor keeps only MSC (and error) messages */
-    int16_t msc_dev_filter;  /* -1 = all, else MSC device_ID 0-127 (all-call 7F also passes) */
-    uint8_t show_inputs;     /* monitor: SHOW_IN_* */
+    msg_filter_t filter;     /* what the monitor and the log browser show */
 
     /* generator */
     uint8_t  gen_channel;    /* 1..16 */
@@ -46,9 +46,9 @@ typedef struct {
     uint8_t  msc_macro;      /* FIRE macro */
 } settings_t;
 
-#define SHOW_IN_BOTH 0
-#define SHOW_IN_A    1
-#define SHOW_IN_B    2
+#define TIMECOL_OFF    0
+#define TIMECOL_UPTIME 1     /* mm:ss.mmm since boot */
+#define TIMECOL_TOD    2     /* time of day hh:mm:ss.mmm (uptime if the clock is not set) */
 
 extern settings_t g_settings;
 

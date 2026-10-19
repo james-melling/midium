@@ -13,5 +13,6 @@ extern int g_checks, g_fail;
     printf("  FAIL %s:%d: \"%s\" != \"%s\"\n", __FILE__, __LINE__, (a), (b)); } } while (0)
 
 void test_msc(void);
+void test_m2(void);
 
 #endif

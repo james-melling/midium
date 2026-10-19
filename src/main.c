@@ -3,7 +3,8 @@
  * Thru + merge engine (two inputs, routing matrix), monitor, generator, menus.
  *
  * core1: MIDI engine only (src/midi_io.c, src/midi_engine.c).
- * core0: everything else - display, joystick, parser/monitor, generator, USB.
+ * core0: everything else - display, joystick, parser/monitor, generator, USB,
+ *        RTC, flash log.
  */
 #include "pico/stdlib.h"
 #include "hardware/gpio.h"
@@ -18,6 +19,9 @@
 #include "generator.h"
 #include "ui.h"
 #include "debug_log.h"
+#include "clock.h"
+#include "logger.h"
+#include "log_flash_rp2350.h"
 
 static const display_driver_t *select_display(void) {
 #if MIDIUM_DISPLAY == DISPLAY_OLED
@@ -63,7 +67,13 @@ int main(void) {
     joystick_init();
     monitor_init();
     gen_init();
-    sleep_ms(700);
+    /* Real-time clock (latches the RTC second: up to ~1.1 s, during the
+     * splash), then the flash log and the boot session. */
+    uint64_t t_splash = time_us_64();
+    clock_init();
+    logger_init(log_flash_rp2350());
+    uint64_t spent = time_us_64() - t_splash;
+    if (spent < 700000u) sleep_us(700000u - spent);
     con_clear();
 
     dbg_printf("\n%s %s v%s, display: %s\n", MIDIUM_NAME, MIDIUM_MODEL, MIDIUM_VERSION, drv->name);
@@ -74,6 +84,8 @@ int main(void) {
         while ((e = joystick_get()) != JOY_NONE) ui_event(e);
         bool changed = monitor_poll(512);
         gen_task(now);
+        clock_task(now);
+        logger_task(now);
         ui_render(now, changed);
         con_flush_step();
     }

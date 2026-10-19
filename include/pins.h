@@ -18,15 +18,15 @@
 #define MIDI_UART_B          uart1   /* RX = MIDI IN B, TX = MIDI OUT B */
 #define MIDI_BAUD            31250
 
-/* ---- I2C1: OLED (0x3C); later RV-3028 RTC + MAX17048 fuel gauge --------- */
+/* ---- I2C1: OLED (0x3C), RV-3028-C7 RTC (0x52); later MAX17048 gauge ----- */
 #define PIN_I2C_SDA          6
 #define PIN_I2C_SCL          7
 #define DISPLAY_I2C          i2c1
 #define I2C_BAUD             400000
 #define OLED_I2C_ADDR        0x3C
 #define OLED_I2C_ADDR_ALT    0x3D   /* probed second (Adafruit 938 with DC high) */
+#define RTC_I2C_ADDR         0x52   /* RV-3028-C7 (src/rv3028.c), same bus as the OLED */
 /* Reserved for milestone 2 (not implemented yet):
- *   RV-3028-C7 RTC          0x52
  *   MAX17048 fuel gauge     0x36                                           */
 
 /* ---- SPI0: ST7789 1.9" TFT 170x320 (used as 320x170 landscape) --------- */

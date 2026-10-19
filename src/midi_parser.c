@@ -32,7 +32,7 @@ static void emit_simple(midi_parser_t *p, uint8_t type, uint8_t status,
     p->cb(&m, p->ctx);
 }
 
-static uint8_t type_of_status(uint8_t s) {
+uint8_t midi_type_of_status(uint8_t s) {
     switch (s & 0xF0u) {
     case 0x80: return MT_NOTE_OFF;
     case 0x90: return MT_NOTE_ON;
@@ -73,7 +73,7 @@ static void sysex_end(midi_parser_t *p, bool terminated) {
 
 static void complete(midi_parser_t *p) {
     uint8_t s = p->cur;
-    emit_simple(p, type_of_status(s), s, p->d[0], p->need > 1 ? p->d[1] : 0, p->t_start);
+    emit_simple(p, midi_type_of_status(s), s, p->d[0], p->need > 1 ? p->d[1] : 0, p->t_start);
     p->cur = 0;
     p->have = 0;
 }
@@ -81,7 +81,7 @@ static void complete(midi_parser_t *p) {
 void midi_parser_feed(midi_parser_t *p, uint8_t b, uint64_t t) {
     if (midi_is_realtime(b)) {
         /* Interleaved anywhere; does not disturb any other state. */
-        emit_simple(p, type_of_status(b), b, 0, 0, t);
+        emit_simple(p, midi_type_of_status(b), b, 0, 0, t);
         return;
     }
 
@@ -113,7 +113,7 @@ void midi_parser_feed(midi_parser_t *p, uint8_t b, uint64_t t) {
             p->running = 0;           /* system common clears running status */
             uint8_t n = midi_data_len(b);
             if (n == 0) {
-                emit_simple(p, type_of_status(b), b, 0, 0, t);
+                emit_simple(p, midi_type_of_status(b), b, 0, 0, t);
                 return;
             }
             p->cur = b;

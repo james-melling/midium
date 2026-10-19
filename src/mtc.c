@@ -135,3 +135,43 @@ bool mtc_full_frame(mtc_t *m, const uint8_t *sx, unsigned len, uint64_t t_us) {
     m->last_full_us = t_us ? t_us : 1u;
     return true;
 }
+
+int32_t mtc_tc_frames(const mtc_tc_t *t, uint8_t rate) {
+    int32_t fps = mtc_fps(rate);
+    int32_t mins = (int32_t)t->h * 60 + t->m;
+    int32_t n = (mins * 60 + t->s) * fps + t->f;
+    if (rate == MTC_RATE_2997) n -= 2 * (mins - mins / 10);
+    return n;
+}
+
+int32_t mtc_tc_diff(const mtc_tc_t *a, const mtc_tc_t *b, uint8_t rate) {
+    mtc_tc_t end = { 23, 59, 59, 0 };
+    end.f = (uint8_t)(mtc_fps(rate) - 1u);
+    int32_t day = mtc_tc_frames(&end, rate) + 1;
+    int32_t d = mtc_tc_frames(a, rate) - mtc_tc_frames(b, rate);
+    if (d >= day / 2) d -= day;
+    else if (d < -day / 2) d += day;
+    return d;
+}
+
+void mtc_sel_init(mtc_sel_t *s) { s->cur = -1; }
+
+int mtc_select(mtc_sel_t *s, const mtc_t *const in[2], uint8_t mode, uint64_t now_us) {
+    if (mode == MTC_SRC_A) return 0;
+    if (mode == MTC_SRC_B) return 1;
+    bool act[2] = { mtc_active(in[0], now_us), mtc_active(in[1], now_us) };
+    if (s->cur >= 0 && act[s->cur]) return s->cur;            /* latched and alive */
+    if (act[0] && act[1]) {
+        /* the latched one went quiet (or nothing latched yet): take the
+         * other one; if neither was latched, the running one, else A */
+        if (s->cur >= 0) s->cur = (int8_t)(1 - s->cur);
+        else s->cur = (int8_t)(!mtc_running(in[0], now_us) && mtc_running(in[1], now_us) ? 1 : 0);
+    } else if (act[0] || act[1]) {
+        s->cur = (int8_t)(act[0] ? 0 : 1);
+    } else if (s->cur < 0) {
+        uint64_t a = mtc_last_us(in[0]), b = mtc_last_us(in[1]);
+        if (!a && !b) return -1;
+        return b > a ? 1 : 0;                                  /* not latched */
+    }
+    return s->cur;
+}

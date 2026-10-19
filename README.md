@@ -8,19 +8,20 @@ tagged with its input, and can merge test messages into the outputs without
 breaking the stream. When it's unpowered or crashes, two relays wire IN A
 straight to OUT A. **IN B is not passed through when the box is unpowered.**
 
-This is the firmware (v0.5: milestone 1, the second input, and milestone 2
+This is the firmware (v0.6: milestone 1, the second input, and milestone 2
 so far: real-time clock, MTC reader, flash logging, soft power on / off and
-the battery fuel gauge) for the breadboard prototype on a Raspberry Pi Pico 2
-(RP2350). For the hookup, see
+the battery fuel gauge; v0.6 moves to a 2.8" 320x240 IPS colour display
+with a smooth anti-aliased font) for the breadboard prototype on a
+Raspberry Pi Pico 2 (RP2350). For the hookup, see
 [docs/wiring.md](docs/wiring.md). A browser simulator runs the same code
 ([sim/](sim/), page `sim/web/index.html`).
 
 ## Features
 
 * **Two inputs, routing matrix.** Each output takes any mix of IN A, IN B
-  and the generator. Presets: `A->A, A->B (thru)` (the default: IN A to both
-  outputs, IN B monitored only), `A+B merge -> both`, `A->A, B->B (split)`,
-  `B->A, B->B`, plus a custom grid.
+  and the generator. Presets: `A→A, A→B (thru)` (the default: IN A to both
+  outputs, IN B monitored only), `A+B merge → both`, `A→A, B→B (split)`,
+  `B→A, B→B`, plus a custom grid.
 * **Thru / merge engine on core1.** Byte-level thru: with one source on an
   output, each byte leaves the moment it arrives, byte-identical to the
   input. When two sources share an output, they are interleaved only between
@@ -36,8 +37,13 @@ the battery fuel gauge) for the breadboard prototype on a Raspberry Pi Pico 2
   position, clock and transport. It keeps a 128-message history and per-type
   counters. Sysex is kept up to 128 bytes per message (the MSC limit). Each
   line starts with its input, `A` or `B`. The **newest message is pinned to
-  the bottom row**, highlighted, even while you scroll back through the
-  history above it (Display > Pin latest turns this off).
+  the bottom row**, highlighted (Display > Pin latest turns this off). On
+  the TFT each line also shows the **time of day to the millisecond**
+  (`A 14:03:22.123 NOTE ON  1 C4  100`; uptime until the clock is set).
+  **UP pauses**: the whole view freezes, however dense the traffic, and the
+  header counts what arrived since (`PAUSED +1532`); scroll back through the
+  frozen history, open any MSC / sysex line, then DOWN past the bottom or
+  LEFT to go live again.
 * **Filters** (Display > Filters): show or hide each message type (notes,
   poly AT, CC, program change, channel AT, pitch bend, other sysex, MSC,
   MMC, MTC quarter frames, MTC full frames, song position / select, tune
@@ -47,11 +53,16 @@ the battery fuel gauge) for the breadboard prototype on a Raspberry Pi Pico 2
   realtime/TC* (the default: everything but clock, active sensing and MTC
   quarter frames) and *None*. Also a MIDI channel filter, the input filter
   (A+B, A only, B only) and the MSC device filter.
-* **MTC reader.** MIDI Time Code from either input is rebuilt from quarter
-  frames (forward and reverse, 24 / 25 / 29.97 drop-frame / 30 fps) and
-  full-frame locates. While it runs, the monitor header shows the time
-  (`01:00:03:12 25fps A`) instead of the routing, and *MTC display* shows it
-  full screen in large digits.
+* **MTC reader.** MIDI Time Code is rebuilt from quarter frames (forward
+  and reverse, 24 / 25 / 29.97 drop-frame / 30 fps) and full-frame locates,
+  with **an independent reader per input**. Display > MTC source picks
+  which one the header and the MTC display show: *Auto* (default: the input
+  that started first, kept until it has been silent for 2 s, so two feeds
+  never make the display flicker between them), *IN A* or *IN B*. While it
+  runs, the monitor header shows the time (`01:00:03:12 25 ▶ A`, plus `+B`
+  when the other input runs MTC too), and *MTC display* shows it full screen
+  in large digits, with the other input's time underneath and how far
+  apart the two are (`DIFF IN B behind IN A by 0:00:01:22`).
 * **Real-time clock** (RV-3028-C7 on the I2C bus) for time-of-day
   timestamps to the millisecond, set from Settings > Date & time. Without
   the RTC a software clock can be set by hand (lost at power off).
@@ -79,9 +90,11 @@ the battery fuel gauge) for the breadboard prototype on a Raspberry Pi Pico 2
   command format and device ID; GO, STOP, RESUME, TIMED_GO, LOAD, SET, FIRE,
   ALL_OFF, RESTORE, RESET, GO_OFF with cue, list, time, control / value or
   macro), MMC Play / Stop, and All Notes Off panic on all 16 channels.
-* **Two display options**, detected at boot: a 1.3" SH1106 / 0.96" SSD1306 OLED
-  (21 x 8 characters), or a 1.9" ST7789 colour TFT (26 x 10 characters,
-  colour-coded by message type).
+* **Display**: a **2.8" 320x240 IPS colour TFT** (ST7789) with **JetBrains
+  Mono**, anti-aliased (40 x 16 characters, colour-coded by message type),
+  see [Display](#display). Still supported: the v0.5 1.9" 320x170 ST7789
+  (40 x 11, build option) and a 1.3" SH1106 / 0.96" SSD1306 OLED (21 x 8,
+  5x7 font, detected at boot).
 * **Soft power and battery** (v0.5). The joystick press is also the power
   button: hold it to power off, with a countdown you can cancel. Power-off
   always closes the log cleanly and drops the relays to passive thru. With
@@ -115,12 +128,16 @@ Build options (pass to `cmake` with `-D`):
 |---|---|---|
 | `MIDIUM_DISPLAY` | `0` | `0` = auto-detect (OLED if 0x3C answers, else TFT), `1` = OLED, `2` = TFT |
 | `MIDIUM_OLED_SSD1306` | `ON` | `OFF` for an SH1106 OLED (default is SSD1306, e.g. Adafruit 938) |
+| `MIDIUM_TFT_MODULE` | `PIMORONI_28` | TFT module and wiring: `PIMORONI_28` (Pimoroni Pico Display Pack 2.8" jumpered to the breadboard: backlight GP20, no reset pin), `GENERIC_28` (2.8" 240x320 ST7789 IPS breakout: reset GP20, backlight GP21; the final PCB), `ADAFRUIT_19` (the v0.5 1.9" 170x320 module: reset GP20, backlight GP21). See [docs/wiring.md](docs/wiring.md) |
 
 The flash log region (`LOG_FLASH_OFFSET`, `LOG_FLASH_SIZE`, default the top
 3 MB of the Pico 2's 4 MB flash) is in `include/config.h`.
 
-TFT geometry (`TFT_X_OFFSET`, `TFT_Y_OFFSET`, `TFT_MADCTL`) is in
-`include/config.h`.
+TFT geometry is in `include/config.h`: `MIDIUM_TFT_PANEL` (28 or 19,
+follows the module), `TFT_X_OFFSET` / `TFT_Y_OFFSET` (0 / 0 on the 2.8",
+0 / 35 on the 1.9"), `TFT_MADCTL` (0x60 landscape; 0xA0 turns it 180
+degrees; add 0x08 if red and blue are swapped) and `TFT_INVERT` (1 = INVON,
+right for IPS panels; set 0 if the screen shows a white background).
 
 ### Host unit tests
 
@@ -141,6 +158,22 @@ and directed merge cases: the boundary rule, running-status restore per
 output, sysex protection, realtime inside sysex, stall timeouts with one and
 two inputs, routing latched at message starts, lane overflow (whole-message
 drops), and the per-input monitor ring.
+
+v0.6 adds: the TFT font table (every printable glyph present, distinct,
+within the 8 x 15 cell, nothing clipped, capitals and digits on the
+baseline, descenders kept, no stray faint pixels, all 16 alpha levels used,
+icons), alpha blending (exact at both ends, monotonic per channel, for
+every pair of UI colours), cell rasterising (background / foreground /
+cursor underline, spans equal the whole-row render, the blend ramp cache)
+and dirty spans; the console at 40 x 16, 40 x 11 and 21 x 8 (padding,
+clipping, dirty rows, bitmap rows); MSC summaries at every monitor width
+(never longer than the width, wider never shows less, full forms at the
+TFT widths); the MTC source selection (two feeds interleaved for 200
+frames never flip the display, the 2 s hand-over, forced inputs) and frame
+differences (across midnight, drop-frame); and the monitor pause (5000
+messages arriving while paused change nothing on screen, 60 lines of
+scrolling, held-key steps, the top, DOWN past the bottom and LEFT resume,
+unpinned mode, every row count).
 
 v0.5 adds: the power-button state machine (taps of every length act once,
 on release; a hold never also selects; cancel; power off; a press held at
@@ -193,7 +226,7 @@ a press that turns into a hold never also selects something.
 
 | Where | UP / DOWN | LEFT | RIGHT | PRESS |
 |---|---|---|---|---|
-| Monitor (home) | scroll history. Pauses the display and the header shows `PAUSED`. The first UP selects the pinned newest line; the next ones move the cursor (`A>`) up the history. | back to live | time column: off / uptime / time of day | open menu. When paused on a sysex / MSC line (cursor, or the pinned line selected): open its detail page |
+| Monitor (home) | the first UP **pauses**: the whole screen freezes (header `PAUSED +n`, n = messages since) with the cursor (`A>`) on the newest line; then UP / DOWN move the cursor through the frozen history (hold: 3, then 8 lines per step). DOWN past the newest line goes live again | back to live | time column: off / uptime / time of day | open menu. When paused on a sysex / MSC line: open its detail page |
 | Detail page | scroll | back (monitor or log browser) | next page (wraps) | next page (wraps) |
 | Menu | move (wraps) | back | select / toggle / edit | select / toggle / edit |
 | Editing a value | change value. **Wraps at both ends** (127 -> 0, 0 -> 127). Hold to auto-repeat; on ranges of more than 150 steps, steps of 10 after ~1.3 s and 100 after ~3.2 s (a big step stops on the end value before wrapping) | done | done | done |
@@ -205,7 +238,7 @@ a press that turns into a hold never also selects something.
 | Power off? | choose Cancel / Power off | cancel | ok | ok |
 | Anywhere | | | | hold 2 s: power-off countdown; release to cancel, hold 2 s more to power off |
 
-The monitor header shows the routing: `MIDIum  A:a  B:a` means both outputs
+The monitor header shows the routing: `MIDIum        A:a  B:a` means both outputs
 take IN A; `A:ab B:ab` is the merge, `A:a  B:b` the split, `-` an output fed
 by no input (generator routing is not shown here). A `*` at the right edge
 means MIDI arrived on either input in the last 150 ms. On the TFT, a `C`
@@ -215,26 +248,38 @@ just left of these (`MIDIum A:a  B:a ▮ 76` on the OLED, which drops one
 space after the name to make room; `▮ 76%` on the TFT); see [Power](#power).
 
 While MTC is running (a quarter frame in the last 250 ms) the header shows
-the time instead, with the rate and the input: `01:00:03;12 29.97df A` on
-the TFT (`rev` when running backwards), `01:00:03;12 29D A` on the OLED
-(`24`, `25`, `29D`, `30`, `R` for reverse). A `;` before the frames means
-drop-frame. When MTC stops, the last time stays for 2 s marked `STOP` (dimmed
-on the TFT), then the routing summary comes back. A full-frame locate shows
-the same way.
+the time of the selected input (Display > MTC source) with the rate, the
+direction and the input: `01:00:03;12 29D ▶ A  A:a  B:a` on the TFT, where
+the routing stays visible (`◀` when running backwards), `01:00:03;12 29D A`
+on the OLED (`24`, `25`, `29D`, `30`, `R` for reverse). `+B` (TFT) or a
+trailing `+` (OLED) means the other input is running MTC as well. A `;`
+before the frames means drop-frame. When MTC stops, the last time stays for
+2 s marked `STOP` (dimmed), then the routing summary comes back. A
+full-frame locate shows the same way.
 
-In the pinned monitor the bottom row is always the newest message (inverse).
-Scrolling freezes the rows above it; new messages keep replacing the pinned
-line, and the history between the frozen rows and the newest message is
-reached by scrolling down. The cursor line is marked `A>` / `B>` (and a grey
-bar on the TFT, an underline on the OLED).
+Pausing freezes everything on the monitor, the pinned newest line too: what
+the screen shows is a copy of the history taken at the moment of the first
+UP, so a dense stream can't move or overwrite it. New messages are still
+monitored, logged and counted (`PAUSED +1532`, `+12k`), and appear when you
+go live. Scrolling reaches back 128 messages; on the oldest the header says
+`TOP (older: Logs)`, as the flash log keeps everything. The cursor line is
+marked `A>` / `B>` (and a grey bar on the TFT, an underline on the OLED).
+Opening an MSC / sysex detail page from a paused line and coming back keeps
+the pause. With Pin latest off the same rules apply, the cursor starting
+on the bottom row.
 
 ### Menu
 
 * **Monitor**: back to the monitor.
-* **MTC display**: the current MTC time full screen in seven-segment digits
-  (both displays), updated every frame, with RUNNING FWD / REV, STOPPED,
-  LOCATED (full frame only) or NO MTC, the rate, drop-frame or not, and the
-  input. Amber while running, grey when stopped. LEFT goes back.
+* **MTC display**: the selected input's MTC time full screen in
+  seven-segment digits (all displays), updated every frame, with RUNNING
+  FORWARD / REVERSE, STOPPED, LOCATED (full frame only) or NO MTC, the
+  rate, drop-frame or not, and the input. Amber while running, grey when
+  stopped. On the TFT also the field names under the digits, the
+  quarter-frame / full-frame / break counts, and the other input: its time,
+  rate and state, and `In sync with IN B (+0 f)` or `DIFF IN B behind IN A
+  by 12 f` (frames under a second, else `h:mm:ss:ff`; drop-frame counted
+  properly), or `frame rates differ`. LEFT goes back.
 * **Logs**: `+ New log session`, then the sessions newest first, each with
   its number, start date and time (or `up h:mm:ss` after power-up when the
   clock was not set; `~` = its oldest part has been overwritten), duration
@@ -256,15 +301,16 @@ bar on the TFT, an underline on the OLED).
   FIRE macro. Defaults are GO, ALL format, all-call, cue 1. LOAD without a
   cue is refused, because the spec requires one.
 * **Routing**: the four presets (a `*` marks the active one) and
-  **Custom >**, the grid: `OUT A <- IN A`, `OUT A <- IN B`, `OUT A <- Gen`,
-  `OUT B <- IN A`, `OUT B <- IN B`, `OUT B <- Gen`. Presets set the input
+  **Custom >**, the grid: `OUT A ← IN A`, `OUT A ← IN B`, `OUT A ← Gen`,
+  `OUT B ← IN A`, `OUT B ← IN B`, `OUT B ← Gen`. Presets set the input
   columns only and leave generator routing alone. Changes take effect at
   each input's next message, so an output never gets half a message. (This
   replaces the old Thru menu: "Thru A off" is `OUT A <- IN A` off.)
 * **Display**: Pin latest (default on), **Filters >**, Note names (C4=60 or
   C3=60), Time column (Off, Uptime `mm:ss.mmm`, Time of day
-  `hh:mm:ss.mmm`; `hh:mm:ss` on the OLED), Brightness, USB log, Clear
-  monitor.
+  `hh:mm:ss.mmm`; `hh:mm:ss` on the OLED; the TFT starts on Time of day,
+  the OLED on Off), MTC source (Auto, IN A, IN B), Brightness, USB log,
+  Clear monitor.
 * **Display > Filters**: the presets (a `*` marks the one that matches),
   then one on/off line per message type, then Channel (all, 1-16: hides
   channel messages on other channels; system messages always pass), Show
@@ -315,6 +361,46 @@ Notes on the display:
   time of day (from the RTC, or the clock set by hand; uptime is shown in its
   place until the time is set). The log stores the time of day when it is
   valid, else uptime. The USB log prints uptime.
+
+## Display
+
+The default display is a **2.8" 240x320 IPS panel with an ST7789
+controller**, used landscape (320 x 240). The prototype uses the Pimoroni
+Pico Display Pack 2.8", jumpered to the breadboard Pico; any 2.8" ST7789
+IPS breakout works with `MIDIUM_TFT_MODULE=GENERIC_28`. Wiring, backlight
+current and pin labels: [docs/wiring.md](docs/wiring.md).
+
+* **Font**: JetBrains Mono Medium at 13 px in an 8 x 15 pixel cell, so
+  40 columns x 16 rows. Glyphs are stored with 16 levels of coverage
+  (4-bit alpha, 6.5 kB of flash for 95 characters and 14 icons) and each
+  pixel is blended between the cell's background and foreground colours,
+  so text is smooth on every background (header bar, highlighted row,
+  cursor bar). The blend ramp of the last colour pair is cached.
+  `tools/gen_font.py` (Python 3 + Pillow) regenerates `src/font_jbm13.h`
+  from `tools/fonts/JetBrainsMono-Medium.ttf`; the battery, charging, play
+  and bar icons are drawn by hand in the script.
+* **Drawing**: the console keeps a grid of characters and redraws only rows
+  that changed; the driver also remembers what each row on the panel shows
+  and sends only the changed columns, as one window per row. A full text
+  row is 320 x 15 x 2 = 9.6 kB, about 2.1 ms at the 37.5 MHz SPI clock, so
+  a full screen is about 33 ms and the activity star in the header is a
+  single 240-byte cell. The core0 loop sends at most one row per pass.
+* **Colours**: white text, green notes, cyan CC / bend / aftertouch, amber
+  program change and system common, magenta sysex / MSC / MMC / MTC full
+  frame, grey realtime and MTC quarter frames, red errors. On the TFT the
+  monitor shows the input letter in white and the time column in grey, so
+  the message stands out. Highlighted rows are a blue bar; warnings (power
+  off, delete, low battery) a red bar with white text.
+* **The 1.9" panel** (v0.5, `MIDIUM_TFT_MODULE=ADAFRUIT_19`) runs the same
+  font and layouts in 40 x 11. The **OLED** keeps the 5x7 font in 21 x 8.
+
+**Font licence.** JetBrains Mono is © 2020 The JetBrains Mono Project
+Authors, under the SIL Open Font License 1.1 (full text in
+[THIRD_PARTY.md](THIRD_PARTY.md) and `tools/fonts/OFL.txt`). The OFL allows
+the font to be embedded and redistributed with software. `src/font_jbm13.h`
+holds bitmaps rasterised from the unmodified font, with the font's name and
+copyright in its header; the Reserved Font Name clause only applies to
+modified versions of the font software itself.
 
 ## Thru / merge engine
 
@@ -558,15 +644,18 @@ NOR flash), and can later sit on a microSD archive.
 | `src/midi_parser.c` | MIDI 1.0 parser (portable, unit tested) |
 | `src/midi_decode.c` | message to text and colour class (portable, unit tested) |
 | `src/msc_decode.c` | MIDI Show Control decoder, summary / detail text, message builder (portable, unit tested) |
-| `src/monitor.c` | core0 input ring to one parser per input, history, counters |
+| `src/monitor.c` | core0 input ring to one parser per input, history, counters, one MTC reader per input |
 | `src/generator.c` | test message generator and clock |
 | `src/console.c` | character-grid console with dirty-row tracking |
-| `src/disp_oled.c`, `src/disp_tft.c` | display drivers |
+| `src/disp_oled.c`, `src/disp_tft.c` | display drivers (TFT: window per dirty span, panel / module from `config.h`) |
+| `src/tft_render.c` | TFT palette, alpha blending, rasterising text cells (portable, unit tested) |
+| `src/font_jbm13.h` | JetBrains Mono 13 px, 4-bit anti-aliased, 8 x 15 cells (generated by `tools/gen_font.py`) |
+| `src/mon_view.c` | monitor history with freeze-on-pause, cursor / scroll logic (portable, unit tested) |
 | `src/joystick.c` | 1 ms sampling, debounce, auto-repeat |
 | `src/ui.c` | monitor view, menus, MTC display, date & time, logs and log browser |
 | `src/settings.c` | settings, filter defaults and routing presets (RAM only for now) |
 | `src/debug_log.c` | USB CDC log (isolated for M3) |
-| `src/mtc.c` | MTC reader: quarter frames, full frames, drop-frame counting (portable, unit tested) |
+| `src/mtc.c` | MTC reader: quarter frames, full frames, drop-frame counting, frame differences, source selection (portable, unit tested) |
 | `src/msg_filter.c` | monitor / log browser filters (portable, unit tested) |
 | `src/valedit.c` | wrap-around value stepping and hold acceleration for every editor (portable, unit tested) |
 | `src/bigdigits.c` | seven-segment digits for the MTC display (portable, unit tested) |
@@ -578,7 +667,8 @@ NOR flash), and can later sit on a microSD archive.
 | `src/power.c` | soft power (kill line, shutdown sequence, soft-off, charge-only), battery polling, low battery, auto-off |
 | `src/power_fsm.c` | power-button state machine, auto-off timer, low-battery thresholds (portable, unit tested) |
 | `src/max17048.c` | MAX17048 fuel gauge driver; register conversions in `include/max17048.h` (unit tested) |
-| `src/glyphs.h` | battery and charging icons drawn in place of a few control characters |
+| `src/glyphs.h` | OLED battery, charging and play icons drawn in place of a few control characters |
+| `tools/gen_font.py`, `tools/fonts/` | TFT font generator; JetBrains Mono Medium TTF and its licence |
 | `sim/` | browser simulator: the core0 code + engine in WebAssembly, `sim/build.sh` |
 | `test/` | host unit tests |
 
@@ -587,6 +677,7 @@ NOR flash), and can later sit on a microSD archive.
 | Milestone | Scope |
 |---|---|
 | **M1** (v0.3) | Thru / merge engine with two inputs and a routing matrix, monitor, generator, menus, OLED / TFT, USB debug log |
+| **v0.6** | 2.8" 320x240 IPS display, anti-aliased JetBrains Mono, 40-column layouts; monitor pause freezes the view; MTC source selection with two feeds |
 | **M2** (v0.4, v0.5) | Done: RV-3028 RTC (real timestamps), message log as a flash ring buffer with sessions, MTC reader and display, monitor filters, soft power on / off, MAX17048 fuel gauge, low battery, auto-off. Still to do: microSD archive, settings saved to flash |
 | **M3** | USB composite device (class-compliant MIDI plus mass storage for logs), replacing the CDC debug log. XRC host/remote mode with selectable 5 V / 12 V VCC. GPI in and out (3.5 mm TRS) |
 | **M4** | Filter / transform rules on the MIDI outputs: channel remap, per-type and per-channel filters, per output (the v0.4 filters are display only) |

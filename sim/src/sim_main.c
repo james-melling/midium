@@ -6,7 +6,7 @@
  * (joystick sampling, MIDI clock) run interleaved on the simulated clock.
  *
  * Exported C API (see sim/web for the page):
- *   sim_init(kind)        power on: 1 = OLED fitted, 2 = TFT (auto-detect sees it)
+ *   sim_init(kind)        power on: 1 = OLED fitted, 2 = TFT 2.8", 3 = TFT 1.9"
  *   sim_tick(ms)          run ms of simulated time
  *   sim_key(k, down)      joystick contact 0 up 1 down 2 left 3 right 4 press
  *   sim_midi_in(p, b)     byte onto IN A (0) / IN B (1) as soon as the wire is free
@@ -62,16 +62,24 @@ static log_flash_t s_fl;
 /* As src/main.c (static there). */
 static void splash(void) {
     con_clear();
-    con_row(1, CLS_HEADER, "  " MIDIUM_NAME);
-    con_row(2, CLS_DIM, "  " MIDIUM_MODEL " v" MIDIUM_VERSION);
-    con_row(4, CLS_NORMAL, "  inline MIDI tester");
+    int r = con_rows() >= 16 ? con_rows() / 2 - 3 : 1;   /* centred on the 2.8" */
+    con_row(r, CLS_HEADER, "  " MIDIUM_NAME);
+    con_row(r + 1, CLS_DIM, "  " MIDIUM_MODEL " v" MIDIUM_VERSION);
+    con_row(r + 3, CLS_NORMAL, "  inline MIDI tester");
     con_flush_all();
+}
+
+extern const display_driver_t g_disp_tft19;   /* sim_tft19.c */
+
+static const display_driver_t *tft_driver(void) {
+    return s_kind == SIM_DISP_TFT19 ? &g_disp_tft19 : &g_disp_tft;
 }
 
 static const display_driver_t *select_display(void) {
     /* MIDIUM_DISPLAY == DISPLAY_AUTO path: the sim's I2C answers at 0x3C
-     * only when an OLED is "fitted". */
-    return oled_probe() ? &g_disp_oled : &g_disp_tft;
+     * only when an OLED is "fitted". Which TFT is a build option on the
+     * hardware; the sim has both drivers. */
+    return oled_probe() ? &g_disp_oled : tft_driver();
 }
 
 static void core0_loop_pass(void) {
@@ -88,8 +96,8 @@ static void core0_loop_pass(void) {
 }
 
 EMSCRIPTEN_KEEPALIVE int sim_init(int kind) {
-    s_kind = kind == SIM_DISP_OLED ? SIM_DISP_OLED : SIM_DISP_TFT;
-    sim_hal_reset(s_kind == SIM_DISP_OLED);
+    s_kind = kind == SIM_DISP_OLED ? SIM_DISP_OLED : kind == SIM_DISP_TFT19 ? SIM_DISP_TFT19 : SIM_DISP_TFT;
+    sim_hal_reset(s_kind);
     s_in_loop = false;
     s_powered = true;
 
@@ -111,7 +119,7 @@ EMSCRIPTEN_KEEPALIVE int sim_init(int kind) {
     dbg_init();
     s_drv = select_display();
     if (!s_drv->init() && s_drv == &g_disp_oled) {
-        s_drv = &g_disp_tft;
+        s_drv = tft_driver();
         s_drv->init();
     }
     con_init(s_drv);

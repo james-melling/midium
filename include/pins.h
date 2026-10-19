@@ -7,6 +7,8 @@
 #ifndef MIDIUM_PINS_H
 #define MIDIUM_PINS_H
 
+#include "config.h"   /* MIDIUM_TFT_MODULE */
+
 /* ---- MIDI ------------------------------------------------------------- */
 #define PIN_MIDI_OUT_A_TX    0   /* UART0 TX -> MIDI OUT A driver (via bypass relays)  */
 #define PIN_MIDI_IN_A_RX     1   /* UART0 RX <- MIDI IN A (U1 H11L1, via bypass relays) */
@@ -32,13 +34,20 @@
 #define RTC_I2C_ADDR         0x52   /* RV-3028-C7 (src/rv3028.c), same bus as the OLED */
 #define GAUGE_I2C_ADDR       0x36   /* MAX17048 fuel gauge (src/max17048.c); optional */
 
-/* ---- SPI0: ST7789 1.9" TFT 170x320 (used as 320x170 landscape) --------- */
+/* ---- SPI0: ST7789 TFT, landscape (config.h MIDIUM_TFT_MODULE) ---------- */
 #define PIN_TFT_DC           16
 #define PIN_TFT_CS           17
 #define PIN_TFT_SCK          18
 #define PIN_TFT_MOSI         19
+#if MIDIUM_TFT_MODULE == TFT_MODULE_PIMORONI_28
+/* Pimoroni Pico Display Pack 2.8": backlight on GP20, reset tied to RUN */
+#define PIN_TFT_RST          (-1)
+#define PIN_TFT_BL           20  /* backlight, PWM (slice 2 channel A) */
+#else
+/* generic 2.8" breakout / Adafruit 1.9": separate reset, backlight on GP21 */
 #define PIN_TFT_RST          20
 #define PIN_TFT_BL           21  /* backlight, PWM (slice 2 channel B) */
+#endif
 #define TFT_SPI              spi0
 
 /* ---- SPI1: microSD (reserved for milestone 2, not used yet) ------------ */

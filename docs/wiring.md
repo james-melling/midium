@@ -1,4 +1,4 @@
-# MIDIum (NSK MT-1) breadboard wiring (v0.5: milestone 1, RTC, soft power, fuel gauge)
+# MIDIum (NSK MT-1) breadboard wiring (v0.6: 2.8" display, RTC, soft power, fuel gauge)
 
 Prototype on a **Raspberry Pi Pico 2** (RP2350). Everything runs at 3.3 V except
 the relay coils (5 V from VBUS). The pin map matches `include/pins.h`. If you
@@ -31,8 +31,8 @@ with USB at the top).
 | GP17 | 22 | TFT CS | TFT CS |
 | GP18 | 24 | SPI0 SCK | TFT SCL / SCK |
 | GP19 | 25 | SPI0 MOSI | TFT SDA / MOSI |
-| GP20 | 26 | TFT RST | TFT RES / RST |
-| GP21 | 27 | TFT backlight (PWM) | TFT BLK / BL |
+| GP20 | 26 | Pimoroni pack (prototype default): TFT backlight (PWM). Generic breakout / 1.9": TFT RST | pack BL (GP20) / breakout RES / RST |
+| GP21 | 27 | Generic breakout / 1.9": TFT backlight (PWM). Pimoroni pack: not used | breakout BLK / BL |
 | GP22 | 29 | Joystick PRESS (also the power button) | joystick centre push; final PCB: also the controller's PB input, via a diode |
 | GP24 | (on board) | VBUS sense (high = USB power present) | the Pico 2's own VBUS divider; nothing to wire |
 | GP25 | (on board) | Activity LED | blinks on every MIDI IN byte |
@@ -228,25 +228,109 @@ trickle charger, so a primary cell is safe; a supercap needs the board's own
 charging arrangement. The firmware runs without the RTC too (software clock,
 "not set" at every power-up).
 
-## 6. TFT (ST7789 1.9", 170x320, SPI)
+## 6. TFT (ST7789 2.8", 240x320 IPS, SPI)
 
-Used in landscape (320 x 170). It is detected only when **no** OLED answers on
-I2C 0x3C or 0x3D, so remove the OLED to use the TFT (or force it with
-`-DMIDIUM_DISPLAY=2`).
+Used in landscape (320 x 240, 40 x 16 characters). The TFT is used when
+**no** OLED answers on I2C 0x3C or 0x3D, so remove the OLED (or force the
+TFT with `-DMIDIUM_DISPLAY=2`). The module and its wiring are a build
+option, `MIDIUM_TFT_MODULE` (README, Building):
 
-| TFT pin (typical label) | Pico |
+| `MIDIUM_TFT_MODULE` | Module | DC | CS | SCK | MOSI | RST | Backlight |
+|---|---|---|---|---|---|---|---|
+| `PIMORONI_28` (default) | Pimoroni Pico Display Pack 2.8" (breadboard prototype) | GP16 | GP17 | GP18 | GP19 | none (software reset) | GP20 |
+| `GENERIC_28` | 2.8" 240x320 ST7789 IPS breakout (final PCB) | GP16 | GP17 | GP18 | GP19 | GP20 | GP21 |
+| `ADAFRUIT_19` | Adafruit 5394 1.9" 170x320 (v0.5) | GP16 | GP17 | GP18 | GP19 | GP20 | GP21 |
+
+All three use SPI0 on the same pins; only reset and backlight differ.
+
+### 6a. Pimoroni Pico Display Pack 2.8" (prototype)
+
+The pack is made to plug straight onto a Pico, but on the breadboard it is
+**jumpered**, not stacked: its header has the Pico's pinout, so each wire
+goes from a Pico pin to the pack pin with the **same pin number**. Only
+these are needed:
+
+| Pack pin (= Pico pin) | Signal | Pico |
+|---|---|---|
+| 36 | 3V3 | 3V3(OUT), pin 36 |
+| 38 (or any GND) | GND | GND |
+| 21 | LCD DC (GP16) | GP16, pin 21 |
+| 22 | LCD CS (GP17) | GP17, pin 22 |
+| 24 | LCD SCK (GP18) | GP18, pin 24 |
+| 25 | LCD MOSI (GP19) | GP19, pin 25 |
+| 26 | Backlight (GP20, PWM) | GP20, pin 26 |
+
+**Do not connect** the pack's other pins:
+
+* **GP12, GP13 (buttons A, B)**: reserved for the microSD card (SPI1 MISO /
+  CS) later. The pack's buttons would short them to GND.
+* **GP14, GP15 (buttons X, Y)**: these are MIDIum's joystick LEFT and RIGHT.
+  The pack's buttons are active low like the joystick, so connecting them
+  would be harmless (X = LEFT, Y = RIGHT), but they are not needed.
+* **GP26, GP27, GP28 (RGB LED)**: reserved for XRC / GPI (M3).
+* **GP4, GP5 (Qw/ST / STEMMA QT I2C on the 2.8" pack)**: these are MIDI
+  OUT B and IN B here. Never connect them, and don't plug anything into the
+  pack's Qw/ST socket.
+* **RUN**: the pack has no separate LCD reset pin; it ties the panel's
+  reset to the Pico's RUN line, and the firmware resets the panel with the
+  ST7789 software reset (SWRESET) at every start. *Check on the board (or
+  Pimoroni's schematic) that the reset line has a pull-up on the pack.* If
+  it only relies on the Pico's RUN pull-up, add one more jumper, RUN (pin
+  30) to pack pin 30, or the panel reset floats.
+
+The pin assignments above are from Pimoroni's published Pico Display pinout
+(LCD CS GP17, SCK GP18, MOSI GP19, DC GP16, backlight GP20, buttons
+GP12-GP15, RGB LED GP26-GP28, Qw/ST GP4 / GP5); **check them against the
+silkscreen / pinout card that comes with your pack** before powering up.
+
+The pack switches its backlight with a transistor from GP20, so the GPIO
+only drives a gate. The backlight itself runs from 3V3: expect roughly
+50-100 mA at full brightness (measure it; Display > Brightness PWMs it
+at ~37 kHz). The Pico's 3V3(OUT) regulator supplies up to 300 mA in total,
+which covers the pack, the RTC, the opto-isolators and the MIDI outputs.
+
+### 6b. Generic 2.8" ST7789 IPS breakout (final PCB pinout)
+
+Common Chinese 2.8" 240x320 IPS SPI modules with an ST7789 (often
+"ST7789V") have an 8-pin header. Labels vary:
+
+| Module pin (labels seen) | Pico |
 |---|---|
 | VCC | 3V3(OUT), pin 36 |
 | GND | GND |
-| SCL / SCK | GP18, pin 24 |
-| SDA / MOSI | GP19, pin 25 |
-| RES / RST | GP20, pin 26 |
-| DC / RS | GP16, pin 21 |
+| SCL / SCK / CLK | GP18, pin 24 |
+| SDA / MOSI / SDI / DIN | GP19, pin 25 |
+| RES / RST / RESET | GP20, pin 26 |
+| DC / RS / A0 | GP16, pin 21 |
 | CS | GP17, pin 22 |
-| BLK / BL | GP21, pin 27 (PWM brightness) |
+| BLK / BL / LED | GP21, pin 27 (PWM brightness) |
 
-If the image is offset, mirrored or has red and blue swapped, adjust
-`TFT_X_OFFSET`, `TFT_Y_OFFSET` or `TFT_MADCTL` in `include/config.h`.
+* **Check the controller**: many 2.8" 240x320 SPI modules are **ILI9341**
+  (usually TN, often with a touch panel and a MISO / SDO pin, labelled
+  `LED` for the backlight). Those need a different driver; buy one that
+  says ST7789 / ST7789V and IPS.
+* **Backlight**: on most modules BLK goes to a transistor on the module
+  (BLK high or floating = on). If yours wires BLK straight to the LED
+  anodes (through a resistor only; measure the current into BLK at 3.3 V),
+  it can draw well over the 12 mA a GPIO may source: drive it through a
+  small N-MOSFET or NPN instead of straight from GP21. Budget 50-100 mA for
+  a 2.8" backlight.
+* Modules with a "VCC 3.3-5 V" regulator still work from 3V3.
+
+### 6c. Adafruit 1.9" 170x320 (v0.5 module)
+
+Build with `-DMIDIUM_TFT_MODULE=ADAFRUIT_19`: the same wiring as 6b
+(RST GP20, backlight GP21), 40 x 11 characters. The 1.9" and the OLED are
+no longer on the parts order, but the firmware keeps supporting both.
+
+### Orientation and colours
+
+The 2.8" panel uses no offsets (it fills the ST7789's 240 x 320 memory);
+the 1.9" sits 35 rows in. If the image is upside down, set `TFT_MADCTL` to
+0xA0; mirrored, try 0x20 or 0xE0; red and blue swapped, add 0x08. A white
+or negative-looking screen means the panel does not want inversion: set
+`TFT_INVERT` to 0 (IPS panels, all three modules above, need it on). All in
+`include/config.h`.
 
 ## 7. Joystick (5-way, active low)
 
@@ -329,13 +413,13 @@ device on OUT A makes step 3 easier.
 | # | Setup | Action | Expected |
 |---|---|---|---|
 | 1 | Unpowered. Laptop OUT to MIDIum IN, MIDIum OUT A to a second interface IN (or a synth). | Send notes. | Notes arrive at OUT A through the relays (passive bypass). |
-| 2 | Power MIDIum from USB. | Watch the relays and screen. | Relays click on after about 1 s, the splash shows, then the monitor reads `MIDIum  A:a  B:a` (both outputs fed from IN A). |
+| 2 | Power MIDIum from USB. | Watch the relays and screen. | Relays click on after about 1 s, the splash shows (centred, the right way up, black background: see 6, Orientation and colours, if not), then the monitor reads `MIDIum        A:a  B:a` (both outputs fed from IN A). |
 | 3 | Laptop OUT to IN. OUT A to interface 2 IN. **OUT B to the laptop's interface IN.** | Send notes, CC, PC, pitch bend and a sysex dump from the laptop. | Each appears on the MIDIum screen, the LED blinks, and identical data arrives on OUT A and OUT B. Check the laptop monitor on OUT B: the sysex is byte-identical. |
-| 4 | Same. | Menu > Routing > Custom > `OUT A <- IN A` off. Send notes. | Nothing on OUT A, OUT B still passes. Turn it back on (or pick the `A->A, A->B (thru)` preset). |
+| 4 | Same. | Menu > Routing > Custom > `OUT A ← IN A` off. Send notes. | Nothing on OUT A, OUT B still passes. Turn it back on (or pick the `A→A, A→B (thru)` preset). |
 | 5 | Same. | Menu > Generate > Note test C4, Send CC, Send PC, MSC GO, MMC Play, PANIC. | The laptop sees each on OUT B, and the footer shows what was sent. MSC GO arrives as `F0 7F 7F 02 7F 01 F7`. |
 | 6 | Same. | Generate > Clock BPM 120 > Clock out on. | The laptop measures 120.0 BPM (24 ppqn, 20.833 ms per clock). |
 | 7 | Dense-stream test. | From the laptop, send a continuous stream on IN: a running-status CC sweep at full rate plus repeated 1 kB sysex dumps for 60 s. At the same time, run Note sweep and Clock out from the MIDIum. | The laptop on OUT B receives every input byte (compare counts or capture and diff). Generated notes and clocks are merged in without corrupting the stream: no stray data, no broken running status. Stats: `Drops out A/B` = 0, `IN A UART err` = 0, `IN A orphans` = 0, `IN A merge drop` = 0. `Mon overflow` may count if the screen can't keep up. That affects the display only, never thru. |
-| 8 | Second source into IN B (another interface output, or a loop from OUT B of a second device). | Menu > Routing > `A+B merge -> both`. Send from both sources at once, including sysex on each. | Both streams arrive merged on OUT A and OUT B, every message intact (sysex never interleaved). The monitor tags each line A or B, and the header reads `A:ab B:ab`. Stats > `IN B merge drop` stays 0 unless the two inputs together send more than one MIDI line can carry. |
+| 8 | Second source into IN B (another interface output, or a loop from OUT B of a second device). | Menu > Routing > `A+B merge → both`. Send from both sources at once, including sysex on each. | Both streams arrive merged on OUT A and OUT B, every message intact (sysex never interleaved). The monitor tags each line A or B, and the header reads `A:ab B:ab`. Stats > `IN B merge drop` stays 0 unless the two inputs together send more than one MIDI line can carry. |
 | 9 | Remove USB power mid-stream. | | Relays drop out and IN A goes hard-wired to OUT A again. IN B stops. |
 | 10 | RTC eval board on GP6 / GP7. | Menu > Settings > Date & time. | `RTC RV-3028`. If `Time` says "lost - set it", press, set the date and time (LEFT / RIGHT field, UP / DOWN value), press. With a backup cell, unplug USB for a minute: the time is still right afterwards. |
 | 11 | Same. | Send some MSC from the laptop, then Menu > Logs. | The newest session is marked LIVE with the right start time; press it to browse the messages. Power-cycle: the session is still there and a new one starts. |
@@ -343,3 +427,6 @@ device on OUT A makes step 3 easier.
 | 13 | Same. | Hold the joystick press 4 s. | *Shutting down*, *Off / Safe to unplug*, then (no controller on the breadboard) *Off, press the joystick to power on*; the display goes dark after 3 s. The relays click off and the notes reach OUT A through the relays (passive). Press: the box reboots; Stats > Last off reads `clean`. |
 | 14 | Same. | Unplug USB mid-stream, plug it back in. | Stats > Last off reads `power loss`. |
 | 15 | MAX17048 breakout and a cell on I2C1. | Look at the monitor header; Stats. | Battery icon and % in the header; Stats shows the charge, cell voltage and `battery` / `USB, charging`. Check the cell voltage against a meter. |
+| 16 | 2.8" TFT. | Look closely at the text; Display > Brightness 10 % to 100 %. | Smooth (anti-aliased) text with no coloured fringes, nothing cut off at the edges, the battery icon and `%` in the header. Brightness changes without flicker. |
+| 17 | A dense stream into IN A and IN B (step 7 on both). | UP on the monitor, then UP 50+ times (or hold UP), PRESS on an MSC / sysex line, LEFT, then DOWN past the bottom. | The first UP freezes the whole screen, the header counts up (`PAUSED +1532`) while nothing else moves; the cursor scrolls back steadily; the detail page opens and LEFT returns to the same frozen view; DOWN past the newest line goes live. |
+| 18 | MTC from two sources, IN A and IN B. | Start A, then B; watch the header and Menu > MTC display. Stop A. | The display stays on A (`+B` shown) without flickering, the MTC display shows B underneath with the offset (`DIFF ...`). 2 s after A stops it switches to B. Display > MTC source IN B / IN A forces one. |

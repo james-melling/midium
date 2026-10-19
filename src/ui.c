@@ -2,10 +2,12 @@
  * ui.c - monitor view, menus and the full-screen pages.
  *
  * Monitor (home):  the newest message is pinned to the bottom row (Display >
- *                  Pin latest). UP/DOWN scroll history (pauses) with a
- *                  cursor that can also land on the pinned line, LEFT back to
- *                  live, RIGHT cycles the time column, PRESS opens the menu,
- *                  or the detail page when paused on a sysex / MSC line.
+ *                  Pin latest). The first UP pauses: the whole view freezes
+ *                  (mon_view.h), the header counts what arrived since. Then
+ *                  UP/DOWN move a cursor through the frozen history (held:
+ *                  faster), DOWN past the newest line or LEFT back to live,
+ *                  RIGHT cycles the time column, PRESS opens the menu, or the
+ *                  detail page when paused on a sysex / MSC line.
  * Detail page:     UP/DOWN scroll, RIGHT/PRESS next page, LEFT back.
  * Menus:           UP/DOWN move (wraps), PRESS or RIGHT select / toggle /
  *                  edit, LEFT back. While editing a value: UP/DOWN change it
@@ -46,6 +48,7 @@
 #include "timeutil.h"
 #include "power.h"
 #include "power_fsm.h"
+#include "mon_view.h"
 
 /* ------------------------------------------------------------------------ */
 /* Menu model                                                                */
@@ -91,12 +94,8 @@ static joy_event_t s_rep_e;
 static uint64_t s_rep_t;
 static unsigned s_rep_n;
 
-/* monitor */
-static bool     s_paused;
-static uint32_t s_anchor;        /* paused: seq on the bottom history row */
-static uint32_t s_cursor;        /* paused, pinned mode: selected seq */
-static bool     s_cur_pin;       /* paused, pinned mode: cursor on the pinned (newest) line */
-static bool     s_anchor_none;   /* pinned mode: no history rows when paused */
+/* monitor: pause / scroll state (the history itself is in monitor.c) */
+static mon_view_t s_mv;
 
 static const char *s_disp_name = "?";
 
@@ -152,6 +151,18 @@ static void toast(const char *t) {
     s_toast_t = time_us_64();
 }
 static bool toast_live(uint64_t now) { return s_toast[0] && now - s_toast_t < 2500000u; }
+
+/* The TFT layouts (40 columns): time column, long labels, fuller headers. */
+static bool is_wide(void) { return con_cols() >= CON_WIDE_COLS; }
+
+static void mon_resume(void) { mv_resume(&s_mv, monitor_hist()); }
+
+/* "+1532", "+12k", "+3M" */
+static void fmt_plus(uint32_t v, char *b, size_t n) {
+    if (v < 10000u) snprintf(b, n, "+%lu", (unsigned long)v);
+    else if (v < 1000000u) snprintf(b, n, "+%luk", (unsigned long)(v / 1000u));
+    else snprintf(b, n, "+%luM", (unsigned long)(v / 1000000u));
+}
 
 /* ------------------------------------------------------------------------ */
 /* Getters / setters / formatters                                            */
@@ -223,13 +234,18 @@ static int  get_nsweep(void)  { return gen_note_sweep_active(); }
 static int  get_pbsweep(void) { return gen_pb_sweep_active(); }
 
 static int  get_pin(void)     { return g_settings.pin_latest; }
-static void set_pin(int v)    { g_settings.pin_latest = v != 0; s_paused = false; }
+static void set_pin(int v)    { g_settings.pin_latest = v != 0; mon_resume(); }
 static int  get_c3(void)      { return g_settings.note_c3; }
 static void set_c3(int v)     { g_settings.note_c3 = v != 0; }
 static int  get_timecol(void) { return g_settings.time_col; }
 static void set_timecol(int v){ g_settings.time_col = (uint8_t)v; }
 static void fmt_timecol(int v, char *b, size_t n) {
     snprintf(b, n, "%s", v == TIMECOL_UPTIME ? "Uptime" : v == TIMECOL_TOD ? "Time of day" : "Off");
+}
+static int  get_mtcsrc(void)  { return g_settings.mtc_src; }
+static void set_mtcsrc(int v) { g_settings.mtc_src = (uint8_t)v; }
+static void fmt_mtcsrc(int v, char *b, size_t n) {
+    snprintf(b, n, "%s", v == MTC_SRC_A ? "IN A" : v == MTC_SRC_B ? "IN B" : "Auto");
 }
 static int  get_usblog(void)  { return g_settings.usb_log; }
 static void set_usblog(int v) { g_settings.usb_log = v != 0; }
@@ -284,7 +300,7 @@ static void act_msc_send(void)   { gen_msc_send(); }
 static void act_mmc_play(void)   { gen_mmc(0x02); }
 static void act_mmc_stop(void)   { gen_mmc(0x01); }
 static void act_panic(void)      { gen_panic(); }
-static void act_clear(void)      { monitor_clear(); s_paused = false; }
+static void act_clear(void)      { monitor_clear(); mon_resume(); }
 
 static void open_mtc(void);
 static void open_datetime(void);
@@ -354,7 +370,7 @@ static void fmt_uptime(int unused, char *b, size_t n) {
 static int  get_usbpo(void)   { return g_settings.usb_power_on; }
 static void set_usbpo(int v)  { g_settings.usb_power_on = (uint8_t)v; }
 static void fmt_usbpo(int v, char *b, size_t n) {
-    bool wide = con_cols() >= 26;
+    bool wide = is_wide();
     if (v == USBPO_POWER_ON) snprintf(b, n, "%s", wide ? "Power on" : "on");
     else snprintf(b, n, "%s", wide ? "Charge only" : "charge");
 }
@@ -363,7 +379,7 @@ static void set_aoff(int v)   { g_settings.auto_off_idx = (uint8_t)v; power_acti
 static void fmt_aoff(int v, char *b, size_t n) {
     unsigned m = autooff_minutes((unsigned)v);
     if (!m) snprintf(b, n, "Off");
-    else snprintf(b, n, con_cols() >= 26 ? "%u min" : "%um", m);
+    else snprintf(b, n, is_wide() ? "%u min" : "%um", m);
 }
 
 /* power / battery stats */
@@ -464,21 +480,24 @@ static const menu_item_t gen_items[] = {
     ACT("PANIC notes off", act_panic),
 };
 
+/* arrows from the font (display.h CH_LEFT / CH_RIGHT) */
+#define AL "\x1B"
+#define AR "\x1A"
 static const menu_item_t grid_items[] = {
-    TOG("OUT A <- IN A", get_r_aa, set_r_aa),
-    TOG("OUT A <- IN B", get_r_ab, set_r_ab),
-    TOG("OUT A <- Gen", get_r_ag, set_r_ag),
-    TOG("OUT B <- IN A", get_r_ba, set_r_ba),
-    TOG("OUT B <- IN B", get_r_bb, set_r_bb),
-    TOG("OUT B <- Gen", get_r_bg, set_r_bg),
+    TOG("OUT A " AL " IN A", get_r_aa, set_r_aa),
+    TOG("OUT A " AL " IN B", get_r_ab, set_r_ab),
+    TOG("OUT A " AL " Gen", get_r_ag, set_r_ag),
+    TOG("OUT B " AL " IN A", get_r_ba, set_r_ba),
+    TOG("OUT B " AL " IN B", get_r_bb, set_r_bb),
+    TOG("OUT B " AL " Gen", get_r_bg, set_r_bg),
 };
 static const menu_t grid_menu = MENU("Custom routing", grid_items);
 
 static const menu_item_t route_items[] = {
-    ACTF("A->A, A->B (thru)", act_preset0, get_preset0, fmt_mark),
-    ACTF("A+B merge -> both", act_preset1, get_preset1, fmt_mark),
-    ACTF("A->A, B->B (split)", act_preset2, get_preset2, fmt_mark),
-    ACTF("B->A, B->B", act_preset3, get_preset3, fmt_mark),
+    ACTF("A" AR "A, A" AR "B (thru)", act_preset0, get_preset0, fmt_mark),
+    ACTF("A+B merge " AR " both", act_preset1, get_preset1, fmt_mark),
+    ACTF("A" AR "A, B" AR "B (split)", act_preset2, get_preset2, fmt_mark),
+    ACTF("B" AR "A, B" AR "B", act_preset3, get_preset3, fmt_mark),
     SUB("Custom", &grid_menu),
 };
 
@@ -505,6 +524,7 @@ static const menu_item_t disp_items[] = {
     SUB("Filters", &filter_menu),
     TOGF("Note names", get_c3, set_c3, fmt_c3),
     VAL("Time column", get_timecol, set_timecol, 0, 2, 1, fmt_timecol),
+    VAL("MTC source", get_mtcsrc, set_mtcsrc, 0, 2, 1, fmt_mtcsrc),
     VAL("Brightness", get_bright, set_bright, 10, 100, 10, fmt_pct),
     TOG("USB log", get_usblog, set_usblog),
     ACT("Clear monitor", act_clear),
@@ -588,7 +608,7 @@ static const menu_item_t about_items[] = {
     INFO("Last off", fmt_power, 5),
     INFO("Gauge", fmt_power, 6),
     INFO("Unpowered:", NULL, 0),
-    INFO(" IN A -> OUT A", NULL, 0),
+    INFO(" IN A " AR " OUT A", NULL, 0),
     INFO(" IN B not passed", NULL, 0),
 };
 
@@ -754,90 +774,27 @@ static void menu_event(joy_event_t e) {
 /* ------------------------------------------------------------------------ */
 static int monitor_rows(void) { return con_rows() - 1; }
 
-/* Pinned mode: clamp the paused view to what is still in the history. */
-static void pin_clamp(void) {
-    uint32_t next = monitor_next_seq(), oldest = monitor_oldest_seq();
-    if (next < 2 || next - 2 < oldest) { s_anchor_none = true; s_cur_pin = true; return; }
-    s_anchor_none = false;
-    if (s_anchor > next - 2) s_anchor = next - 2;
-    if (s_anchor < oldest) s_anchor = oldest;
-    if (!s_cur_pin) {
-        if (s_cursor < oldest) s_cursor = oldest;
-        if (s_cursor > s_anchor) s_cursor = s_anchor;
-        uint32_t hist = (uint32_t)(monitor_rows() - 1);
-        if (hist == 0) hist = 1;
-        if (s_anchor - s_cursor >= hist) s_anchor = s_cursor + hist - 1u;
-    }
-}
-
-static void monitor_event_pinned(joy_event_t e) {
-    uint32_t next = monitor_next_seq();
-    uint32_t oldest = monitor_oldest_seq();
-    uint32_t hist = (uint32_t)(monitor_rows() - 1);
-    switch (e) {
-    case JOY_UP:
-        if (!s_paused) {
-            s_paused = true;
-            s_cur_pin = true;
-            s_anchor = next >= 2 ? next - 2 : 0;
-        } else if (s_cur_pin) {
-            pin_clamp();
-            if (!s_anchor_none) { s_cur_pin = false; s_cursor = s_anchor; }
-        } else if (s_cursor > oldest) {
-            s_cursor--;
-            if (s_anchor - s_cursor >= hist) s_anchor--;
-        }
-        break;
-    case JOY_DOWN:
-        if (!s_paused || s_cur_pin) break;
-        if (s_cursor < s_anchor) s_cursor++;
-        else if (next >= 2 && s_anchor + 1u <= next - 2) { s_anchor++; s_cursor++; }
-        else s_cur_pin = true;
-        break;
-    case JOY_LEFT:
-        s_paused = false;
-        break;
-    case JOY_RIGHT:
-        g_settings.time_col = (uint8_t)val_wrap_step(g_settings.time_col, 1, TIMECOL_OFF, TIMECOL_TOD);
-        break;
-    case JOY_PRESS: {
-        midi_msg_t m;
-        uint32_t sel = s_cur_pin ? next - 1u : s_cursor;
-        if (s_paused && next && monitor_get(sel, &m) && m.type == MT_SYSEX) open_detail(&m, NULL, SCR_MONITOR);
-        else push_menu(&main_menu);
-        break;
-    }
-    default:
-        break;
-    }
-    if (s_paused) pin_clamp();
+/* UP in the monitor: pause, or move the cursor up (faster while held). */
+static void mon_up(void) {
+    unsigned steps = s_rep_n >= 24u ? 8u : s_rep_n >= 8u ? 3u : 1u;
+    mv_up(&s_mv, monitor_hist(), g_settings.pin_latest, monitor_rows(), steps);
 }
 
 static void monitor_event(joy_event_t e) {
-    uint32_t next = monitor_next_seq();
-    uint32_t oldest = monitor_oldest_seq();
-    if (next == 0 && e != JOY_PRESS && e != JOY_RIGHT) return;
-    if (g_settings.pin_latest) { monitor_event_pinned(e); return; }
-    uint32_t min_anchor = oldest + (uint32_t)monitor_rows() - 1u;
-    if (min_anchor > next - 1u) min_anchor = next - 1u;
-
+    msg_hist_t *h = monitor_hist();
+    bool pin = g_settings.pin_latest;
     switch (e) {
-    case JOY_UP:
-        if (!s_paused) { s_paused = true; s_anchor = next - 1u; }
-        if (s_anchor > min_anchor) s_anchor--;
-        break;
-    case JOY_DOWN:
-        if (s_paused && s_anchor + 1u < next) s_anchor++;
-        break;
-    case JOY_LEFT:
-        s_paused = false;
-        break;
+    case JOY_UP:    mon_up(); break;
+    case JOY_DOWN:  mv_down(&s_mv, h, pin, monitor_rows()); break;
+    case JOY_LEFT:  mon_resume(); break;
     case JOY_RIGHT:
         g_settings.time_col = (uint8_t)val_wrap_step(g_settings.time_col, 1, TIMECOL_OFF, TIMECOL_TOD);
         break;
     case JOY_PRESS: {
         midi_msg_t m;
-        if (s_paused && monitor_get(s_anchor, &m) && m.type == MT_SYSEX) open_detail(&m, NULL, SCR_MONITOR);
+        uint32_t sel;
+        if (s_mv.paused && mv_selected(&s_mv, h, &sel) && monitor_get(sel, &m) && m.type == MT_SYSEX)
+            open_detail(&m, NULL, SCR_MONITOR);
         else push_menu(&main_menu);
         break;
     }
@@ -873,11 +830,13 @@ typedef struct {
 static int time_col_width(void) {
     switch (g_settings.time_col) {
     case TIMECOL_UPTIME: return 10;                       /* "mm:ss.mmm " */
-    case TIMECOL_TOD:    return con_cols() >= 26 ? 13 : 9; /* "hh:mm:ss.mmm " / "hh:mm:ss " */
+    case TIMECOL_TOD:    return is_wide() ? 13 : 9;       /* "hh:mm:ss.mmm " / "hh:mm:ss " */
     default:             return 0;
     }
 }
 
+/* "A hh:mm:ss.mmm MESSAGE": tag, time column (time_col_width()), decoded
+ * message in what is left of the row. */
 static msg_class_t format_line(const vmsg_t *v, char *line, size_t n) {
     int width = con_cols() - 2 - time_col_width();
     decode_opts_t o = { .note_c3 = g_settings.note_c3, .width = (uint8_t)(width > 0 ? width : 1) };
@@ -892,12 +851,12 @@ static msg_class_t format_line(const vmsg_t *v, char *line, size_t n) {
         break;
     case TIMECOL_TOD:
         if (v->t.real) {
-            tu_fmt_tod(v->t.real_s, v->t.real_ms, con_cols() >= 26, t, sizeof t);
+            tu_fmt_tod(v->t.real_s, v->t.real_ms, is_wide(), t, sizeof t);
         } else {
             /* clock not set: uptime in the same width */
             char u[16];
             midi_format_time(v->m.t_us, u, sizeof u);
-            if (con_cols() >= 26) snprintf(t, sizeof t, "%12s", u);
+            if (is_wide()) snprintf(t, sizeof t, "%12s", u);
             else snprintf(t, sizeof t, "%.8s", u);
         }
         snprintf(line, n, "%c %s %s", tag, t, txt);
@@ -920,31 +879,40 @@ static void draw_msg_row(int screen_row, const vmsg_t *v, uint8_t extra) {
     msg_class_t cls = format_line(v, line, sizeof line);
     if (extra & ATTR_CURSOR) line[1] = '>';      /* cursor: "A>" (plus bar / underline) */
     con_row(screen_row, (uint8_t)((uint8_t)cls | extra), line);
+    /* colour: the tag in white and the time column dimmed, so the message
+     * stands out (not on the inverse pinned bar, where grey is too faint) */
+    const display_driver_t *d = con_driver();
+    int tw = time_col_width();
+    if (d && d->has_colour && !(extra & ATTR_INVERSE)) {
+        char tag[3] = { line[0], line[1], 0 };
+        con_print(screen_row, 0, (uint8_t)(CLS_NORMAL | extra), tag);
+        if (tw > 1 && (int)strlen(line) > 2 + tw) {
+            line[2 + tw - 1] = 0;
+            con_print(screen_row, 2, (uint8_t)(CLS_DIM | extra), line + 2);
+        }
+    }
 }
 
-/* Header: routing summary, or MTC time while MTC is running (and for
- * MTC_HOLD_US after it stops, marked STOP). */
-static bool mtc_header(uint64_t now, char *hdr, size_t n, uint8_t *attr) {
-    int in = monitor_mtc_active();
-    if (in < 0) return false;
-    const mtc_t *m = monitor_mtc(in);
-    uint64_t last = mtc_last_us(m);
-    if (!m->valid || !last || now - last >= MTC_HOLD_US) return false;
-    bool run = mtc_running(m, now);
-    char tc[16];
-    mtc_tc_str(&m->tc, m->rate, tc, sizeof tc);
-    char L = in ? 'B' : 'A';
-    if (con_cols() >= 26) {
-        static const char *const R[4] = { "24fps", "25fps", "29.97df", "30fps" };
-        if (run) snprintf(hdr, n, "%s %s%s %c", tc, R[m->rate & 3u], m->dir < 0 ? " rev" : "", L);
-        else snprintf(hdr, n, "%s STOP %c", tc, L);
-    } else {
-        static const char *const R[4] = { "24", "25", "29D", "30" };
-        if (run) snprintf(hdr, n, "%s %s%s %c", tc, R[m->rate & 3u], m->dir < 0 ? "R" : "", L);
-        else snprintf(hdr, n, "%s STOP %c", tc, L);
-    }
-    *attr = (uint8_t)((run ? CLS_HEADER : CLS_DIM) | ATTR_INVERSE);
-    return true;
+/* ---- MTC: the selected input (Display > MTC source) and the other one ---- */
+typedef struct {
+    int in;                 /* selected input, -1 none */
+    const mtc_t *m;         /* its reader */
+    bool show;              /* header: valid and active within MTC_HOLD_US */
+    bool run;
+    const mtc_t *o;         /* the other input's reader */
+    bool o_active, o_run;
+} mtc_pick_t;
+
+static void mtc_pick(uint64_t now, mtc_pick_t *p) {
+    memset(p, 0, sizeof *p);
+    p->in = monitor_mtc_select(now);
+    if (p->in < 0) return;
+    p->m = monitor_mtc(p->in);
+    p->run = mtc_running(p->m, now);
+    p->show = p->m->valid && mtc_active(p->m, now);
+    p->o = monitor_mtc(1 - p->in);
+    p->o_active = p->o->valid && mtc_active(p->o, now);
+    p->o_run = mtc_running(p->o, now);
 }
 
 /* Battery field for the monitor header: an icon (charge level, or a bolt
@@ -956,7 +924,7 @@ static bool mtc_header(uint64_t now, char *hdr, size_t n, uint8_t *attr) {
 static int batt_field(uint64_t now, char *b, size_t n, uint8_t *attr) {
     const batt_info_t *bi = power_batt();
     if (!bi->present) return 0;
-    bool wide = con_cols() >= 26;
+    bool wide = is_wide();
     int w = wide ? 4 : 3;
     char num[8];
     snprintf(num, sizeof num, wide ? "%u%%" : "%u", bi->soc_pct);
@@ -972,26 +940,97 @@ static int batt_field(uint64_t now, char *b, size_t n, uint8_t *attr) {
     return w + 1;
 }
 
-static void render_header(uint64_t now, bool paused) {
-    char hdr[CON_MAX_COLS + 24], bf[12];
+static const char *const MTC_RATE_SHORT[4] = { "24", "25", "29D", "30" };
+
+/* TFT header, 40 columns, fixed fields:
+ *   no MTC:  "MIDIum        A:ab B:ab         [b 76%] C*"
+ *            "PAUSED +1532  A:ab B:ab ..."
+ *   MTC:     "01:00:03:12 25 > A+B  A:ab B:ab [b 76%] C*"  (route, or
+ *            PAUSED+n while paused); the time in orange running, grey
+ *            stopped; "+B" = the other input runs MTC too.
+ * Battery at columns 32-36, generator clock 'C' at 38, activity '*' at 39. */
+/* Paused with the cursor on the oldest message the monitor still holds,
+ * and older ones have gone (the log has them all). */
+static bool paused_at_top(void) {
+    return s_mv.paused && monitor_oldest_seq() > 0 && s_mv.cursor <= monitor_oldest_seq();
+}
+
+static void render_header_wide(uint64_t now, bool act) {
+    const int cols = con_cols();
+    const uint8_t attr = CLS_HEADER | ATTR_INVERSE;
+    char route[16], pc[12], f[CON_MAX_COLS + 8], bf[12];
+    char ra[4], rb[4];
+    route_summary(&g_settings.route, ME_OUT_A, ra, sizeof ra);
+    route_summary(&g_settings.route, ME_OUT_B, rb, sizeof rb);
+    snprintf(route, sizeof route, "A:%-2s B:%-2s", ra, rb);
+    fmt_plus(monitor_new_since_pause(), pc, sizeof pc);
+    mtc_pick_t mp;
+    mtc_pick(now, &mp);
+
+    con_row(0, attr, "");
+    if (mp.show) {
+        char tc[16];
+        mtc_tc_str(&mp.m->tc, mp.m->rate, tc, sizeof tc);
+        char L = mp.in ? 'B' : 'A';
+        if (mp.run) snprintf(f, sizeof f, "%s %-3s%c %c", tc, MTC_RATE_SHORT[mp.m->rate & 3u],
+                             mp.m->dir < 0 ? CH_PLAY_L : CH_PLAY_R, L);
+        else snprintf(f, sizeof f, "%s STOP %c", tc, L);
+        con_print(0, 0, (uint8_t)((mp.run ? CLS_HEADER : CLS_DIM) | ATTR_INVERSE), f);
+        if (mp.o_run) {
+            snprintf(f, sizeof f, "+%c", L == 'A' ? 'B' : 'A');
+            con_print(0, 18, (uint8_t)(CLS_DIM | ATTR_INVERSE), f);
+        }
+        if (s_mv.paused) {
+            snprintf(f, sizeof f, "PAUSED%s", pc);
+            con_print(0, 21, attr, f);
+        } else {
+            con_print(0, 21, attr, route);
+        }
+    } else {
+        if (s_mv.paused) snprintf(f, sizeof f, "PAUSED %s", pc);
+        else snprintf(f, sizeof f, "%s", MIDIUM_NAME);
+        con_print(0, 0, attr, f);
+        con_print(0, 14, attr, paused_at_top() ? "TOP (older: Logs)" : route);
+    }
+    uint8_t battr = attr;
+    int bw = batt_field(now, bf, sizeof bf, &battr);
+    if (bw) con_print(0, cols - 3 - bw, battr, bf);
+    if (gen_clock_running()) con_print(0, cols - 2, attr, "C");
+    con_print(0, cols - 1, attr, act ? "*" : " ");
+}
+
+/* OLED header, 21 columns: as v0.5. Routing summary ("PAUSED +1532" while
+ * paused), or the MTC time while MTC is running (and for MTC_HOLD_US after
+ * it stops, marked STOP); battery before the activity star. */
+static void render_header_narrow(uint64_t now, bool act) {
+    char hdr[CON_MAX_COLS + 24], bf[12], pc[12];
     int cols = con_cols();
-    bool wide = cols >= 26;
-    bool act = (uint32_t)(now / 1000u) - midi_io_last_rx_ms() < 150u && midi_io_last_rx_ms() != 0;
     uint8_t attr = CLS_HEADER | ATTR_INVERSE;
     uint8_t battr = attr;
     int bw = batt_field(now, bf, sizeof bf, &battr);
-    if (!mtc_header(now, hdr, sizeof hdr, &attr)) {
-        char ra[4], rb[4];
-        route_summary(&g_settings.route, ME_OUT_A, ra, sizeof ra);
-        route_summary(&g_settings.route, ME_OUT_B, rb, sizeof rb);
-        /* the OLED drops one space to make room for the battery */
-        snprintf(hdr, sizeof hdr, (bw && !wide) ? "%-6s A:%-2s B:%s" : "%-7s A:%-2s B:%s",
-                 paused ? "PAUSED" : MIDIUM_NAME, ra, rb);
+    mtc_pick_t mp;
+    mtc_pick(now, &mp);
+    if (!mp.show) {
+        if (s_mv.paused) {
+            fmt_plus(monitor_new_since_pause(), pc, sizeof pc);
+            snprintf(hdr, sizeof hdr, "PAUSED %s%s", pc, paused_at_top() ? " TOP" : "");
+        } else {
+            char ra[4], rb[4];
+            route_summary(&g_settings.route, ME_OUT_A, ra, sizeof ra);
+            route_summary(&g_settings.route, ME_OUT_B, rb, sizeof rb);
+            /* drop one space to make room for the battery */
+            snprintf(hdr, sizeof hdr, bw ? "%-6s A:%-2s B:%s" : "%-7s A:%-2s B:%s", MIDIUM_NAME, ra, rb);
+        }
         con_row(0, attr, hdr);
-        if (wide && gen_clock_running()) con_print(0, cols - 3, attr, "C");
-        /* TFT: battery before the clock marker; OLED: before the activity star */
-        if (bw) con_print(0, cols - 1 - bw - (wide ? 2 : 0), battr, bf);
+        if (bw) con_print(0, cols - 1 - bw, battr, bf);
     } else {
+        char tc[16];
+        mtc_tc_str(&mp.m->tc, mp.m->rate, tc, sizeof tc);
+        char L = mp.in ? 'B' : 'A';
+        const char *plus = mp.o_run ? "+" : "";
+        if (mp.run) snprintf(hdr, sizeof hdr, "%s %s%s %c%s", tc, MTC_RATE_SHORT[mp.m->rate & 3u], mp.m->dir < 0 ? "R" : "", L, plus);
+        else snprintf(hdr, sizeof hdr, "%s STOP %c%s", tc, L, plus);
+        attr = (uint8_t)((mp.run ? CLS_HEADER : CLS_DIM) | ATTR_INVERSE);
         con_row(0, attr, hdr);
         if (battr == (CLS_HEADER | ATTR_INVERSE)) battr = attr;   /* dimmed with a stopped MTC */
         int len = (int)strlen(hdr);
@@ -1001,52 +1040,35 @@ static void render_header(uint64_t now, bool paused) {
     con_print(0, cols - 1, attr, act ? "*" : " ");
 }
 
+static void render_header(uint64_t now) {
+    bool act = (uint32_t)(now / 1000u) - midi_io_last_rx_ms() < 150u && midi_io_last_rx_ms() != 0;
+    if (is_wide()) render_header_wide(now, act);
+    else render_header_narrow(now, act);
+}
+
 static void render_monitor(uint64_t now) {
-    render_header(now, s_paused);
-    uint32_t next = monitor_next_seq();
-    uint32_t oldest = monitor_oldest_seq();
+    render_header(now);
     int rows = monitor_rows();
     int last_row = con_rows() - 1;
-    vmsg_t v;
 
-    if (next == 0) {
+    if (monitor_next_seq() == 0) {
         for (int r = 1; r < last_row; r++) con_row(r, CLS_DIM, "");
         con_row(last_row, CLS_DIM, "  waiting for MIDI...");
         return;
     }
-
-    if (g_settings.pin_latest) {
-        if (s_paused) pin_clamp();
-        /* pinned newest line */
-        if (live_msg(next - 1u, &v))
-            draw_msg_row(last_row, &v, (uint8_t)(ATTR_INVERSE | (s_paused && s_cur_pin ? ATTR_CURSOR : 0)));
-        /* history above it */
-        bool have = next >= 2 && next - 2 >= oldest && !(s_paused && s_anchor_none);
-        uint32_t bottom = s_paused ? s_anchor : next - 2u;
-        for (int r = 0; r < rows - 1; r++) {
-            int screen_row = last_row - 1 - r;
-            if (!have || bottom < (uint32_t)r || bottom - (uint32_t)r < oldest || !live_msg(bottom - (uint32_t)r, &v)) {
-                con_row(screen_row, CLS_DIM, "");
-                continue;
-            }
-            bool sel = s_paused && !s_cur_pin && bottom - (uint32_t)r == s_cursor;
-            draw_msg_row(screen_row, &v, sel ? ATTR_CURSOR : 0);
-        }
-        return;
-    }
-
-    if (s_paused) {
-        if (s_anchor < oldest) s_anchor = oldest;           /* history overwritten */
-        if (s_anchor >= next) s_anchor = next - 1u;
-    }
-    uint32_t bottom = s_paused ? s_anchor : next - 1u;
-    for (int r = 0; r < rows; r++) {
-        int screen_row = last_row - r;
-        if (bottom < (uint32_t)r || !live_msg(bottom - (uint32_t)r, &v)) {
-            con_row(screen_row, CLS_DIM, "");
+    uint32_t seq[CON_MAX_ROWS];
+    uint8_t fl[CON_MAX_ROWS];
+    mv_layout(&s_mv, monitor_hist(), g_settings.pin_latest, rows, seq, fl);
+    for (int i = 0; i < rows; i++) {
+        vmsg_t v;
+        if ((fl[i] & MV_ROW_EMPTY) || !live_msg(seq[i], &v)) {
+            con_row(1 + i, CLS_DIM, "");
             continue;
         }
-        draw_msg_row(screen_row, &v, (s_paused && r == 0) ? ATTR_INVERSE : 0);
+        uint8_t extra = 0;
+        if (fl[i] & MV_ROW_PIN) extra |= ATTR_INVERSE;
+        if (fl[i] & MV_ROW_CURSOR) extra |= ATTR_CURSOR;
+        draw_msg_row(1 + i, &v, extra);
     }
 }
 
@@ -1122,9 +1144,12 @@ static void render_menu(uint64_t now) {
     }
 
     const menu_item_t *sel = &m->items[s_sel[s_depth]];
-    if (s_editing && sel->kind == MI_CUE) con_row(con_rows() - 1, CLS_DIM, s_cue_field ? "UP/DN adj  LEFT int" : "UP/DN adj  RIGHT .dec");
-    else if (s_editing) con_row(con_rows() - 1, CLS_DIM, "UP/DN adjust, PRESS ok");
-    else render_footer(now, con_cols() >= 26 ? "PRESS select  LEFT back" : "PRESS sel  LEFT back");
+    bool wide = is_wide();
+    if (s_editing && sel->kind == MI_CUE)
+        con_row(con_rows() - 1, CLS_DIM, s_cue_field ? (wide ? "UP/DN adjust  LEFT integer part" : "UP/DN adj  LEFT int")
+                                                     : (wide ? "UP/DN adjust  RIGHT decimal part" : "UP/DN adj  RIGHT .dec"));
+    else if (s_editing) con_row(con_rows() - 1, CLS_DIM, wide ? "UP/DN adjust (hold: faster)  PRESS ok" : "UP/DN adjust, PRESS ok");
+    else render_footer(now, wide ? "UP/DN move  PRESS select  LEFT back" : "PRESS sel  LEFT back");
 }
 
 static void render_detail(void) {
@@ -1133,9 +1158,14 @@ static void render_detail(void) {
     unsigned pages = s_dl_n ? (s_dl_n + (unsigned)rows - 1u) / (unsigned)rows : 1u;
     unsigned page = s_dl_top / (unsigned)rows + 1u;
     if (s_dl_top + (unsigned)rows >= s_dl_n) page = pages;       /* last screen */
-    if (s_dl_time.real) tu_fmt_tod(s_dl_time.real_s, s_dl_time.real_ms, con_cols() >= 26, t, sizeof t);
-    else midi_format_time(s_dl_msg.t_us, t, sizeof t);
-    snprintf(left, sizeof left, "%s %c %s", s_dl_msc ? "MSC" : "SYX", s_dl_msg.src ? 'B' : 'A', t);
+    char d[12] = "";
+    if (s_dl_time.real) {
+        tu_fmt_tod(s_dl_time.real_s, s_dl_time.real_ms, is_wide(), t, sizeof t);
+        if (is_wide()) tu_fmt_date(s_dl_time.real_s, d, sizeof d);
+    } else {
+        midi_format_time(s_dl_msg.t_us, t, sizeof t);
+    }
+    snprintf(left, sizeof left, "%s %c %s%s%s", s_dl_msc ? "MSC" : "SYX", s_dl_msg.src ? 'B' : 'A', t, d[0] ? "  " : "", d);
     snprintf(right, sizeof right, "%u/%u", page, pages);
     con_row_lr(0, CLS_HEADER | ATTR_INVERSE, left, right);
     for (int r = 0; r < rows; r++) {
@@ -1152,15 +1182,18 @@ typedef struct {
     int row0, nrows;              /* bitmap band in text rows */
     int x0, y_off;                /* first glyph x; glyph y within the band */
     int dw, dh, t, cw, gap;       /* digit w / h, stroke, colon w, gap inside a pair */
+    int inset;                    /* digit drawn inset this much from its cell sides */
 } big_layout_t;
 
 static void big_layout(big_layout_t *L) {
     const display_driver_t *d = con_driver();
     int gw = con_cols() * d->cell_w;
-    if (d->cell_h >= 16) {          /* TFT 312 x 160 grid */
-        *L = (big_layout_t){ 1, 6, 0, 8, 28, 80, 7, 18, 6 };
-    } else {                        /* OLED 126 x 64 grid */
-        *L = (big_layout_t){ 1, 5, 0, 3, 11, 34, 3, 7, 3 };
+    if (d->cell_h < 12) {             /* OLED 126 x 64 grid, 6 x 8 cells */
+        *L = (big_layout_t){ 1, 5, 0, 3, 11, 34, 3, 7, 3, 0 };
+    } else if (con_rows() >= 16) {    /* TFT 2.8": 320 x 240, band 90 px */
+        *L = (big_layout_t){ 1, 6, 0, 6, 30, 78, 7, 14, 6, 2 };
+    } else {                          /* TFT 1.9": 320 x 165, band 75 px */
+        *L = (big_layout_t){ 1, 5, 0, 5, 30, 64, 6, 14, 6, 2 };
     }
     int total = 8 * L->dw + 3 * L->cw + 4 * L->gap;
     L->x0 = (gw - total) / 2;
@@ -1196,7 +1229,8 @@ static void big_draw(const char *s, uint8_t cls, bool force) {
         int w, x = glyph_x(&L, i, &w);
         int stride = (w + 7) / 8;
         memset(s_gbuf, 0, sizeof s_gbuf);
-        bd_glyph(s_gbuf, stride, 0, L.y_off, w, L.dh, L.t, s[i]);
+        int in = (i % 3) == 2 ? 0 : L.inset;
+        bd_glyph(s_gbuf, stride, in, L.y_off, w - 2 * in, L.dh, L.t, s[i]);
         d->draw_bitmap(x, by, w, bh, s_gbuf, stride, cls);
     }
     snprintf(s_big_last, sizeof s_big_last, "%s", s);
@@ -1211,13 +1245,53 @@ static void open_mtc(void) {
     s_big_force = true;
 }
 
+/* One line about the other input's MTC, and how it compares. */
+static void mtc_other_lines(const mtc_pick_t *p, int row, int last) {
+    char l[CON_MAX_COLS + 64], r[24], tc[16];
+    if (row > last) return;
+    if (!p->o_active) {
+        con_row(row, CLS_DIM, p->in ? "IN A  no MTC" : "IN B  no MTC");
+        for (int k = row + 1; k <= last; k++) con_row(k, CLS_NORMAL, "");
+        return;
+    }
+    const mtc_t *o = p->o;
+    mtc_tc_str(&o->tc, o->rate, tc, sizeof tc);
+    snprintf(l, sizeof l, "IN %c  %s  %s fps", p->in ? 'A' : 'B', tc, mtc_rate_name(o->rate));
+    snprintf(r, sizeof r, "%s %c", p->o_run ? "RUN" : "STOP", o->dir < 0 ? CH_PLAY_L : CH_PLAY_R);
+    if (!p->o_run) r[4] = 0;
+    con_row_lr(row, p->o_run ? CLS_NORMAL : CLS_DIM, l, r);
+    if (++row > last) return;
+    if (!p->m->valid) {
+        con_row(row, CLS_DIM, "");
+    } else if (o->rate != p->m->rate) {
+        con_row(row, CLS_ERROR, "DIFF  frame rates differ");
+    } else {
+        int32_t df = mtc_tc_diff(&p->m->tc, &o->tc, o->rate);
+        int32_t a = df < 0 ? -df : df;
+        if (a <= 1) snprintf(l, sizeof l, "In sync with IN %c (%+ld f)", p->in ? 'A' : 'B', (long)df);
+        else {
+            /* under a second in frames, else h:mm:ss:ff */
+            char by[48];
+            int32_t fps = mtc_fps(o->rate);
+            if (a < fps) snprintf(by, sizeof by, "%ld f", (long)a);
+            else snprintf(by, sizeof by, "%ld:%02ld:%02ld:%02ld", (long)(a / (fps * 3600)), (long)(a / (fps * 60) % 60),
+                          (long)(a / fps % 60), (long)(a % fps));
+            snprintf(l, sizeof l, "DIFF  IN %c %s IN %c by %s", p->in ? 'B' : 'A', df > 0 ? "ahead of" : "behind",
+                     p->in ? 'A' : 'B', by);
+        }
+        con_row(row, a <= 1 ? CLS_NOTE : CLS_ERROR, l);
+    }
+    for (int k = row + 1; k <= last; k++) con_row(k, CLS_NORMAL, "");
+}
+
 static void render_mtc(uint64_t now) {
     big_layout_t L;
     big_layout(&L);
-    int in = monitor_mtc_active();
-    const mtc_t *m = in >= 0 ? monitor_mtc(in) : NULL;
+    mtc_pick_t p;
+    mtc_pick(now, &p);
+    const mtc_t *m = p.m;
     bool valid = m && m->valid;
-    bool run = valid && mtc_running(m, now);
+    bool run = valid && p.run;
     char tc[16];
     if (valid) mtc_tc_str(&m->tc, m->rate, tc, sizeof tc);
     else snprintf(tc, sizeof tc, "--:--:--:--");
@@ -1227,30 +1301,66 @@ static void render_mtc(uint64_t now) {
     s_big_cls = cls;
     big_draw(tc, cls, force);
 
-    bool wide = con_cols() >= 26;
+    bool wide = is_wide();
+    int rows = con_rows();
     char l[CON_MAX_COLS + 8], r[CON_MAX_COLS + 8];
+    /* title: MTC, and the input shown (auto / fixed; +B = the other runs too) */
     snprintf(l, sizeof l, "MTC");
-    snprintf(r, sizeof r, "%s", in < 0 ? "" : in ? "IN B" : "IN A");
+    if (p.in < 0) r[0] = 0;
+    else if (wide) snprintf(r, sizeof r, "IN %c (%s)%s", p.in ? 'B' : 'A',
+                            g_settings.mtc_src == MTC_SRC_AUTO ? "auto" : "fixed", p.o_run ? (p.in ? " +A" : " +B") : "");
+    else snprintf(r, sizeof r, "IN %c%s", p.in ? 'B' : 'A', p.o_run ? "+" : "");
     con_row_lr(0, CLS_HEADER | ATTR_INVERSE, l, r);
+
     int st_row = L.row0 + L.nrows;
-    const char *state = !valid ? "NO MTC" : run ? (m->dir < 0 ? "RUNNING  REV <<" : "RUNNING  FWD >>")
-                                               : m->last_qf_us ? "STOPPED" : "LOCATED (full fr)";
-    if (!wide && valid && run) state = m->dir < 0 ? "RUN  << REV" : "RUN  >> FWD";
-    if (!wide && valid && !run && !m->last_qf_us) state = "LOCATED";
+    if (rows >= 16) {
+        /* field labels under the digit pairs */
+        char lab[CON_MAX_COLS + 1];
+        memset(lab, ' ', (size_t)con_cols());
+        lab[con_cols()] = 0;
+        static const char *const N[4] = { "HRS", "MIN", "SEC", "FRM" };
+        for (int k = 0; k < 4; k++) {
+            int w, x = glyph_x(&L, k * 3, &w);
+            int centre = x + L.dw + L.gap / 2;                   /* between the pair */
+            int col = centre / con_driver()->cell_w - 1;
+            if (col < 0) col = 0;
+            if (col + 3 <= con_cols()) memcpy(lab + col, N[k], 3);
+        }
+        con_row(st_row++, CLS_DIM, lab);
+    }
+    const char *state;
+    char st[24];
+    if (!valid) state = "NO MTC";
+    else if (run) {
+        if (wide) snprintf(st, sizeof st, "RUNNING  %c %s", m->dir < 0 ? CH_PLAY_L : CH_PLAY_R, m->dir < 0 ? "REVERSE" : "FORWARD");
+        else snprintf(st, sizeof st, "RUN  %c %s", m->dir < 0 ? CH_PLAY_L : CH_PLAY_R, m->dir < 0 ? "REV" : "FWD");
+        state = st;
+    } else state = m->last_qf_us ? "STOPPED" : (wide ? "LOCATED (full frame)" : "LOCATED");
     if (valid) {
         static const char *const R[4] = { "24 fps", "25 fps", "29.97 DF", "30 fps" };
         snprintf(r, sizeof r, "%s", R[m->rate & 3u]);
     } else {
         r[0] = 0;
     }
-    con_row_lr(st_row, run ? CLS_NOTE : CLS_DIM, state, r);
+    if (rows >= 16) con_row(st_row++, CLS_NORMAL, "");
+    con_row_lr(st_row++, run ? CLS_NOTE : CLS_DIM, state, r);
     if (wide) {
-        if (valid) snprintf(l, sizeof l, "Source IN %c   %s", in ? 'B' : 'A', m->rate == MTC_RATE_2997 ? "drop-frame" : "non-drop");
+        if (valid) snprintf(l, sizeof l, "Source IN %c   %s", p.in ? 'B' : 'A', m->rate == MTC_RATE_2997 ? "drop-frame" : "non-drop");
         else snprintf(l, sizeof l, "Waiting for MTC on IN A / B");
-        con_row(st_row + 1, CLS_NORMAL, l);
-        con_row(con_rows() - 1, CLS_DIM, "LEFT back");
+        con_row(st_row++, CLS_NORMAL, l);
+        if (rows >= 16) {
+            if (valid) snprintf(l, sizeof l, "QF %lu  full frames %lu  breaks %lu", (unsigned long)m->qf_count,
+                                (unsigned long)m->full_count, (unsigned long)m->breaks);
+            else l[0] = 0;
+            con_row(st_row++, CLS_DIM, l);
+            con_row(st_row++, CLS_NORMAL, "");
+        }
+        if (p.in >= 0) mtc_other_lines(&p, st_row, rows - 2);
+        else for (int k = st_row; k <= rows - 2; k++) con_row(k, CLS_NORMAL, "");
+        con_row(rows - 1, CLS_DIM, "LEFT back   MTC source: Display menu");
     } else {
-        con_row(con_rows() - 1, CLS_DIM, "LEFT back");
+        for (int k = st_row; k < rows - 1; k++) con_row(k, CLS_NORMAL, "");
+        con_row(rows - 1, CLS_DIM, "LEFT back");
     }
 }
 
@@ -1304,7 +1414,7 @@ static void dt_event(joy_event_t e) {
 
 static void render_datetime(uint64_t now) {
     char l[CON_MAX_COLS + 16], r[CON_MAX_COLS + 16];
-    bool wide = con_cols() >= 26;
+    bool wide = is_wide();
     con_row(0, CLS_HEADER | ATTR_INVERSE, "Date & time");
     snprintf(r, sizeof r, "%s", clock_rtc_present() ? "RV-3028" : wide ? "none (software)" : "none (soft)");
     con_row_lr(1, CLS_NORMAL, "RTC", r);
@@ -1336,7 +1446,7 @@ static void render_datetime(uint64_t now) {
     uint8_t attr = s_dt_edit ? CLS_PC : (clock_valid() ? CLS_NORMAL : CLS_DIM);
     con_row(5, attr, (s_dt_edit || clock_valid()) ? line : (wide ? "      -- not set --" : "    -- not set --"));
     for (int rr = 6; rr < con_rows() - 1; rr++) con_row(rr, CLS_NORMAL, "");
-    if (s_dt_edit) con_row(con_rows() - 1, CLS_DIM, wide ? "U/D adj L/R field PRESS ok" : "UD adj LR fld PRS ok");
+    if (s_dt_edit) con_row(con_rows() - 1, CLS_DIM, wide ? "UP/DN adjust  L/R field  PRESS set" : "UD adj LR fld PRS ok");
     else render_footer(now, wide ? "PRESS set time  LEFT back" : "PRESS set  LEFT back");
 }
 
@@ -1425,7 +1535,7 @@ static void logs_event(joy_event_t e) {
 
 static void sess_title(const log_sess_t *e, char *b, size_t n) {
     char d[16], t[16];
-    bool wide = con_cols() >= 26;
+    bool wide = is_wide();
     const char *pre = e->partial ? "~" : "";
     if (e->start.real) {
         tu_fmt_date(e->start.real_s, d, sizeof d);
@@ -1482,7 +1592,7 @@ static void render_logs(uint64_t now) {
         const log_sess_t *e = log_session(Lg, i - 1);
         if (!e) continue;
         bool live = log_is_live(Lg, e->no);
-        bool wide = con_cols() >= 26;
+        bool wide = is_wide();
         sess_title(e, l, sizeof l);
         con_row_lr(row++, (uint8_t)((live ? CLS_NOTE : CLS_NORMAL) | attr), l, live && !wide ? "LIVE" : "");
         if (row <= rows) {
@@ -1591,10 +1701,10 @@ static void pwrconf_event(joy_event_t e) {
 }
 
 static void render_pwrconf(void) {
-    bool wide = con_cols() >= 26;
+    bool wide = is_wide();
     con_row(0, CLS_ERROR | ATTR_INVERSE, "Power off?");
     con_row(1, CLS_NORMAL, wide ? "The log is saved first." : "Log is saved first.");
-    con_row(2, CLS_DIM, wide ? "Off: IN A -> OUT A only" : "Off: IN A->OUT A only");
+    con_row(2, CLS_DIM, wide ? "Off: IN A " AR " OUT A only (relays)" : "Off: IN A->OUT A only");
     con_row(3, CLS_NORMAL, "");
     con_row(4, (uint8_t)(CLS_NORMAL | (s_pwr_sel == 0 ? ATTR_INVERSE : 0)), "  Cancel");
     con_row(5, (uint8_t)(CLS_ERROR | (s_pwr_sel == 1 ? ATTR_INVERSE : 0)), "  Power off");
@@ -1615,7 +1725,16 @@ static void render_panel(uint8_t tattr, const char *title, const char *const *li
 
 /* Progress bar across row r, permille filled (inverse cells). */
 static void render_bar(int r, unsigned permille, uint8_t cls) {
-    int cols = con_cols(), w = cols - 2;
+    int cols = con_cols();
+    const display_driver_t *d = con_driver();
+    if (d && d->has_colour) {               /* TFT: solid bar in the class colour on a faint track */
+        static const char full[2] = { CH_BAR_FULL, 0 }, empty[2] = { CH_BAR_EMPTY, 0 };
+        int w = cols - 2, fill = (int)((permille * (unsigned)w + 500u) / 1000u);
+        con_row(r, CLS_DIM, "");
+        for (int i = 0; i < w; i++) con_print(r, 1 + i, i < fill ? cls : CLS_DIM, i < fill ? full : empty);
+        return;
+    }
+    int w = cols - 2;
     int fill = (int)((permille * (unsigned)w + 500u) / 1000u);
     con_row(r, CLS_DIM, "");
     con_print(r, 0, CLS_DIM, "[");
@@ -1624,7 +1743,7 @@ static void render_bar(int r, unsigned permille, uint8_t cls) {
 }
 
 static void render_hold(uint64_t now) {
-    bool wide = con_cols() >= 26;
+    bool wide = is_wide();
     uint64_t el = now - s_hold_t, tot = (uint64_t)PWR_COUNTDOWN_MS * 1000u;
     if (el > tot) el = tot;
     unsigned pm = (unsigned)(el * 1000u / tot);
@@ -1643,7 +1762,7 @@ static void render_hold(uint64_t now) {
 }
 
 static void render_autooff(void) {
-    bool wide = con_cols() >= 26;
+    bool wide = is_wide();
     uint32_t left = 0;
     power_autooff_warning(&left);
     char l1[24];
@@ -1658,7 +1777,7 @@ static void render_autooff(void) {
 }
 
 static void render_lowbatt(void) {
-    bool wide = con_cols() >= 26;
+    bool wide = is_wide();
     char l1[24], l3[28];
     snprintf(l1, sizeof l1, "%u%% left", power_batt()->soc_pct);
     snprintf(l3, sizeof l3, wide ? "Powers off safely at %u%%" : "Powers off at %u%%", (unsigned)BATT_OFF_PCT);
@@ -1667,7 +1786,7 @@ static void render_lowbatt(void) {
 }
 
 static void render_power(uint64_t now) {
-    bool wide = con_cols() >= 26;
+    bool wide = is_wide();
     (void)now;
     switch (power_state()) {
     case PWR_SHUTDOWN: {
@@ -1679,13 +1798,13 @@ static void render_power(uint64_t now) {
     }
     case PWR_OFF_MSG:
     case PWR_KILLED: {
-        const char *lines[] = { "Safe to unplug.", "", wide ? "Relays: IN A -> OUT A" : "Relays: IN A->OUT A", "(passive thru)" };
+        const char *lines[] = { "Safe to unplug.", "", wide ? "Relays: IN A " AR " OUT A" : "Relays: IN A->OUT A", "(passive thru)" };
         render_panel(CLS_DIM | ATTR_INVERSE, "Off", lines, 4, "");
         break;
     }
     case PWR_IDLE: {
         const char *lines[] = { "Safe to unplug.", "", "Press the joystick", "to power on." };
-        render_panel(CLS_DIM | ATTR_INVERSE, "Off", lines, 4, wide ? "Relays: IN A -> OUT A" : "IN A -> OUT A only");
+        render_panel(CLS_DIM | ATTR_INVERSE, "Off", lines, 4, wide ? "Relays: IN A " AR " OUT A" : "IN A -> OUT A only");
         break;
     }
     case PWR_CHARGE_ONLY: {
@@ -1753,13 +1872,17 @@ void ui_event(joy_event_t e) {
 
 /* Something that changes faster than the 100 ms refresh: MTC. */
 static uint32_t live_signature(uint64_t now) {
-    int in = monitor_mtc_active();
+    int in = monitor_mtc_select(now);
     if (in < 0) return 0;
-    const mtc_t *m = monitor_mtc(in);
-    uint32_t sig = (uint32_t)m->tc.f | (uint32_t)m->tc.s << 8 | (uint32_t)m->tc.m << 16 | (uint32_t)m->tc.h << 24;
-    sig ^= mtc_running(m, now) ? 0x80000000u : 0u;
-    sig ^= (now - mtc_last_us(m) < MTC_HOLD_US) ? 0x40000000u : 0u;
-    return sig ^ (uint32_t)in;
+    uint32_t sig = (uint32_t)in * 0x9E3779B1u;
+    for (int i = 0; i < 2; i++) {
+        const mtc_t *m = monitor_mtc(i);
+        uint32_t s1 = (uint32_t)m->tc.f | (uint32_t)m->tc.s << 8 | (uint32_t)m->tc.m << 16 | (uint32_t)m->tc.h << 24;
+        s1 ^= mtc_running(m, now) ? 0x80000000u : 0u;
+        s1 ^= mtc_active(m, now) ? 0x40000000u : 0u;
+        sig = (sig ^ s1) * 0x01000193u;
+    }
+    return sig;
 }
 
 void ui_render(uint64_t now, bool history_changed) {
@@ -1815,4 +1938,8 @@ void ui_init(void) {
     if (d && d->set_brightness) d->set_brightness(g_settings.brightness);
     s_screen = SCR_MONITOR;
     s_need_render = true;
+    /* The TFT has room for the time column: show time of day (uptime until
+     * the clock is set) from the start. Settings are RAM only, so this is
+     * the power-up default; RIGHT on the monitor still cycles it. */
+    if (is_wide() && g_settings.time_col == TIMECOL_OFF) g_settings.time_col = TIMECOL_TOD;
 }

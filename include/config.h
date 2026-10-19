@@ -6,7 +6,7 @@
 #define MIDIUM_CONFIG_H
 
 #ifndef MIDIUM_VERSION
-#define MIDIUM_VERSION "0.5.0"
+#define MIDIUM_VERSION "0.6.0"
 #endif
 
 #define MIDIUM_NAME   "MIDIum"
@@ -26,10 +26,60 @@
 #define MIDIUM_OLED_SSD1306 1
 #endif
 
-/* ST7789 1.9" 170x320 panel geometry in landscape (320 x 170).
- * The panel is 170 px wide in portrait, centred in the controller's 240-column
- * RAM, so portrait has a column offset of 35. Rotated to landscape (MADCTL MV)
- * rows and columns swap: the 35 becomes the ROW (y) offset, x offset is 0. */
+/* ---- TFT module (ST7789) ----------------------------------------------
+ * MIDIUM_TFT_MODULE picks the wiring and, unless MIDIUM_TFT_PANEL says
+ * otherwise, the panel:
+ *   TFT_MODULE_PIMORONI_28  Pimoroni Pico Display Pack 2.8" (320x240 IPS,
+ *                           ST7789V), jumpered to the breadboard Pico: DC GP16,
+ *                           CS GP17, SCK GP18, MOSI GP19, backlight GP20, no
+ *                           reset pin (the pack ties it to RUN; software reset
+ *                           at init). Default: the prototype.
+ *   TFT_MODULE_GENERIC_28   generic 2.8" 240x320 ST7789 IPS breakout: DC GP16,
+ *                           CS GP17, SCK GP18, MOSI GP19, RST GP20, BL GP21
+ *                           (the final PCB pinout).
+ *   TFT_MODULE_ADAFRUIT_19  Adafruit 5394 1.9" 170x320 ST7789 (v0.5 and
+ *                           earlier): same pins as the generic module.
+ * See docs/wiring.md. */
+#define TFT_MODULE_PIMORONI_28 1
+#define TFT_MODULE_GENERIC_28  2
+#define TFT_MODULE_ADAFRUIT_19 3
+#ifndef MIDIUM_TFT_MODULE
+#if defined(MIDIUM_TFT_PANEL) && MIDIUM_TFT_PANEL == 19
+#define MIDIUM_TFT_MODULE TFT_MODULE_ADAFRUIT_19
+#else
+#define MIDIUM_TFT_MODULE TFT_MODULE_PIMORONI_28
+#endif
+#endif
+
+/* Panel: 28 = 2.8" 240x320 (used landscape 320x240, 40 x 16 text cells),
+ *        19 = 1.9" 170x320 (landscape 320x170, 40 x 11 text cells). */
+#ifndef MIDIUM_TFT_PANEL
+#if MIDIUM_TFT_MODULE == TFT_MODULE_ADAFRUIT_19
+#define MIDIUM_TFT_PANEL 19
+#else
+#define MIDIUM_TFT_PANEL 28
+#endif
+#endif
+
+#if MIDIUM_TFT_PANEL == 28
+/* 2.8" 240x320: the panel fills the controller's 240 x 320 RAM, so no
+ * offsets. Landscape = MADCTL MV (row/column exchange) | MX = 0x60. */
+#ifndef TFT_WIDTH
+#define TFT_WIDTH     320
+#endif
+#ifndef TFT_HEIGHT
+#define TFT_HEIGHT    240
+#endif
+#ifndef TFT_X_OFFSET
+#define TFT_X_OFFSET  0
+#endif
+#ifndef TFT_Y_OFFSET
+#define TFT_Y_OFFSET  0
+#endif
+#elif MIDIUM_TFT_PANEL == 19
+/* 1.9" 170x320: in portrait the 170-px-wide panel sits at controller column
+ * 35 of 240. Rotated to landscape (MADCTL MV) rows and columns swap: the 35
+ * becomes the ROW (y) offset, x offset is 0. */
 #ifndef TFT_WIDTH
 #define TFT_WIDTH     320
 #endif
@@ -42,10 +92,20 @@
 #ifndef TFT_Y_OFFSET
 #define TFT_Y_OFFSET  35
 #endif
+#else
+#error "MIDIUM_TFT_PANEL must be 28 or 19"
+#endif
+
 /* MADCTL for landscape: MV | MX = 0x60 (RGB order). Use 0xA0 (MV | MY) to
- * rotate 180 degrees; add 0x08 if red and blue are swapped on your panel. */
+ * rotate 180 degrees; add 0x08 (BGR) if red and blue are swapped on your
+ * panel. */
 #ifndef TFT_MADCTL
 #define TFT_MADCTL    0x60
+#endif
+/* 1 = send INVON at init. IPS ST7789 panels (all three modules above) need
+ * it, or every colour shows inverted (black background looks white). */
+#ifndef TFT_INVERT
+#define TFT_INVERT    1
 #endif
 #ifndef TFT_SPI_HZ
 #define TFT_SPI_HZ    62500000   /* RP2350 @150 MHz gives 37.5 MHz (nearest legal divider) */

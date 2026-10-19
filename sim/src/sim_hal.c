@@ -116,23 +116,42 @@ bool gpio_get(uint gpio) { return (gpio_get_all() >> gpio) & 1u; }
 /* ------------------------------------------------------------------------ */
 /* Framebuffer                                                               */
 /* ------------------------------------------------------------------------ */
-static uint8_t  s_fb[TFT_WIDTH * TFT_HEIGHT * 4];
-static int      s_fb_w = TFT_WIDTH, s_fb_h = TFT_HEIGHT;
+#define FB_MAX_W 320
+#define FB_MAX_H 240
+static uint8_t  s_fb[FB_MAX_W * FB_MAX_H * 4];
+static int      s_fb_w = FB_MAX_W, s_fb_h = FB_MAX_H;
 static uint32_t s_fb_ver;
 static int      s_bright = 0;
 static bool     s_disp_on;
 static bool     s_oled_fitted;
 
-uint8_t *sim_hal_fb(void) { return s_fb; }
+static void tft_compose(void);
+static bool s_tft_dirty;
+
+uint8_t *sim_hal_fb(void) { if (!s_oled_fitted && s_tft_dirty) tft_compose(); return s_fb; }
 int sim_hal_fb_w(void) { return s_fb_w; }
 int sim_hal_fb_h(void) { return s_fb_h; }
-uint32_t sim_hal_fb_version(void) { return s_fb_ver; }
+uint32_t sim_hal_fb_version(void) { if (!s_oled_fitted && s_tft_dirty) tft_compose(); return s_fb_ver; }
 int sim_hal_brightness(void) { return s_bright; }
 bool sim_hal_display_on(void) { return s_disp_on; }
 
 /* ------------------------------------------------------------------------ */
-/* ST7789 over SPI0 (landscape, MADCTL MV; panel rows start at RAM row 35)   */
+/* ST7789 over SPI0                                                          */
+/*                                                                           */
+/* The controller's frame memory is 240 columns (sources) x 320 rows (gates),*/
+/* portrait. Writes land at (column, row) per MADCTL:                        */
+/*   MV exchanges the address counters (CASET then addresses rows),          */
+/*   MX mirrors the column, MY the row, BGR swaps red and blue.              */
+/* The panel shows a window of that memory: the 2.8" all of it, the 1.9"    */
+/* columns 35..204. MIDIum mounts both turned to landscape, so screen pixel  */
+/* (sx, sy) shows memory row sx, column (c0 + w - 1 - sy): with MADCTL 0x60  */
+/* (MV | MX) the firmware's x / y come out upright, 0xA0 (MV | MY) upside    */
+/* down. IPS panels show inverted colours unless INVON was sent.            */
 /* ------------------------------------------------------------------------ */
+#define ST_COLS 240
+#define ST_ROWS 320
+static uint16_t s_ram[ST_ROWS][ST_COLS];
+
 static struct {
     bool cs, dc;
     uint8_t cmd;
@@ -141,17 +160,38 @@ static struct {
     uint16_t xs, xe, ys, ye, x, y;
     uint8_t hi;
     bool have_hi;
+    uint8_t madctl;
+    bool inv;
+    int c0, w;              /* visible memory columns (panel) */
 } T;
 
+static void tft_compose(void) {
+    s_tft_dirty = false;
+    for (int sy = 0; sy < s_fb_h; sy++) {
+        int pc = T.c0 + T.w - 1 - sy;
+        for (int sx = 0; sx < s_fb_w; sx++) {
+            uint16_t c = s_ram[sx][pc];
+            if (!T.inv) c = (uint16_t)~c;                 /* IPS: normally-inverted */
+            uint8_t r = (uint8_t)((c >> 11) & 0x1F), g = (uint8_t)((c >> 5) & 0x3F), b = (uint8_t)(c & 0x1F);
+            if (T.madctl & 0x08) { uint8_t t = r; r = b; b = t; }   /* BGR */
+            uint8_t *p = &s_fb[((size_t)sy * (size_t)s_fb_w + (size_t)sx) * 4u];
+            p[0] = (uint8_t)((r << 3) | (r >> 2));
+            p[1] = (uint8_t)((g << 2) | (g >> 4));
+            p[2] = (uint8_t)((b << 3) | (b >> 2));
+            p[3] = 255;
+        }
+    }
+}
+
 static void tft_pixel(uint16_t c) {
-    int px = (int)T.x - TFT_X_OFFSET, py = (int)T.y - TFT_Y_OFFSET;
-    if (px >= 0 && px < TFT_WIDTH && py >= 0 && py < TFT_HEIGHT && !s_oled_fitted) {
-        uint8_t *p = &s_fb[((size_t)py * TFT_WIDTH + (size_t)px) * 4u];
-        uint8_t r = (uint8_t)((c >> 11) & 0x1F), g = (uint8_t)((c >> 5) & 0x3F), b = (uint8_t)(c & 0x1F);
-        p[0] = (uint8_t)((r << 3) | (r >> 2));
-        p[1] = (uint8_t)((g << 2) | (g >> 4));
-        p[2] = (uint8_t)((b << 3) | (b >> 2));
-        p[3] = 255;
+    int col, row;
+    if (T.madctl & 0x20) { col = T.y; row = T.x; }    /* MV */
+    else { col = T.x; row = T.y; }
+    if (T.madctl & 0x40) col = ST_COLS - 1 - col;      /* MX */
+    if (T.madctl & 0x80) row = ST_ROWS - 1 - row;      /* MY */
+    if (col >= 0 && col < ST_COLS && row >= 0 && row < ST_ROWS && !s_oled_fitted) {
+        s_ram[row][col] = c;
+        s_tft_dirty = true;
     }
     if (++T.x > T.xe) { T.x = T.xs; if (++T.y > T.ye) T.y = T.ys; }
 }
@@ -159,9 +199,15 @@ static void tft_pixel(uint16_t c) {
 static void tft_byte(uint8_t b) {
     if (!T.dc) {                      /* command */
         T.cmd = b; T.nargs = 0; T.have_hi = false;
-        if (b == 0x2C) { T.x = T.xs; T.y = T.ys; }
-        if (b == 0x29) { s_disp_on = true; s_fb_ver++; }
-        if (b == 0x28) { s_disp_on = false; s_fb_ver++; }
+        switch (b) {
+        case 0x2C: T.x = T.xs; T.y = T.ys; break;
+        case 0x29: s_disp_on = true; s_fb_ver++; break;
+        case 0x28: s_disp_on = false; s_fb_ver++; break;
+        case 0x01: T.madctl = 0; T.inv = false; s_tft_dirty = true; s_fb_ver++; break;   /* SWRESET */
+        case 0x20: T.inv = false; s_tft_dirty = true; s_fb_ver++; break;                 /* INVOFF */
+        case 0x21: T.inv = true;  s_tft_dirty = true; s_fb_ver++; break;                 /* INVON */
+        default: break;
+        }
         return;
     }
     switch (T.cmd) {
@@ -171,6 +217,9 @@ static void tft_byte(uint8_t b) {
             uint16_t s = (uint16_t)(T.arg[0] << 8 | T.arg[1]), e = (uint16_t)(T.arg[2] << 8 | T.arg[3]);
             if (T.cmd == 0x2A) { T.xs = s; T.xe = e; } else { T.ys = s; T.ye = e; }
         }
+        break;
+    case 0x36:
+        T.madctl = b; s_tft_dirty = true; s_fb_ver++;
         break;
     case 0x2C:
         if (!T.have_hi) { T.hi = b; T.have_hi = true; }
@@ -443,15 +492,21 @@ void sim_hal_power_cut(void) {
 bool stdio_init_all(void) { return true; }
 bool stdio_usb_connected(void) { return false; }
 
-void sim_hal_reset(int oled_fitted) {
+void sim_hal_reset(int kind) {
     memset(s_timers, 0, sizeof s_timers);
     memset(&T, 0, sizeof T);
     memset(&O, 0, sizeof O);
     memset(s_fb, 0, sizeof s_fb);
     for (size_t i = 3; i < sizeof s_fb; i += 4) s_fb[i] = 255;
-    s_oled_fitted = oled_fitted != 0;
-    s_fb_w = s_oled_fitted ? 128 : TFT_WIDTH;
-    s_fb_h = s_oled_fitted ? 64 : TFT_HEIGHT;
+    /* panel memory powers up with noise-ish content: use mid grey, so a
+     * driver that forgets to clear it shows */
+    for (int r = 0; r < ST_ROWS; r++) for (int c = 0; c < ST_COLS; c++) s_ram[r][c] = 0x8410;
+    s_oled_fitted = kind == SIM_DISP_OLED;
+    if (kind == SIM_DISP_TFT19) { T.c0 = 35; T.w = 170; }
+    else { T.c0 = 0; T.w = 240; }
+    s_fb_w = s_oled_fitted ? 128 : 320;
+    s_fb_h = s_oled_fitted ? 64 : T.w;
+    s_tft_dirty = !s_oled_fitted;
     s_bright = 0;
     s_disp_on = false;
     s_keys_down = 0;

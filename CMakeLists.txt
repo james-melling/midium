@@ -8,7 +8,7 @@ endif()
 # Pull in the Pico SDK (PICO_SDK_PATH env var or -DPICO_SDK_PATH=...)
 include(pico_sdk_import.cmake)
 
-project(midium VERSION 0.5.0 LANGUAGES C CXX ASM)
+project(midium VERSION 0.6.0 LANGUAGES C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
@@ -17,6 +17,8 @@ pico_sdk_init()
 # Build-time options
 set(MIDIUM_DISPLAY "0" CACHE STRING "0 = auto-detect, 1 = force OLED, 2 = force TFT")
 option(MIDIUM_OLED_SSD1306 "OLED is an SSD1306 (Adafruit 938, default) - OFF for SH1106" ON)
+set(MIDIUM_TFT_MODULE "PIMORONI_28" CACHE STRING "TFT module / wiring: PIMORONI_28 (prototype), GENERIC_28 (final PCB), ADAFRUIT_19")
+set_property(CACHE MIDIUM_TFT_MODULE PROPERTY STRINGS PIMORONI_28 GENERIC_28 ADAFRUIT_19)
 
 set(MIDIUM_SOURCES
     src/main.c
@@ -30,6 +32,8 @@ set(MIDIUM_SOURCES
     src/console.c
     src/disp_oled.c
     src/disp_tft.c
+    src/tft_render.c
+    src/mon_view.c
     src/joystick.c
     src/ui.c
     src/settings.c
@@ -58,6 +62,7 @@ target_compile_definitions(midium PRIVATE
     MIDIUM_VERSION="${PROJECT_VERSION}"
     MIDIUM_DISPLAY=${MIDIUM_DISPLAY}
     MIDIUM_OLED_SSD1306=$<BOOL:${MIDIUM_OLED_SSD1306}>
+    MIDIUM_TFT_MODULE=TFT_MODULE_${MIDIUM_TFT_MODULE}
     # Don't stall core0 if the USB host stops reading the debug log
     PICO_STDIO_USB_STDOUT_TIMEOUT_US=2000
 )

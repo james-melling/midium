@@ -1,7 +1,7 @@
 <title>MIDIum Simulator</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
-/* Layout: test bench. Left, the MT-1 top face with its live screen and joystick;
+/* Layout: test bench. Left, the MIDIum top face with its live screen and joystick;
    right, the signal generator (IN A / IN B) feeding it and the capture of OUT A / OUT B.
    Stacks to one column on narrow screens. */
 :root {
@@ -105,7 +105,7 @@ button, select, input { font: inherit; color: inherit; }
   box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 -1px 0 rgba(0,0,0,0.5) inset, 0 14px 28px -12px rgba(0,0,0,0.45), 0 2px 4px rgba(0,0,0,0.25);
   color: var(--etch);
   display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 0.6fr);
-  grid-template-areas: "screen leds" "screen joy" "word model";
+  grid-template-areas: "screen leds" "screen joy" "word word";
   column-gap: 5%; row-gap: 3cqw;
   user-select: none; -webkit-user-select: none; touch-action: manipulation;
 }
@@ -123,7 +123,8 @@ button, select, input { font: inherit; color: inherit; }
 
 .screen { grid-area: screen; align-self: center; border: 2px solid #c8ccd2; padding: 3.2%; background: #0b0c0e; }
 .screen .glass { background: #000; padding: 2.6% 2.8%; box-shadow: inset 0 0 0 1px #000, inset 0 2px 8px rgba(0,0,0,0.9); }
-.screen canvas { display: block; width: 100%; height: auto; aspect-ratio: 320 / 170; image-rendering: pixelated; transition: filter 120ms linear; }
+.screen canvas { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; image-rendering: pixelated; transition: filter 120ms linear; }
+.screen canvas.tft19 { aspect-ratio: 320 / 170; }
 .screen canvas.oled { aspect-ratio: 2 / 1; }
 
 .leds { grid-area: leds; display: flex; gap: 9%; justify-content: center; align-items: center; font-size: clamp(11px, 2.6cqw, 17px); letter-spacing: 0.02em; }
@@ -173,16 +174,12 @@ button, select, input { font: inherit; color: inherit; }
 
 .word { grid-area: word; align-self: end; font-size: 10.5cqw; line-height: 0.9; letter-spacing: -0.01em; font-weight: 400; color: #fff;
   -webkit-text-stroke: 0.25cqw #fff; }
-.model { grid-area: model; align-self: end; justify-self: end; text-align: right; display: grid; gap: 0.6cqw; padding-bottom: 0.6cqw; }
-.model .brand { font-size: 3cqw; letter-spacing: 0.08em; }
-.model .mt { font-size: 2.9cqw; letter-spacing: 0.04em; font-weight: 400; -webkit-text-stroke: 0.08cqw #fff; color: #fff; }
 
 @container (max-width: 560px) {
-  .device { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "screen screen" "joy leds" "word model"; padding: 6% 6.5% 5%; row-gap: 5cqw; }
+  .device { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "screen screen" "joy leds" "word word"; padding: 6% 6.5% 5%; row-gap: 5cqw; }
   .joy { width: min(100%, 40cqw); }
   .leds { flex-direction: column; align-items: flex-start; gap: 1em; font-size: 14px; }
   .word { font-size: 13cqw; }
-  .model .brand { font-size: 3.6cqw; } .model .mt { font-size: 3.8cqw; }
   .jb.press { border-width: 0.5cqw; box-shadow: 0 0 0 0.7cqw #121315, 0 2px 6px rgba(0,0,0,0.7); }
 }
 
@@ -255,13 +252,14 @@ td:first-child { white-space: nowrap; }
 <div class="wrap">
   <header class="top">
     <div>
-      <h1>MIDIum <span>NSK MT-1 simulator</span></h1>
-      <p>The screen, menus, monitor, generator, thru / merge engine and soft power below are the real v0.5 firmware, compiled to WebAssembly. Inject traffic on IN A and IN B, drive the joystick, and watch what leaves OUT A and OUT B.</p>
+      <h1>MIDIum <span>simulator</span></h1>
+      <p>The screen, menus, monitor, generator, thru / merge engine and soft power below are the real v0.6 firmware, compiled to WebAssembly. Inject traffic on IN A and IN B, drive the joystick, and watch what leaves OUT A and OUT B.</p>
     </div>
     <div class="top-ctl">
       <div class="seg" role="group" aria-label="Display fitted">
-        <button type="button" id="d-tft" aria-pressed="true">TFT 1.9" colour</button>
-        <button type="button" id="d-oled" aria-pressed="false">OLED 1.3" mono</button>
+        <button type="button" id="d-tft" aria-pressed="true">TFT 2.8"</button>
+        <button type="button" id="d-tft19" aria-pressed="false">TFT 1.9"</button>
+        <button type="button" id="d-oled" aria-pressed="false">OLED 1.3"</button>
       </div>
       <button type="button" class="btn" id="power">Power cycle</button>
     </div>
@@ -269,10 +267,10 @@ td:first-child { white-space: nowrap; }
 
   <div class="layout">
     <div class="col">
-      <section class="bench" aria-label="MT-1 top face">
+      <section class="bench" aria-label="MIDIum top face">
         <div class="device" id="device">
           <i class="screw tl"></i><i class="screw tr"></i><i class="screw bl"></i><i class="screw br"></i>
-          <div class="screen"><div class="glass"><canvas id="lcd" width="320" height="170" aria-label="Device screen"></canvas><div class="offmsg" id="offmsg" aria-live="polite"><span><b>OFF</b><span id="offwhy">Press the joystick to power on</span></span></div></div></div>
+          <div class="screen"><div class="glass"><canvas id="lcd" width="320" height="240" aria-label="Device screen"></canvas><div class="offmsg" id="offmsg" aria-live="polite"><span><b>OFF</b><span id="offwhy">Press the joystick to power on</span></span></div></div></div>
           <div class="leds">
             <span class="led midi" id="led-midi" title="MIDI activity (blinks on every input byte)"><i></i>MIDI</span>
             <span class="led chg" id="led-chg" title="Charging (USB-C connected, battery not full)"><i></i>CHG</span>
@@ -285,7 +283,6 @@ td:first-child { white-space: nowrap; }
             <button type="button" class="jb dn" data-k="1" aria-label="Joystick down"><svg viewBox="0 0 10 10" aria-hidden="true"><polygon points="5,8.5 9,2 1,2"/></svg></button>
           </div>
           <div class="word">MIDIum</div>
-          <div class="model"><span class="mt">NSK MT-1</span></div>
         </div>
         <div class="devbar">
           <span>Display <b id="st-disp">-</b></span>
@@ -334,11 +331,11 @@ td:first-child { white-space: nowrap; }
             <thead><tr><th>Where</th><th>Up / Down</th><th>Left</th><th>Right</th><th>Press</th></tr></thead>
             <tbody>
               <tr><td>Anywhere</td><td>-</td><td>-</td><td>-</td><td>a short press acts on release; hold 2 s: power-off countdown (release cancels), 2 s more: power off</td></tr>
-              <tr><td>Monitor</td><td>scroll history (pauses); the newest message stays pinned on the bottom line, the cursor can land on it</td><td>back to live</td><td>time column: off / uptime / time of day</td><td>open menu; on a selected MSC / sysex line, open its detail page</td></tr>
+              <tr><td>Monitor</td><td>first UP pauses: the whole view freezes (header PAUSED +n); then move the cursor through the frozen history (hold for faster); DOWN past the newest line goes live</td><td>back to live</td><td>time column: off / uptime / time of day</td><td>open menu; on a selected MSC / sysex line, open its detail page</td></tr>
               <tr><td>Detail page</td><td>scroll</td><td>back to monitor</td><td>next page</td><td>next page</td></tr>
               <tr><td>Menu</td><td>move (wraps)</td><td>back</td><td>select / toggle / edit</td><td>select / toggle / edit</td></tr>
               <tr><td>Editing a value</td><td>change value (wraps at both ends; hold to repeat, faster on big ranges)</td><td>done</td><td>done</td><td>done</td></tr>
-              <tr><td>MTC display</td><td>-</td><td>back</td><td>-</td><td>back</td></tr>
+              <tr><td>MTC display</td><td>-</td><td>back</td><td>-</td><td>back (source: Display &gt; MTC source)</td></tr>
               <tr><td>Date &amp; time</td><td>change field (wraps)</td><td>previous field / cancel</td><td>next field</td><td>edit, then set</td></tr>
               <tr><td>Logs</td><td>move (wraps)</td><td>back</td><td>open</td><td>open session / new session / delete</td></tr>
               <tr><td>Log browser</td><td>scroll</td><td>back to Logs</td><td>time column</td><td>detail page of an MSC / sysex line</td></tr>
@@ -832,6 +829,7 @@ td:first-child { white-space: nowrap; }
     fbCanvas.width = fbW; fbCanvas.height = fbH;
     img = fbCtx.createImageData(fbW, fbH);
     canvas.classList.toggle("oled", fbW === 128);
+    canvas.classList.toggle("tft19", fbW === 320 && fbH === 170);
     sizeCanvas();
   }
   /* Draw at a whole-number multiple of the panel resolution that covers the
@@ -1003,6 +1001,7 @@ td:first-child { white-space: nowrap; }
     booting = true;
     kind = k;
     document.getElementById("d-tft").setAttribute("aria-pressed", k === 2 ? "true" : "false");
+    document.getElementById("d-tft19").setAttribute("aria-pressed", k === 3 ? "true" : "false");
     document.getElementById("d-oled").setAttribute("aria-pressed", k === 1 ? "true" : "false");
     // stop streams, forget queued traffic: this is a power cycle
     events = [];
@@ -1043,6 +1042,7 @@ td:first-child { white-space: nowrap; }
   }
 
   document.getElementById("d-tft").addEventListener("click", function () { lsSet("midium-disp", "2"); boot(2); });
+  document.getElementById("d-tft19").addEventListener("click", function () { lsSet("midium-disp", "3"); boot(3); });
   document.getElementById("d-oled").addEventListener("click", function () { lsSet("midium-disp", "1"); boot(1); });
   document.getElementById("power").addEventListener("click", function () { boot(kind); });
 
@@ -1072,7 +1072,7 @@ td:first-child { white-space: nowrap; }
   buildInputs();
   buildOutputs();
   var saved = lsGet("midium-disp");
-  boot(saved === "1" ? 1 : 2);
+  boot(saved === "1" ? 1 : saved === "3" ? 3 : 2);
   requestAnimationFrame(frame);
 
 })();

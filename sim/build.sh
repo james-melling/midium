@@ -21,12 +21,12 @@ fi
 # sim_io.c / sim_main.c, and the QSPI flash log backend (log_flash_rp2350.c)
 # by the RAM NOR emulation (log_flash_ram.c); everything else is the real code.
 FW="midi_engine.c midi_parser.c midi_decode.c msc_decode.c settings.c monitor.c
-    generator.c console.c ui.c joystick.c disp_tft.c disp_oled.c debug_log.c
+    generator.c console.c ui.c joystick.c disp_tft.c tft_render.c mon_view.c disp_oled.c debug_log.c
     timeutil.c mtc.c msg_filter.c valedit.c bigdigits.c log_store.c log_flash_ram.c
     logger.c rv3028.c clock.c max17048.c power_fsm.c power.c"
 SRCS=""
 for f in $FW; do SRCS="$SRCS $ROOT/src/$f"; done
-SRCS="$SRCS $SIM/src/sim_hal.c $SIM/src/sim_io.c $SIM/src/sim_main.c"
+SRCS="$SRCS $SIM/src/sim_hal.c $SIM/src/sim_io.c $SIM/src/sim_main.c $SIM/src/sim_tft19.c"
 
 VERSION=$(sed -n 's/^#define MIDIUM_VERSION "\(.*\)"/\1/p' "$ROOT/include/config.h")
 

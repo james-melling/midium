@@ -80,4 +80,33 @@ static inline uint64_t mtc_last_us(const mtc_t *m) {
     return m->last_qf_us > m->last_full_us ? m->last_qf_us : m->last_full_us;
 }
 
+/* Frames since 00:00:00:00 (real frames: drop-frame labels that are
+ * skipped are not counted). */
+int32_t mtc_tc_frames(const mtc_tc_t *t, uint8_t rate);
+/* a - b in frames, wrapped into [-12 h, +12 h) of frames. */
+int32_t mtc_tc_diff(const mtc_tc_t *a, const mtc_tc_t *b, uint8_t rate);
+
+/* Activity (quarter or full frame) within MTC_HOLD_US. */
+static inline bool mtc_active(const mtc_t *m, uint64_t now_us) {
+    uint64_t t = mtc_last_us(m);
+    return t && now_us - t < MTC_HOLD_US;
+}
+
+/* ---- which input the display shows (two independent readers) ----------
+ * Modes (settings mtc_src): MTC_SRC_AUTO, MTC_SRC_A, MTC_SRC_B.
+ * Auto latches to the first input that becomes active and stays on it while
+ * it is active (activity within MTC_HOLD_US = 2 s), so two feeds never make
+ * the display alternate. When it has been silent for 2 s, it moves to the
+ * other input if that one is active. Before anything is latched and with
+ * nothing active, the input with the most recent activity is shown. */
+#define MTC_SRC_AUTO 0u
+#define MTC_SRC_A    1u
+#define MTC_SRC_B    2u
+typedef struct {
+    int8_t cur;            /* latched input, -1 = none yet */
+} mtc_sel_t;
+void mtc_sel_init(mtc_sel_t *s);
+/* in[0] = IN A, in[1] = IN B. Returns 0 / 1, or -1 (auto, never any MTC). */
+int  mtc_select(mtc_sel_t *s, const mtc_t *const in[2], uint8_t mode, uint64_t now_us);
+
 #endif /* MIDIUM_MTC_H */

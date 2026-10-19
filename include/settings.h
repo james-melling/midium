@@ -25,6 +25,7 @@ typedef struct {
     uint8_t brightness;      /* 10..100 % */
     bool    usb_log;         /* printf decoded messages over USB CDC */
     msg_filter_t filter;     /* what the monitor and the log browser show */
+    uint8_t mtc_src;         /* MTC shown in the header / MTC display: MTC_SRC_* (mtc.h) */
 
     /* power */
     uint8_t usb_power_on;    /* USBPO_*: what plugging USB into a box that is off does */

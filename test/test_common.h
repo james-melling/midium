@@ -15,5 +15,6 @@ extern int g_checks, g_fail;
 void test_msc(void);
 void test_m2(void);
 void test_power(void);
+void test_v6(void);
 
 #endif

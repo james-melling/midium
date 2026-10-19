@@ -63,6 +63,7 @@ void settings_defaults(settings_t *s) {
     s->brightness = 80;
     s->usb_log = true;
     msg_filter_defaults(&s->filter);
+    s->mtc_src = 0;          /* MTC_SRC_AUTO */
 
     s->usb_power_on = USBPO_CHARGE;
     s->auto_off_idx = 0;     /* Off */

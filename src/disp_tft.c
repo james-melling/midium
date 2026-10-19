@@ -1,12 +1,22 @@
 /*
- * disp_tft.c - ST7789 1.9" 170x320 IPS TFT on SPI0, used landscape 320x170.
+ * disp_tft.c - ST7789 IPS TFT on SPI0, used landscape.
  *
- * Console cells are the 5x7 font scaled 2x in a 12x16 cell: 26 x 10 cells =
- * 312 x 160 px, centred (4 px left/right, 5 px top/bottom).
+ *   2.8" 240x320 (MIDIUM_TFT_PANEL 28): 320 x 240, 40 x 16 cells, no margin
+ *   1.9" 170x320 (MIDIUM_TFT_PANEL 19): 320 x 170, 40 x 11 cells, 2 px top /
+ *                                        3 px bottom margin
  *
- * Offsets: in portrait the 170-px-wide panel sits at controller column 35.
- * With MADCTL MV set (landscape) the controller swaps rows/columns, so the
- * offset moves to the row address (TFT_Y_OFFSET = 35, TFT_X_OFFSET = 0).
+ * Text is JetBrains Mono 13 px, anti-aliased: 8 x 15 px cells, each pixel
+ * blended between the cell's background and foreground (tft_render.c). The
+ * driver keeps a copy of the cells last sent for each row and only sends
+ * the columns that changed (one CASET/RASET window per dirty span; a whole
+ * row is 320 x 15 x 2 = 9.6 kB, ~2.1 ms at 37.5 MHz SPI).
+ *
+ * Offsets: the 2.8" panel fills the controller's 240 x 320 RAM. The 1.9" sits
+ * at controller column 35 in portrait; with MADCTL MV set (landscape) that
+ * becomes the row offset (TFT_Y_OFFSET = 35, TFT_X_OFFSET = 0).
+ *
+ * Reset: the Pimoroni Pico Display Pack has no reset pin (PIN_TFT_RST < 0),
+ * so init relies on the software reset (SWRESET) alone.
  */
 #include <string.h>
 #include "pico/stdlib.h"
@@ -17,35 +27,28 @@
 #include "pins.h"
 #include "config.h"
 #include "display.h"
-#include "midi_decode.h"
-#include "font5x7.h"
-#include "glyphs.h"
+#include "tft_render.h"
 
-#define TFT_COLS   26
-#define TFT_ROWS   10
-#define CELL_W     12
-#define CELL_H     16
-#define GRID_X     ((TFT_WIDTH  - TFT_COLS * CELL_W) / 2)
-#define GRID_Y     ((TFT_HEIGHT - TFT_ROWS * CELL_H) / 2)
+#define CELL_W     TFT_CELL_W
+#define CELL_H     TFT_CELL_H
+#define TFT_COLS   (TFT_WIDTH / CELL_W)
+#define TFT_ROWS   (TFT_HEIGHT / CELL_H)
+#define GRID_W     (TFT_COLS * CELL_W)
+#define GRID_H     (TFT_ROWS * CELL_H)
+#define GRID_X     ((TFT_WIDTH  - GRID_W) / 2)
+#define GRID_Y     ((TFT_HEIGHT - GRID_H) / 2)
 
-#define RGB565(r, g, b) ((uint16_t)((((r) & 0xF8) << 8) | (((g) & 0xFC) << 3) | ((b) >> 3)))
+#if TFT_COLS > CON_MAX_COLS || TFT_ROWS > CON_MAX_ROWS
+#error "TFT grid larger than the console"
+#endif
 
-static const uint16_t s_fg[CLS_COUNT] = {
-    [CLS_NORMAL]   = RGB565(0xFF, 0xFF, 0xFF),
-    [CLS_NOTE]     = RGB565(0x40, 0xFF, 0x40),
-    [CLS_CC]       = RGB565(0x40, 0xE0, 0xFF),
-    [CLS_PC]       = RGB565(0xFF, 0xE0, 0x30),
-    [CLS_SYSEX]    = RGB565(0xFF, 0x50, 0xFF),
-    [CLS_REALTIME] = RGB565(0x90, 0x90, 0x90),
-    [CLS_ERROR]    = RGB565(0xFF, 0x40, 0x40),
-    [CLS_HEADER]   = RGB565(0xFF, 0xA0, 0x20),
-    [CLS_DIM]      = RGB565(0x80, 0x80, 0x80),
-};
-#define BG_COLOUR      RGB565(0x00, 0x00, 0x00)
-#define INV_BG_COLOUR  RGB565(0x20, 0x50, 0xA0)   /* highlighted menu row */
-#define CUR_BG_COLOUR  RGB565(0x34, 0x38, 0x40)   /* cursor row (pinned monitor) */
-
-static uint8_t s_line[TFT_COLS * CELL_W * CELL_H * 2];   /* one text row, RGB565 BE */
+/* One text row of pixels (RGB565, big-endian): 9.6 kB. Also the chunk
+ * buffer for screen fills and bitmaps. */
+static uint16_t s_line[GRID_W * CELL_H];
+/* What each row on the panel shows now; s_shown_ok[r] false = unknown
+ * (after init or a bitmap drew over it): send the whole row. */
+static cell_t   s_shown[TFT_ROWS][TFT_COLS];
+static bool     s_shown_ok[TFT_ROWS];
 static uint s_bl_slice, s_bl_chan;
 
 static inline void cs(bool active) { gpio_put(PIN_TFT_CS, !active); }
@@ -81,18 +84,17 @@ static void write_pixels_begin(void) {
 
 static void fill_screen(uint16_t colour) {
     set_window(0, 0, TFT_WIDTH - 1, TFT_HEIGHT - 1);
-    for (size_t i = 0; i < sizeof s_line; i += 2) {
-        s_line[i] = (uint8_t)(colour >> 8);
-        s_line[i + 1] = (uint8_t)colour;
-    }
+    uint16_t be = (uint16_t)((colour >> 8) | (colour << 8));
+    for (size_t i = 0; i < sizeof s_line / 2u; i++) s_line[i] = be;
     write_pixels_begin();
     size_t total = (size_t)TFT_WIDTH * TFT_HEIGHT * 2u;
     while (total) {
         size_t n = total < sizeof s_line ? total : sizeof s_line;
-        spi_write_blocking(TFT_SPI, s_line, n);
+        spi_write_blocking(TFT_SPI, (const uint8_t *)s_line, n);
         total -= n;
     }
     cs(false);
+    memset(s_shown_ok, 0, sizeof s_shown_ok);
 }
 
 static void tft_set_brightness(uint8_t pct) {
@@ -108,7 +110,9 @@ static bool tft_init(void) {
 
     gpio_init(PIN_TFT_CS);  gpio_set_dir(PIN_TFT_CS, GPIO_OUT);  gpio_put(PIN_TFT_CS, 1);
     gpio_init(PIN_TFT_DC);  gpio_set_dir(PIN_TFT_DC, GPIO_OUT);  gpio_put(PIN_TFT_DC, 1);
+#if PIN_TFT_RST >= 0
     gpio_init(PIN_TFT_RST); gpio_set_dir(PIN_TFT_RST, GPIO_OUT); gpio_put(PIN_TFT_RST, 1);
+#endif
 
     /* backlight PWM ~37.5 kHz, 0..1000 */
     gpio_set_function(PIN_TFT_BL, GPIO_FUNC_PWM);
@@ -120,75 +124,60 @@ static bool tft_init(void) {
     pwm_init(s_bl_slice, &cfg, true);
     pwm_set_chan_level(s_bl_slice, s_bl_chan, 0);   /* dark until drawn */
 
+#if PIN_TFT_RST >= 0
     /* hardware reset */
     sleep_ms(5);
     gpio_put(PIN_TFT_RST, 0);
     sleep_ms(10);
     gpio_put(PIN_TFT_RST, 1);
+#endif
     sleep_ms(120);
 
-    write_cmd(0x01, NULL, 0);  sleep_ms(150);       /* SWRESET */
+    write_cmd(0x01, NULL, 0);  sleep_ms(150);       /* SWRESET (the only reset on the Pimoroni pack) */
     write_cmd(0x11, NULL, 0);  sleep_ms(120);       /* SLPOUT */
     uint8_t colmod = 0x55;                          /* 16 bit/pixel */
     write_cmd(0x3A, &colmod, 1);
     uint8_t madctl = TFT_MADCTL;
     write_cmd(0x36, &madctl, 1);
-    write_cmd(0x21, NULL, 0);                       /* INVON (IPS panels) */
+    write_cmd(TFT_INVERT ? 0x21 : 0x20, NULL, 0);   /* INVON (IPS panels) / INVOFF */
     write_cmd(0x13, NULL, 0);                       /* NORON */
-    fill_screen(BG_COLOUR);
+    fill_screen(TFT_BG_COLOUR);
     write_cmd(0x29, NULL, 0);  sleep_ms(10);        /* DISPON */
     return true;
 }
 
 static void tft_draw_row(int row, const cell_t *cells) {
-    const int w = TFT_COLS * CELL_W;
-    for (int c = 0; c < TFT_COLS; c++) {
-        uint8_t attr = cells[c].attr;
-        uint8_t cls = ATTR_CLASS(attr);
-        uint16_t fg = s_fg[cls < CLS_COUNT ? cls : 0];
-        uint16_t bg = BG_COLOUR;
-        bool cur = (attr & ATTR_CURSOR) != 0;
-        if (attr & ATTR_INVERSE) { bg = INV_BG_COLOUR; if (cls == CLS_NORMAL) fg = 0xFFFF; }
-        else if (cur) bg = CUR_BG_COLOUR;
-        const uint8_t *g = glyph5x7((uint8_t)cells[c].ch);
-        for (int y = 0; y < CELL_H; y++) {
-            uint8_t *p = &s_line[((size_t)y * w + (size_t)c * CELL_W) * 2u];
-            uint8_t bit = (uint8_t)(1u << (y >> 1));
-            bool uline = cur && y == CELL_H - 1;
-            for (int x = 0; x < CELL_W; x++) {
-                int gx = x >> 1;
-                uint16_t col = (uline || (gx < 5 && (g[gx] & bit))) ? fg : bg;
-                *p++ = (uint8_t)(col >> 8);
-                *p++ = (uint8_t)col;
-            }
-        }
-    }
-    uint16_t x0 = GRID_X, y0 = (uint16_t)(GRID_Y + row * CELL_H);
+    if (row < 0 || row >= TFT_ROWS) return;
+    int c0 = 0, c1 = TFT_COLS;
+    if (s_shown_ok[row] && !tft_row_span(cells, s_shown[row], TFT_COLS, &c0, &c1)) return;
+    memcpy(&s_shown[row][c0], &cells[c0], (size_t)(c1 - c0) * sizeof(cell_t));
+    s_shown_ok[row] = true;
+    tft_render_cells(cells, c0, c1, s_line);
+    int w = (c1 - c0) * CELL_W;
+    uint16_t x0 = (uint16_t)(GRID_X + c0 * CELL_W), y0 = (uint16_t)(GRID_Y + row * CELL_H);
     set_window(x0, y0, (uint16_t)(x0 + w - 1), (uint16_t)(y0 + CELL_H - 1));
     write_pixels_begin();
-    spi_write_blocking(TFT_SPI, s_line, (size_t)w * CELL_H * 2u);
+    spi_write_blocking(TFT_SPI, (const uint8_t *)s_line, (size_t)w * CELL_H * 2u);
     cs(false);
 }
 
 static void tft_draw_bitmap(int x, int y, int w, int h, const uint8_t *bits, int stride, uint8_t attr) {
-    if (x < 0 || y < 0 || w <= 0 || h <= 0 || x + w > TFT_COLS * CELL_W || y + h > TFT_ROWS * CELL_H) return;
-    uint8_t cls = ATTR_CLASS(attr);
-    uint16_t fg = s_fg[cls < CLS_COUNT ? cls : 0], bg = BG_COLOUR;
+    if (x < 0 || y < 0 || w <= 0 || h <= 0 || x + w > GRID_W || y + h > GRID_H) return;
+    uint16_t fg = tft_class_colour(ATTR_CLASS(attr)), bg = TFT_BG_COLOUR;
     if (attr & ATTR_INVERSE) { uint16_t t = fg; fg = bg; bg = t; }
+    uint16_t fbe = (uint16_t)((fg >> 8) | (fg << 8)), bbe = (uint16_t)((bg >> 8) | (bg << 8));
+    for (int r = y / CELL_H; r <= (y + h - 1) / CELL_H; r++) s_shown_ok[r] = false;
     uint16_t x0 = (uint16_t)(GRID_X + x), y0 = (uint16_t)(GRID_Y + y);
     set_window(x0, y0, (uint16_t)(x0 + w - 1), (uint16_t)(y0 + h - 1));
     write_pixels_begin();
     int rows_per_chunk = (int)(sizeof s_line / 2u) / w;
     for (int r0 = 0; r0 < h; r0 += rows_per_chunk) {
         int nr = h - r0 < rows_per_chunk ? h - r0 : rows_per_chunk;
-        uint8_t *p = s_line;
+        uint16_t *p = s_line;
         for (int r = r0; r < r0 + nr; r++)
-            for (int i = 0; i < w; i++) {
-                uint16_t col = ((bits[r * stride + (i >> 3)] >> (7 - (i & 7))) & 1u) ? fg : bg;
-                *p++ = (uint8_t)(col >> 8);
-                *p++ = (uint8_t)col;
-            }
-        spi_write_blocking(TFT_SPI, s_line, (size_t)(p - s_line));
+            for (int i = 0; i < w; i++)
+                *p++ = ((bits[r * stride + (i >> 3)] >> (7 - (i & 7))) & 1u) ? fbe : bbe;
+        spi_write_blocking(TFT_SPI, (const uint8_t *)s_line, (size_t)(p - s_line) * 2u);
     }
     cs(false);
 }
@@ -205,7 +194,11 @@ static void tft_power(bool on) {
 }
 
 const display_driver_t g_disp_tft = {
-    .name = "TFT ST7789",
+#if MIDIUM_TFT_PANEL == 28
+    .name = "TFT 2.8\" ST7789",
+#else
+    .name = "TFT 1.9\" ST7789",
+#endif
     .cols = TFT_COLS,
     .rows = TFT_ROWS,
     .init = tft_init,

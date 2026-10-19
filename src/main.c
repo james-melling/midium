@@ -36,9 +36,10 @@ static const display_driver_t *select_display(void) {
 
 static void splash(void) {
     con_clear();
-    con_row(1, CLS_HEADER, "  " MIDIUM_NAME);
-    con_row(2, CLS_DIM, "  " MIDIUM_MODEL " v" MIDIUM_VERSION);
-    con_row(4, CLS_NORMAL, "  inline MIDI tester");
+    int r = con_rows() >= 16 ? con_rows() / 2 - 3 : 1;   /* centred on the 2.8" */
+    con_row(r, CLS_HEADER, "  " MIDIUM_NAME);
+    con_row(r + 1, CLS_DIM, "  " MIDIUM_MODEL " v" MIDIUM_VERSION);
+    con_row(r + 3, CLS_NORMAL, "  inline MIDI tester");
     con_flush_all();
 }
 

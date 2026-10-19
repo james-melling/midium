@@ -11,7 +11,7 @@
 #include <stdbool.h>
 #include "midi_parser.h"
 
-#define MIDI_TEXT_MAX 27   /* 26 chars (TFT width) + NUL */
+#define MIDI_TEXT_MAX 41   /* 40 chars (TFT width) + NUL */
 #define MIDI_TEXT_COLS 21  /* default line width (OLED) */
 
 /* Colour classes (the TFT maps these to colours; OLED ignores them). */

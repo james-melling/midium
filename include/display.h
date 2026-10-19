@@ -4,8 +4,12 @@
  * The UI only ever writes characters + attributes into a grid of cells. The
  * console tracks which rows changed and the driver redraws only those rows.
  *
- *   OLED SH1106/SSD1306 128x64, 6x8 cells  -> 21 x 8
- *   TFT  ST7789 320x170, 12x16 cells (2x)   -> 26 x 10
+ *   OLED SH1106/SSD1306 128x64, 5x7 font in 6x8 cells       -> 21 x 8
+ *   TFT  ST7789 2.8" 320x240, JetBrains Mono 13 px, 8x15 cells -> 40 x 16
+ *   TFT  ST7789 1.9" 320x170, same font                        -> 40 x 11
+ *
+ * The UI asks con_cols() / con_rows() and lays itself out for the grid; it
+ * treats >= CON_WIDE_COLS columns as the wide (TFT) layout.
  */
 #ifndef MIDIUM_DISPLAY_H
 #define MIDIUM_DISPLAY_H
@@ -14,8 +18,9 @@
 #include <stdbool.h>
 #include "midi_decode.h"   /* msg_class_t colour classes */
 
-#define CON_MAX_COLS 26
-#define CON_MAX_ROWS 10
+#define CON_MAX_COLS 40
+#define CON_MAX_ROWS 16
+#define CON_WIDE_COLS 40   /* the TFT layouts: time column, long labels */
 
 /* Cell attribute: low 4 bits = colour class (msg_class_t), bit 7 = inverse,
  * bit 6 = cursor (TFT: grey bar; both: underline) */
@@ -23,11 +28,21 @@
 #define ATTR_CURSOR  0x40u
 #define ATTR_CLASS(a) ((a) & 0x0Fu)
 
-/* Icon characters (drawn from glyphs.h instead of the font):
- * battery levels 0 (empty outline) .. 4 (full), and a charging bolt. */
+/* Icon characters (control codes that never occur in text; both fonts
+ * have them: src/glyphs.h for the OLED, src/font_jbm13.h for the TFT):
+ * battery levels 0 (empty outline) .. 4 (full), a charging bolt, play
+ * triangles and arrows (the arrows at their CP437 positions). */
 #define CH_BATT0     '\x10'
 #define CH_BATT(n)   ((char)(0x10 + (n)))
 #define CH_BOLT      '\x15'
+#define CH_PLAY_R    '\x16'
+#define CH_PLAY_L    '\x17'
+#define CH_UP        '\x18'
+#define CH_DOWN      '\x19'
+#define CH_RIGHT     '\x1A'
+#define CH_LEFT      '\x1B'
+#define CH_BAR_FULL  '\x1C'   /* TFT only: progress bar cell, full */
+#define CH_BAR_EMPTY '\x1D'   /* TFT only: progress bar track */
 
 typedef struct {
     char    ch;

@@ -12,16 +12,17 @@
 #include "logger.h"
 #include "mtc.h"
 #include "config.h"
+#include "mon_view.h"
 
 static midi_parser_t s_parser[ME_NUM_INS];
-static midi_msg_t    s_hist[HISTORY_LEN];
-static uint32_t      s_seq;               /* next sequence number */
+static msg_hist_t    s_hist;              /* history + frozen copy (mon_view.h) */
 static uint32_t      s_counts[MT_COUNT];
 static uint32_t      s_total;
 static uint32_t      s_total_src[ME_NUM_INS];
 static bool          s_changed;
 
-static mtc_t s_mtc[ME_NUM_INS];
+static mtc_t     s_mtc[ME_NUM_INS];       /* one independent reader per input */
+static mtc_sel_t s_mtc_sel;
 
 static void on_msg(const midi_msg_t *m, void *ctx) {
     (void)ctx;
@@ -39,8 +40,7 @@ static void on_msg(const midi_msg_t *m, void *ctx) {
      * 120 BPM the clock alone would flush a 128-entry history in under 3 s.
      * Hidden messages are still counted above. */
     if (!msg_filter_pass(&g_settings.filter, m)) return;
-    s_hist[s_seq % HISTORY_LEN] = *m;
-    s_seq++;
+    hist_push(&s_hist, m);
     s_changed = true;
 }
 
@@ -60,11 +60,12 @@ void monitor_init(void) {
         midi_parser_init(&s_parser[i], on_msg, NULL);
         s_parser[i].src = (uint8_t)i;
     }
+    mtc_sel_init(&s_mtc_sel);
     monitor_clear();
 }
 
 void monitor_clear(void) {
-    s_seq = 0;
+    hist_clear(&s_hist);
     s_total = 0;
     memset(s_total_src, 0, sizeof s_total_src);
     memset(s_counts, 0, sizeof s_counts);
@@ -94,14 +95,11 @@ bool monitor_poll(uint32_t max_bytes) {
     return c;
 }
 
-uint32_t monitor_next_seq(void) { return s_seq; }
-uint32_t monitor_oldest_seq(void) { return s_seq > HISTORY_LEN ? s_seq - HISTORY_LEN : 0; }
-
-bool monitor_get(uint32_t seq, midi_msg_t *out) {
-    if (seq >= s_seq || seq < monitor_oldest_seq()) return false;
-    *out = s_hist[seq % HISTORY_LEN];
-    return true;
-}
+uint32_t monitor_next_seq(void) { return hist_next(&s_hist); }
+uint32_t monitor_oldest_seq(void) { return hist_oldest(&s_hist); }
+bool monitor_get(uint32_t seq, midi_msg_t *out) { return hist_get(&s_hist, seq, out); }
+msg_hist_t *monitor_hist(void) { return &s_hist; }
+uint32_t monitor_new_since_pause(void) { return hist_new_since(&s_hist); }
 
 uint32_t monitor_type_count(midi_type_t t) { return t < MT_COUNT ? s_counts[t] : 0; }
 uint32_t monitor_total_msgs(void) { return s_total; }
@@ -110,8 +108,7 @@ uint32_t monitor_stray_bytes(void) { return s_parser[ME_IN_A].stray_data + s_par
 
 const mtc_t *monitor_mtc(int in) { return (in >= 0 && in < ME_NUM_INS) ? &s_mtc[in] : NULL; }
 
-int monitor_mtc_active(void) {
-    uint64_t a = mtc_last_us(&s_mtc[ME_IN_A]), b = mtc_last_us(&s_mtc[ME_IN_B]);
-    if (!a && !b) return -1;
-    return b > a ? ME_IN_B : ME_IN_A;
+int monitor_mtc_select(uint64_t now) {
+    const mtc_t *in[2] = { &s_mtc[ME_IN_A], &s_mtc[ME_IN_B] };
+    return mtc_select(&s_mtc_sel, in, g_settings.mtc_src, now);
 }

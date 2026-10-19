@@ -96,9 +96,10 @@ bool stdio_usb_connected(void);
 
 /* ======================= simulator internals ============================== */
 /* Display emulation */
-#define SIM_DISP_TFT  2
-#define SIM_DISP_OLED 1
-void     sim_hal_reset(int oled_fitted);
+#define SIM_DISP_OLED  1
+#define SIM_DISP_TFT   2     /* 2.8" 240x320 ST7789 (firmware default) */
+#define SIM_DISP_TFT19 3     /* 1.9" 170x320 ST7789 (MIDIUM_TFT_PANEL 19) */
+void     sim_hal_reset(int kind);
 uint8_t *sim_hal_fb(void);           /* RGBA */
 int      sim_hal_fb_w(void);
 int      sim_hal_fb_h(void);

@@ -1,17 +1,19 @@
-# Host-side unit tests for the MIDIum parser, decoders (incl. MSC) and thru/merge engine.
+# Host-side unit tests for the MIDIum parser, decoders (incl. MSC), thru/merge engine,
+# TFT font / rendering, console and monitor view.
 #   make -C test        build and run
 #   make -C test clean
 CC      ?= gcc
 CFLAGS  ?= -std=c11 -O2 -g -Wall -Wextra -Werror -fsanitize=address,undefined
-INC      = -I../include
-SRCS     = test_main.c test_msc.c test_m2.c test_power.c ../src/midi_engine.c ../src/midi_parser.c ../src/midi_decode.c \
+INC      = -I../include -I../src
+SRCS     = test_main.c test_msc.c test_m2.c test_power.c test_v6.c ../src/midi_engine.c ../src/midi_parser.c ../src/midi_decode.c \
            ../src/settings.c \
            ../src/msc_decode.c ../src/timeutil.c ../src/mtc.c ../src/msg_filter.c ../src/valedit.c \
-           ../src/bigdigits.c ../src/log_store.c ../src/log_flash_ram.c ../src/power_fsm.c
+           ../src/bigdigits.c ../src/log_store.c ../src/log_flash_ram.c ../src/power_fsm.c \
+           ../src/tft_render.c ../src/mon_view.c ../src/console.c
 
 all: run
 
-test_midium: $(SRCS) $(wildcard ../include/*.h) test_common.h Makefile
+test_midium: $(SRCS) $(wildcard ../include/*.h) $(wildcard ../src/*.h) test_common.h Makefile
 	$(CC) $(CFLAGS) $(INC) -o $@ $(SRCS)
 
 run: test_midium

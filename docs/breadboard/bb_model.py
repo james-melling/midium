@@ -1,5 +1,5 @@
 """
-bb_model.py - MIDIum (NSK MT-1) breadboard prototype: placement + wiring model.
+bb_model.py - melling.audio MIDIum MT-1 breadboard prototype: placement + wiring model.
 
 Everything the drawings and tables show comes from this file.  The expected
 netlist (EXPECTED_NETS) is transcribed independently from docs/wiring.md and

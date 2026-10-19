@@ -5,10 +5,10 @@
 <line x1="264.00" y1="276.00" x2="414.00" y2="276.00" stroke="#000" stroke-width="0.30"/>
 <line x1="264.00" y1="283.50" x2="414.00" y2="283.50" stroke="#000" stroke-width="0.30"/>
 <line x1="376.00" y1="276.00" x2="376.00" y2="291.00" stroke="#000" stroke-width="0.30"/>
-<text x="267.00" y="273.30" font-size="5.00" text-anchor="start" font-weight="bold" fill="#111">MIDIum (NSK MT-1)</text>
+<text x="267.00" y="273.30" font-size="5.00" text-anchor="start" font-weight="bold" fill="#111">MIDIum MT-1</text>
 <text x="411.00" y="273.30" font-size="3.20" text-anchor="end" font-weight="normal" fill="#555">melling.audio</text>
 <text x="267.00" y="281.20" font-size="3.40" text-anchor="start" font-weight="normal" fill="#111">Breadboard prototype · Off-board pinouts</text>
-<text x="267.00" y="288.60" font-size="3.20" text-anchor="start" font-weight="normal" fill="#111">Rev B · 18/10/2026 · J Melling</text>
+<text x="267.00" y="288.60" font-size="3.20" text-anchor="start" font-weight="normal" fill="#111">Rev C · 19/10/2026 · J Melling</text>
 <text x="379.00" y="281.20" font-size="3.20" text-anchor="start" font-weight="normal" fill="#111">Sheet 3 of 4</text>
 <text x="379.00" y="288.60" font-size="3.00" text-anchor="start" font-weight="normal" fill="#444">A3 · milestone 1</text>
 <text x="14.00" y="14.50" font-size="4.20" text-anchor="start" font-weight="bold" fill="#111">Sheet 3 · Pinouts for the parts that are easy to get wrong</text>

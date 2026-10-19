@@ -64,8 +64,9 @@ static void splash(void) {
     con_clear();
     int r = con_rows() >= 16 ? con_rows() / 2 - 3 : 1;   /* centred on the 2.8" */
     con_row(r, CLS_HEADER, "  " MIDIUM_NAME);
-    con_row(r + 1, CLS_DIM, "  " MIDIUM_MODEL " v" MIDIUM_VERSION);
+    con_row(r + 1, CLS_DIM, "  " MIDIUM_MODEL "  v" MIDIUM_VERSION);
     con_row(r + 3, CLS_NORMAL, "  inline MIDI tester");
+    con_row(r + 5, CLS_DIM, "  " MIDIUM_MAKER);
     con_flush_all();
 }
 
@@ -155,7 +156,7 @@ EMSCRIPTEN_KEEPALIVE void sim_tick(double ms) {
             sim_advance_to(t);
             if (time_us_64() >= s_splash_until) {
                 con_clear();
-                dbg_printf("\n%s %s v%s, display: %s\n", MIDIUM_NAME, MIDIUM_MODEL, MIDIUM_VERSION, s_drv->name);
+                dbg_printf("\n%s %s v%s (%s), display: %s\n", MIDIUM_NAME, MIDIUM_MODEL, MIDIUM_VERSION, MIDIUM_MAKER, s_drv->name);
                 s_in_loop = true;
             }
             continue;

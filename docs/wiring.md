@@ -1,4 +1,4 @@
-# MIDIum (NSK MT-1) breadboard wiring (v0.6: 2.8" display, RTC, soft power, fuel gauge)
+# MIDIum MT-1 (melling.audio) breadboard wiring (v0.6: 2.8" display, RTC, soft power, fuel gauge)
 
 Prototype on a **Raspberry Pi Pico 2** (RP2350). Everything runs at 3.3 V except
 the relay coils (5 V from VBUS). The pin map matches `include/pins.h`. If you
@@ -413,13 +413,13 @@ device on OUT A makes step 3 easier.
 | # | Setup | Action | Expected |
 |---|---|---|---|
 | 1 | Unpowered. Laptop OUT to MIDIum IN, MIDIum OUT A to a second interface IN (or a synth). | Send notes. | Notes arrive at OUT A through the relays (passive bypass). |
-| 2 | Power MIDIum from USB. | Watch the relays and screen. | Relays click on after about 1 s, the splash shows (centred, the right way up, black background: see 6, Orientation and colours, if not), then the monitor reads `MIDIum        A:a  B:a` (both outputs fed from IN A). |
+| 2 | Power MIDIum from USB. | Watch the relays and screen. | Relays click on after about 1 s, the splash shows (centred, the right way up, black background: see 6, Orientation and colours, if not), then the monitor reads `MIDIum        A→AB B→-` (IN A feeds both outputs, IN B none). |
 | 3 | Laptop OUT to IN. OUT A to interface 2 IN. **OUT B to the laptop's interface IN.** | Send notes, CC, PC, pitch bend and a sysex dump from the laptop. | Each appears on the MIDIum screen, the LED blinks, and identical data arrives on OUT A and OUT B. Check the laptop monitor on OUT B: the sysex is byte-identical. |
-| 4 | Same. | Menu > Routing > Custom > `OUT A ← IN A` off. Send notes. | Nothing on OUT A, OUT B still passes. Turn it back on (or pick the `A→A, A→B (thru)` preset). |
+| 4 | Same. | Menu > Routing > Custom: in the matrix, turn `IN A → OUT A` off (row IN A, column OUT A, PRESS). Send notes. | Nothing on OUT A, OUT B still passes. Turn it back on (or pick the *Thru* preset, `IN A → OUT A + OUT B`). |
 | 5 | Same. | Menu > Generate > Note test C4, Send CC, Send PC, MSC GO, MMC Play, PANIC. | The laptop sees each on OUT B, and the footer shows what was sent. MSC GO arrives as `F0 7F 7F 02 7F 01 F7`. |
 | 6 | Same. | Generate > Clock BPM 120 > Clock out on. | The laptop measures 120.0 BPM (24 ppqn, 20.833 ms per clock). |
 | 7 | Dense-stream test. | From the laptop, send a continuous stream on IN: a running-status CC sweep at full rate plus repeated 1 kB sysex dumps for 60 s. At the same time, run Note sweep and Clock out from the MIDIum. | The laptop on OUT B receives every input byte (compare counts or capture and diff). Generated notes and clocks are merged in without corrupting the stream: no stray data, no broken running status. Stats: `Drops out A/B` = 0, `IN A UART err` = 0, `IN A orphans` = 0, `IN A merge drop` = 0. `Mon overflow` may count if the screen can't keep up. That affects the display only, never thru. |
-| 8 | Second source into IN B (another interface output, or a loop from OUT B of a second device). | Menu > Routing > `A+B merge → both`. Send from both sources at once, including sysex on each. | Both streams arrive merged on OUT A and OUT B, every message intact (sysex never interleaved). The monitor tags each line A or B, and the header reads `A:ab B:ab`. Stats > `IN B merge drop` stays 0 unless the two inputs together send more than one MIDI line can carry. |
+| 8 | Second source into IN B (another interface output, or a loop from OUT B of a second device). | Menu > Routing > *Merge* (`IN A + IN B → both outs`). Send from both sources at once, including sysex on each. | Both streams arrive merged on OUT A and OUT B, every message intact (sysex never interleaved). The monitor tags each line A or B, and the header reads `A→AB B→AB` (each input feeds both outputs). Stats > `IN B merge drop` stays 0 unless the two inputs together send more than one MIDI line can carry. |
 | 9 | Remove USB power mid-stream. | | Relays drop out and IN A goes hard-wired to OUT A again. IN B stops. |
 | 10 | RTC eval board on GP6 / GP7. | Menu > Settings > Date & time. | `RTC RV-3028`. If `Time` says "lost - set it", press, set the date and time (LEFT / RIGHT field, UP / DOWN value), press. With a backup cell, unplug USB for a minute: the time is still right afterwards. |
 | 11 | Same. | Send some MSC from the laptop, then Menu > Logs. | The newest session is marked LIVE with the right start time; press it to browse the messages. Power-cycle: the session is still there and a new one starts. |

@@ -8,7 +8,7 @@ endif()
 # Pull in the Pico SDK (PICO_SDK_PATH env var or -DPICO_SDK_PATH=...)
 include(pico_sdk_import.cmake)
 
-project(midium VERSION 0.6.0 LANGUAGES C CXX ASM)
+project(midium VERSION 0.6.1 LANGUAGES C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
@@ -88,7 +88,7 @@ pico_enable_stdio_usb(midium 1)
 pico_enable_stdio_uart(midium 0)   # UART0 is MIDI: stdio must never touch it
 
 pico_set_program_name(midium "MIDIum")
-pico_set_program_description(midium "NSK MT-1 inline MIDI test / thru box")
+pico_set_program_description(midium "melling.audio MIDIum MT-1 inline MIDI test / thru box")
 pico_set_program_version(midium "${PROJECT_VERSION}")
 
 pico_add_extra_outputs(midium)

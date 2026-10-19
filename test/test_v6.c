@@ -120,6 +120,19 @@ static void test_font(void) {
     CHECK(glyph5x7((uint8_t)CH_PLAY_R) != &font5x7[CH_PLAY_R * 5]);
     CHECK(glyph5x7((uint8_t)CH_BOLT) != &font5x7[CH_BOLT * 5]);
     CHECK(glyph5x7((uint8_t)CH_RIGHT) == &font5x7[CH_RIGHT * 5]);   /* CP437 arrow from the font */
+    /* routing matrix dots: routed clearly heavier than not routed, both fonts */
+    CHECK(ink_total(jbm13_glyph((uint8_t)CH_DOT_OFF)) > 0);
+    CHECK(ink_total(jbm13_glyph((uint8_t)CH_DOT_ON)) > 4 * ink_total(jbm13_glyph((uint8_t)CH_DOT_OFF)));
+    CHECK(glyph5x7((uint8_t)CH_DOT_ON) != &font5x7[CH_DOT_ON * 5]);
+    CHECK(glyph5x7((uint8_t)CH_DOT_OFF) != &font5x7[CH_DOT_OFF * 5]);
+    int on5 = 0, off5 = 0;
+    for (int k = 0; k < 5; k++) {
+        for (int b = 0; b < 8; b++) {
+            on5 += (glyph5x7((uint8_t)CH_DOT_ON)[k] >> b) & 1;
+            off5 += (glyph5x7((uint8_t)CH_DOT_OFF)[k] >> b) & 1;
+        }
+    }
+    CHECK(off5 >= 1 && on5 > 4 * off5);
 }
 
 /* ------------------------------------------------------------------------ */

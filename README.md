@@ -1,27 +1,35 @@
-# MIDIum (NSK MT-1)
+# MIDIum MT-1
 
-MIDIum is a pocket inline MIDI tester for show-control lines. You plug it
-between two devices. It has two MIDI inputs (IN A, IN B) and two outputs
-(OUT A, OUT B). It passes MIDI through with one byte time of latency (about
+*by melling.audio*
+
+The melling.audio MIDIum MT-1 is a pocket inline MIDI tester for
+show-control lines. You plug it between two devices. It has two MIDI
+inputs (IN A, IN B) and two outputs (OUT A, OUT B). It passes MIDI through with one byte time of latency (about
 320 µs), can merge the two inputs, shows every incoming message on screen
 tagged with its input, and can merge test messages into the outputs without
 breaking the stream. When it's unpowered or crashes, two relays wire IN A
 straight to OUT A. **IN B is not passed through when the box is unpowered.**
 
-This is the firmware (v0.6: milestone 1, the second input, and milestone 2
-so far: real-time clock, MTC reader, flash logging, soft power on / off and
+This is the firmware (v0.6.1; v0.6: milestone 1, the second input, and
+milestone 2 so far: real-time clock, MTC reader, flash logging, soft power on / off and
 the battery fuel gauge; v0.6 moves to a 2.8" 320x240 IPS colour display
 with a smooth anti-aliased font) for the breadboard prototype on a
 Raspberry Pi Pico 2 (RP2350). For the hookup, see
 [docs/wiring.md](docs/wiring.md). A browser simulator runs the same code
 ([sim/](sim/), page `sim/web/index.html`).
 
+The splash screen and About page carry the melling.audio name. The brand
+typeface, Century Gothic, is not in the firmware: the displays use JetBrains
+Mono (TFT) and a 5x7 bitmap font (OLED).
+
 ## Features
 
 * **Two inputs, routing matrix.** Each output takes any mix of IN A, IN B
-  and the generator. Presets: `A→A, A→B (thru)` (the default: IN A to both
-  outputs, IN B monitored only), `A+B merge → both`, `A→A, B→B (split)`,
-  `B→A, B→B`, plus a custom grid.
+  and the generator. Routing always reads as signal flow, IN → OUT. Presets:
+  *Thru* `IN A → OUT A + OUT B` (the default; IN B monitored only), *Merge*
+  `IN A + IN B → both outs`, *Split* `IN A → OUT A, IN B → OUT B`, *B to
+  both* `IN B → OUT A + OUT B`, plus a custom matrix (sources down, outputs
+  across).
 * **Thru / merge engine on core1.** Byte-level thru: with one source on an
   output, each byte leaves the moment it arrives, byte-identical to the
   input. When two sources share an output, they are interleaved only between
@@ -236,20 +244,23 @@ a press that turns into a hold never also selects something.
 | Logs | move (wraps) | back | open | open the session / start a new session / delete all |
 | Log browser | scroll (older / newer) | back to Logs | time column | detail page of an MSC / sysex line |
 | Power off? | choose Cancel / Power off | cancel | ok | ok |
+| Custom routing (matrix) | source row IN A / IN B / GEN (wraps) | OUT A column; on OUT A: back to Routing | OUT B column | connect / disconnect the source under the cursor to that output |
 | Anywhere | | | | hold 2 s: power-off countdown; release to cancel, hold 2 s more to power off |
 
-The monitor header shows the routing: `MIDIum        A:a  B:a` means both outputs
-take IN A; `A:ab B:ab` is the merge, `A:a  B:b` the split, `-` an output fed
-by no input (generator routing is not shown here). A `*` at the right edge
+The monitor header shows the routing per input, read as signal flow
+IN → OUT: `MIDIum        A→AB B→-` means IN A feeds OUT A and OUT B and IN B
+feeds neither (Thru, the default). `A→AB B→AB` is Merge, `A→A  B→B` Split,
+`A→-  B→AB` B to both; `-` is an input routed nowhere (still monitored).
+Generator routing is not shown here. A `*` at the right edge
 means MIDI arrived on either input in the last 150 ms. On the TFT, a `C`
 means the clock generator is running. The onboard LED also blinks on every
 byte received. With a fuel gauge fitted, a battery icon and the charge sit
-just left of these (`MIDIum A:a  B:a ▮ 76` on the OLED, which drops one
-space after the name to make room; `▮ 76%` on the TFT); see [Power](#power).
+just left of these (`▮ 76%` on the TFT; on the OLED the name gives way to
+make room: `A→AB B→-     ▮ 76`); see [Power](#power).
 
 While MTC is running (a quarter frame in the last 250 ms) the header shows
 the time of the selected input (Display > MTC source) with the rate, the
-direction and the input: `01:00:03;12 29D ▶ A  A:a  B:a` on the TFT, where
+direction and the input: `01:00:03;12 29D ▶ A  A→AB B→-` on the TFT, where
 the routing stays visible (`◀` when running backwards), `01:00:03;12 29D A`
 on the OLED (`24`, `25`, `29D`, `30`, `R` for reverse). `+B` (TFT) or a
 trailing `+` (OLED) means the other input is running MTC as well. A `;`
@@ -300,12 +311,27 @@ on the bottom row.
   fade time when not 0:00; sent as 25 fps), SET control / SET value (0-16383),
   FIRE macro. Defaults are GO, ALL format, all-call, cue 1. LOAD without a
   cue is refused, because the spec requires one.
-* **Routing**: the four presets (a `*` marks the active one) and
-  **Custom >**, the grid: `OUT A ← IN A`, `OUT A ← IN B`, `OUT A ← Gen`,
-  `OUT B ← IN A`, `OUT B ← IN B`, `OUT B ← Gen`. Presets set the input
-  columns only and leave generator routing alone. Changes take effect at
-  each input's next message, so an output never gets half a message. (This
-  replaces the old Thru menu: "Thru A off" is `OUT A <- IN A` off.)
+* **Routing**: the four presets, each shown with its signal flow, and
+  **Custom >** (a `*` marks the active one; Custom when no preset matches):
+
+  ```
+  Thru       IN A → OUT A + OUT B      *
+  Merge      IN A + IN B → both outs
+  Split      IN A → OUT A, IN B → OUT B
+  B to both  IN B → OUT A + OUT B
+  Custom     matrix                      >
+  ```
+
+  (On the OLED the flow is abbreviated: `A→A+B`, `A+B→both`, `A→A, B→B`,
+  `B→A+B`.) **Custom** is a matrix read left to right: a row per source
+  (IN A, IN B, GEN = the generator), a column per output, `●` routed and a
+  dim `·` not. UP / DOWN pick the source (wraps), LEFT / RIGHT the output
+  (LEFT on OUT A goes back), PRESS connects or disconnects. Under the grid,
+  the selected source in words (`IN A → OUT A, OUT B`, `IN B → monitor
+  only`) and, on the TFT, what PRESS will do (`PRESS: connect IN B →
+  OUT B`). Presets set the input rows only and leave generator routing
+  alone. Changes take effect at each input's next message, so an output
+  never gets half a message.
 * **Display**: Pin latest (default on), **Filters >**, Note names (C4=60 or
   C3=60), Time column (Off, Uptime `mm:ss.mmm`, Time of day
   `hh:mm:ss.mmm`; `hh:mm:ss` on the OLED; the TFT starts on Time of day,
@@ -337,7 +363,7 @@ on the bottom row.
   realtime shed, generator counts, stalls. Log: % of the log flash
   used, sessions, the live session's number and message count, records
   dropped (RAM queue full), bad pages found, pages written, sector erases.
-* **About**: model, version, build date, which display was detected, the
+* **About**: model (MIDIum MT-1), make (melling.audio), version, build date, which display was detected, the
   RTC, last reset cause (power-on or watchdog), last power-down, the gauge
   (MAX17048 or none), and a reminder that unpowered
   only IN A reaches OUT A (IN B is not passed).
@@ -678,6 +704,7 @@ NOR flash), and can later sit on a microSD archive.
 |---|---|
 | **M1** (v0.3) | Thru / merge engine with two inputs and a routing matrix, monitor, generator, menus, OLED / TFT, USB debug log |
 | **v0.6** | 2.8" 320x240 IPS display, anti-aliased JetBrains Mono, 40-column layouts; monitor pause freezes the view; MTC source selection with two feeds |
+| **v0.6.1** | melling.audio MIDIum MT-1 naming (splash, About, docs); routing shown as signal flow IN → OUT: preset list, a Custom matrix (sources × outputs), per-input header summary `A→AB B→-` |
 | **M2** (v0.4, v0.5) | Done: RV-3028 RTC (real timestamps), message log as a flash ring buffer with sessions, MTC reader and display, monitor filters, soft power on / off, MAX17048 fuel gauge, low battery, auto-off. Still to do: microSD archive, settings saved to flash |
 | **M3** | USB composite device (class-compliant MIDI plus mass storage for logs), replacing the CDC debug log. XRC host/remote mode with selectable 5 V / 12 V VCC. GPI in and out (3.5 mm TRS) |
 | **M4** | Filter / transform rules on the MIDI outputs: channel remap, per-type and per-channel filters, per output (the v0.4 filters are display only) |

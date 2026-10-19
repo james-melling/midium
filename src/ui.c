@@ -18,6 +18,9 @@
  * Logs:            sessions newest first; PRESS browse; LEFT back.
  * Log browser:     as the monitor without pinning; LEFT back to Logs.
  * Power off:       Cancel / Power off (Cancel preselected).
+ * Custom routing:  matrix, sources (rows) IN > OUT (columns): UP/DOWN
+ *                  source (wraps), LEFT/RIGHT output, LEFT on OUT A back,
+ *                  PRESS toggles.
  *
  * Over any screen: holding PRESS shows the power-off countdown (release to
  * cancel; JOY_PRESS only ever comes from a short tap, see joystick.h), the
@@ -78,7 +81,7 @@ struct menu {
 /* ------------------------------------------------------------------------ */
 /* UI state                                                                  */
 /* ------------------------------------------------------------------------ */
-typedef enum { SCR_MONITOR, SCR_MENU, SCR_DETAIL, SCR_MTC, SCR_DATETIME, SCR_LOGS, SCR_LOGDEL, SCR_BROWSE, SCR_PWRCONF } screen_t;
+typedef enum { SCR_MONITOR, SCR_MENU, SCR_DETAIL, SCR_MTC, SCR_DATETIME, SCR_LOGS, SCR_LOGDEL, SCR_BROWSE, SCR_PWRCONF, SCR_RGRID } screen_t;
 
 #define MENU_DEPTH 4
 static screen_t s_screen = SCR_MONITOR;
@@ -126,6 +129,10 @@ static uint32_t s_br_no;
 static log_pos_t s_br_pos;
 static bool     s_br_have;
 
+/* custom routing matrix: cursor row = source (IN A, IN B, GEN), column =
+ * output (OUT A, OUT B) */
+static uint8_t s_rg_row, s_rg_col;
+
 /* power: overlays on top of the current screen */
 typedef enum { OV_NONE = 0, OV_POWER, OV_HOLD, OV_AUTOOFF, OV_LOWBATT } overlay_t;
 static overlay_t s_ov;               /* overlay drawn last */
@@ -167,18 +174,7 @@ static void fmt_plus(uint32_t v, char *b, size_t n) {
 /* ------------------------------------------------------------------------ */
 /* Getters / setters / formatters                                            */
 /* ------------------------------------------------------------------------ */
-/* Routing grid: one getter / setter pair per (output, source) cell. */
-#define ROUTE_CELL(name, o, col) \
-    static int  get_##name(void)  { return g_settings.route.src[o][col]; } \
-    static void set_##name(int v) { g_settings.route.src[o][col] = v != 0; }
-ROUTE_CELL(r_aa, ME_OUT_A, ME_SRC_A)
-ROUTE_CELL(r_ab, ME_OUT_A, ME_SRC_B)
-ROUTE_CELL(r_ag, ME_OUT_A, ME_SRC_GEN)
-ROUTE_CELL(r_ba, ME_OUT_B, ME_SRC_A)
-ROUTE_CELL(r_bb, ME_OUT_B, ME_SRC_B)
-ROUTE_CELL(r_bg, ME_OUT_B, ME_SRC_GEN)
-#undef ROUTE_CELL
-
+/* Routing presets; Custom (no preset matches) opens the matrix page. */
 #define ROUTE_PRESET(n) \
     static void act_preset##n(void) { route_preset_apply(&g_settings.route, n); } \
     static int  get_preset##n(void) { return route_preset_active(&g_settings.route, n); }
@@ -188,6 +184,14 @@ ROUTE_PRESET(2)
 ROUTE_PRESET(3)
 #undef ROUTE_PRESET
 static void fmt_mark(int v, char *b, size_t n) { snprintf(b, n, "%s", v ? "*" : ""); }
+/* Routing list: the active entry's '*' one cell in, so it lines up with
+ * Custom's "* >". */
+static void fmt_rmark(int v, char *b, size_t n) { snprintf(b, n, "%s", v ? "* " : ""); }
+static int  get_custom(void) {
+    for (int p = 0; p < ROUTE_PRESET_COUNT; p++) if (route_preset_active(&g_settings.route, p)) return 0;
+    return 1;
+}
+static void fmt_custom(int v, char *b, size_t n) { snprintf(b, n, "%s", v ? "* >" : ">"); }
 
 /* Filters: presets and one toggle per category. */
 #define FPRESET(n) \
@@ -306,6 +310,7 @@ static void open_mtc(void);
 static void open_datetime(void);
 static void open_logs(void);
 static void open_pwrconf(void);
+static void open_rgrid(void);
 
 /* stats */
 static void fmt_count(int t, char *b, size_t n) { snprintf(b, n, "%lu", (unsigned long)monitor_type_count((midi_type_t)t)); }
@@ -421,7 +426,8 @@ static void fmt_power(int which, char *b, size_t n) {
 /* about */
 static void fmt_about(int which, char *b, size_t n) {
     switch (which) {
-    case 0: snprintf(b, n, "%s", MIDIUM_MODEL); break;
+    case 0: snprintf(b, n, "%s %s", MIDIUM_NAME, MIDIUM_MODEL); break;
+    case 7: snprintf(b, n, "%s", MIDIUM_MAKER); break;
     case 1: snprintf(b, n, "%s", MIDIUM_VERSION); break;
     case 2: snprintf(b, n, "%s", __DATE__); break;
     case 3: snprintf(b, n, "%s", __TIME__); break;
@@ -480,25 +486,16 @@ static const menu_item_t gen_items[] = {
     ACT("PANIC notes off", act_panic),
 };
 
-/* arrows from the font (display.h CH_LEFT / CH_RIGHT) */
-#define AL "\x1B"
+/* arrow from the font (display.h CH_RIGHT) */
 #define AR "\x1A"
-static const menu_item_t grid_items[] = {
-    TOG("OUT A " AL " IN A", get_r_aa, set_r_aa),
-    TOG("OUT A " AL " IN B", get_r_ab, set_r_ab),
-    TOG("OUT A " AL " Gen", get_r_ag, set_r_ag),
-    TOG("OUT B " AL " IN A", get_r_ba, set_r_ba),
-    TOG("OUT B " AL " IN B", get_r_bb, set_r_bb),
-    TOG("OUT B " AL " Gen", get_r_bg, set_r_bg),
-};
-static const menu_t grid_menu = MENU("Custom routing", grid_items);
-
+/* Labels NULL: "Thru      IN A > OUT A + OUT B", built by item_label()
+ * from settings.c (40 / 21 column forms). */
 static const menu_item_t route_items[] = {
-    ACTF("A" AR "A, A" AR "B (thru)", act_preset0, get_preset0, fmt_mark),
-    ACTF("A+B merge " AR " both", act_preset1, get_preset1, fmt_mark),
-    ACTF("A" AR "A, B" AR "B (split)", act_preset2, get_preset2, fmt_mark),
-    ACTF("B" AR "A, B" AR "B", act_preset3, get_preset3, fmt_mark),
-    SUB("Custom", &grid_menu),
+    ACTF(NULL, act_preset0, get_preset0, fmt_rmark),
+    ACTF(NULL, act_preset1, get_preset1, fmt_rmark),
+    ACTF(NULL, act_preset2, get_preset2, fmt_rmark),
+    ACTF(NULL, act_preset3, get_preset3, fmt_rmark),
+    ACTF(NULL, open_rgrid, get_custom, fmt_custom),
 };
 
 #define FTOG(c) TOG(NULL, get_fc_##c, set_fc_##c)
@@ -598,7 +595,8 @@ static const menu_item_t stats_items[] = {
 };
 
 static const menu_item_t about_items[] = {
-    INFO(MIDIUM_NAME, fmt_about, 0),
+    INFO("Model", fmt_about, 0),
+    INFO("Make", fmt_about, 7),
     INFO("Version", fmt_about, 1),
     INFO("Built", fmt_about, 2),
     INFO("", fmt_about, 3),
@@ -634,9 +632,15 @@ static const menu_item_t main_items[] = {
 static const menu_t main_menu = MENU("Menu", main_items);
 
 static const char *item_label(const menu_t *m, int idx) {
+    static char lbl[CON_MAX_COLS + 8];
     const menu_item_t *it = &m->items[idx];
     if (it->label) return it->label;
     if (m == &filter_menu) return msg_filter_cat_label((filter_cat_t)(idx - FILTER_FIRST_CAT));
+    if (m == &route_menu && idx < ROUTE_PRESET_COUNT) {
+        snprintf(lbl, sizeof lbl, is_wide() ? "%-11s%s" : "%-10s%s", route_preset_name(idx), route_preset_flow(idx, is_wide()));
+        return lbl;
+    }
+    if (m == &route_menu) return is_wide() ? "Custom     matrix" : "Custom    matrix";
     return "";
 }
 
@@ -943,11 +947,13 @@ static int batt_field(uint64_t now, char *b, size_t n, uint8_t *attr) {
 static const char *const MTC_RATE_SHORT[4] = { "24", "25", "29D", "30" };
 
 /* TFT header, 40 columns, fixed fields:
- *   no MTC:  "MIDIum        A:ab B:ab         [b 76%] C*"
- *            "PAUSED +1532  A:ab B:ab ..."
- *   MTC:     "01:00:03:12 25 > A+B  A:ab B:ab [b 76%] C*"  (route, or
+ *   no MTC:  "MIDIum        A>AB B>-          [b 76%] C*"
+ *            "PAUSED +1532  A>AB B>- ..."
+ *   MTC:     "01:00:03:12 25 > A+B  A>AB B>-  [b 76%] C*"  (route, or
  *            PAUSED+n while paused); the time in orange running, grey
  *            stopped; "+B" = the other input runs MTC too.
+ * Routing reads IN -> OUT, per input: "A>AB" = IN A feeds OUT A and OUT B,
+ * "B>-" = IN B feeds neither (route_summary_line(); generator not shown).
  * Battery at columns 32-36, generator clock 'C' at 38, activity '*' at 39. */
 /* Paused with the cursor on the oldest message the monitor still holds,
  * and older ones have gone (the log has them all). */
@@ -959,10 +965,7 @@ static void render_header_wide(uint64_t now, bool act) {
     const int cols = con_cols();
     const uint8_t attr = CLS_HEADER | ATTR_INVERSE;
     char route[16], pc[12], f[CON_MAX_COLS + 8], bf[12];
-    char ra[4], rb[4];
-    route_summary(&g_settings.route, ME_OUT_A, ra, sizeof ra);
-    route_summary(&g_settings.route, ME_OUT_B, rb, sizeof rb);
-    snprintf(route, sizeof route, "A:%-2s B:%-2s", ra, rb);
+    route_summary_line(&g_settings.route, route, sizeof route);
     fmt_plus(monitor_new_since_pause(), pc, sizeof pc);
     mtc_pick_t mp;
     mtc_pick(now, &mp);
@@ -999,7 +1002,8 @@ static void render_header_wide(uint64_t now, bool act) {
     con_print(0, cols - 1, attr, act ? "*" : " ");
 }
 
-/* OLED header, 21 columns: as v0.5. Routing summary ("PAUSED +1532" while
+/* OLED header, 21 columns: "A>AB B>-        [b82*" (with a battery gauge;
+ * "MIDIum  A>AB B>-" without). Routing summary ("PAUSED +1532" while
  * paused), or the MTC time while MTC is running (and for MTC_HOLD_US after
  * it stops, marked STOP); battery before the activity star. */
 static void render_header_narrow(uint64_t now, bool act) {
@@ -1015,11 +1019,12 @@ static void render_header_narrow(uint64_t now, bool act) {
             fmt_plus(monitor_new_since_pause(), pc, sizeof pc);
             snprintf(hdr, sizeof hdr, "PAUSED %s%s", pc, paused_at_top() ? " TOP" : "");
         } else {
-            char ra[4], rb[4];
-            route_summary(&g_settings.route, ME_OUT_A, ra, sizeof ra);
-            route_summary(&g_settings.route, ME_OUT_B, rb, sizeof rb);
-            /* drop one space to make room for the battery */
-            snprintf(hdr, sizeof hdr, bw ? "%-6s A:%-2s B:%s" : "%-7s A:%-2s B:%s", MIDIUM_NAME, ra, rb);
+            char rl[16];
+            route_summary_line(&g_settings.route, rl, sizeof rl);
+            /* with the battery field there is no room for the name as
+             * well: "MIDIum A>AB B>AB" would run into the icon */
+            if (bw) snprintf(hdr, sizeof hdr, "%s", rl);
+            else snprintf(hdr, sizeof hdr, "%-7s %s", MIDIUM_NAME, rl);
         }
         con_row(0, attr, hdr);
         if (bw) con_print(0, cols - 1 - bw, battr, bf);
@@ -1679,6 +1684,101 @@ static void render_browse(void) {
 }
 
 /* ------------------------------------------------------------------------ */
+/* Custom routing matrix                                                     */
+/* ------------------------------------------------------------------------ */
+/* Read left to right as signal flow: a row per source, a column per output.
+ *
+ *   Custom routing                    IN > OUT
+ *
+ *            > OUT A   OUT B
+ *
+ *     IN A     [#]       #             # routed, . not routed,
+ *     IN B      .        .             [ ] the cursor
+ *     GEN       #        #
+ *
+ *     IN A > OUT A, OUT B              the cursor row in words
+ *     PRESS: disconnect IN A > OUT A
+ *
+ * UP/DOWN source (wraps), LEFT/RIGHT output (LEFT on OUT A: back), PRESS
+ * toggles. The engine latches routes per message start, so a change takes
+ * effect at the next message boundary. */
+#define RG_ROWS 3
+static const char *const RG_SRC[RG_ROWS] = { "IN A", "IN B", "GEN" };
+
+static void open_rgrid(void) {
+    s_rg_row = 0;
+    s_rg_col = 0;
+    set_screen(SCR_RGRID);
+}
+
+static void rgrid_event(joy_event_t e) {
+    switch (e) {
+    case JOY_UP:    s_rg_row = (uint8_t)val_wrap_step(s_rg_row, -1, 0, RG_ROWS - 1); break;
+    case JOY_DOWN:  s_rg_row = (uint8_t)val_wrap_step(s_rg_row, 1, 0, RG_ROWS - 1); break;
+    case JOY_LEFT:  if (s_rg_col == 0) back_to_menu(); else s_rg_col = 0; break;
+    case JOY_RIGHT: if (s_rg_col == 0) s_rg_col = 1; break;
+    case JOY_PRESS: {
+        volatile bool *c = &g_settings.route.src[s_rg_col][s_rg_row];
+        *c = !*c;
+        break;
+    }
+    default: break;
+    }
+}
+
+/* Layout: rows (header, first source, row step, words) and the centre
+ * column of each output. */
+typedef struct { int hdr, row0, step, words, lab, arrow, cx[2]; } rg_layout_t;
+
+static void rg_layout(rg_layout_t *L) {
+    bool wide = is_wide();
+    int rows = con_rows();
+    if (!wide)            *L = (rg_layout_t){ 1, 2, 1, 6, 1, 6, { 10, 17 } };   /* OLED 21 x 8 */
+    else if (rows >= 16)  *L = (rg_layout_t){ 2, 4, 2, 11, 2, 11, { 15, 25 } }; /* TFT 2.8": 40 x 16 */
+    else                  *L = (rg_layout_t){ 2, 3, 1, 7, 2, 11, { 15, 25 } };  /* TFT 1.9": 40 x 11 */
+}
+
+static void render_rgrid(uint64_t now) {
+    bool wide = is_wide();
+    rg_layout_t L;
+    rg_layout(&L);
+    const volatile bool (*src)[ME_NUM_SRCS] = g_settings.route.src;
+    char l[CON_MAX_COLS + 24];
+
+    if (wide) con_row_lr(0, CLS_HEADER | ATTR_INVERSE, "Custom routing", "IN " AR " OUT ");
+    else con_row(0, CLS_HEADER | ATTR_INVERSE, "Custom routing");
+    for (int r = 1; r < con_rows() - 1; r++) con_row(r, CLS_NORMAL, "");
+
+    /* column heads: "> OUT A   OUT B", the arrow over the source labels' end */
+    con_print(L.hdr, L.arrow, CLS_DIM, AR);
+    for (int o = 0; o < 2; o++) con_print(L.hdr, L.cx[o] - 2, CLS_DIM, o ? "OUT B" : "OUT A");
+
+    for (int s = 0; s < RG_ROWS; s++) {
+        int row = L.row0 + s * L.step;
+        bool sel_row = s == s_rg_row;
+        con_print(row, L.lab, sel_row ? CLS_HEADER : CLS_NORMAL, RG_SRC[s]);
+        for (int o = 0; o < 2; o++) {
+            bool on = src[o][s];
+            char cell[4] = { ' ', on ? CH_DOT_ON : CH_DOT_OFF, ' ', 0 };
+            uint8_t cls = on ? CLS_NOTE : CLS_DIM;
+            if (sel_row && o == s_rg_col) con_print(row, L.cx[o] - 1, (uint8_t)(cls | ATTR_INVERSE), cell);
+            else con_print(row, L.cx[o], cls, cell + 1);
+        }
+    }
+
+    /* the cursor row in words, IN > OUT, and what PRESS does */
+    route_flow_text(&g_settings.route, s_rg_row, wide, l, sizeof l);
+    con_print(L.words, L.lab, CLS_NORMAL, l);
+    if (wide) {
+        snprintf(l, sizeof l, "PRESS: %s %s " AR " OUT %c", src[s_rg_col][s_rg_row] ? "disconnect" : "connect",
+                 RG_SRC[s_rg_row], s_rg_col ? 'B' : 'A');
+        con_print(L.words + 1, L.lab, CLS_DIM, l);
+    }
+    if (wide) render_footer(now, s_rg_col == 0 ? "PRESS toggle  U/D/R move  LEFT back" : "PRESS toggle  U/D/L move");
+    else render_footer(now, s_rg_col == 0 ? "PRESS tgl  LEFT back" : "PRESS toggle");
+}
+
+/* ------------------------------------------------------------------------ */
 /* Power: confirm page, countdown, warnings, shutdown / off screens          */
 /* ------------------------------------------------------------------------ */
 static void open_pwrconf(void) {
@@ -1865,6 +1965,7 @@ void ui_event(joy_event_t e) {
     case SCR_LOGDEL:   logdel_event(e); break;
     case SCR_BROWSE:   browse_event(e); break;
     case SCR_PWRCONF:  pwrconf_event(e); break;
+    case SCR_RGRID:    rgrid_event(e); break;
     default:           menu_event(e); break;
     }
     s_need_render = true;
@@ -1928,6 +2029,7 @@ void ui_render(uint64_t now, bool history_changed) {
     case SCR_LOGDEL:   render_logdel(); break;
     case SCR_BROWSE:   render_browse(); break;
     case SCR_PWRCONF:  render_pwrconf(); break;
+    case SCR_RGRID:    render_rgrid(now); break;
     default:           render_menu(now); break;
     }
 }

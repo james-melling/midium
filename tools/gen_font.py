@@ -27,6 +27,8 @@ Glyph set:
   0x18..0x1B  arrows up, down, right, left (from the font: U+2191 U+2193
               U+2192 U+2190; CP437 positions, as in src/font5x7.h)
   0x1C, 0x1D  progress bar: full cell, empty track (TFT only)
+  0x1E, 0x1F  routing matrix cells: filled disc (routed), small dot (not
+              routed); src/glyphs.h has 5x7 versions for the OLED
 Anything else draws as '?'.
 
 The Reserved Font Name rule of the OFL applies to modified versions of the
@@ -99,13 +101,34 @@ PLAY_L = [r[::-1] for r in PLAY_R]
 BAR_FULL = ["........"] * 3 + ["FFFFFFFF"] * 9 + ["........"] * 3
 BAR_EMPTY = ["........"] * 3 + ["44444444"] * 9 + ["........"] * 3
 
+# routing matrix cells: an anti-aliased disc centred on the x-height, 4x4
+# supersampled
+def disc(radius, cx=3.5, cy=7.0):
+    rows = []
+    for y in range(CELL_H):
+        row = ""
+        for x in range(CELL_W):
+            hit = 0
+            for sy in range(4):
+                for sx in range(4):
+                    px, py = x + (sx + 0.5) / 4, y + (sy + 0.5) / 4
+                    hit += (px - cx - 0.5) ** 2 + (py - cy - 0.5) ** 2 <= radius ** 2
+            a = int(round(hit / 16 * 15))
+            row += "." if a == 0 else "%X" % a
+        rows.append(row)
+    return rows
+
+DOT_ON = disc(3.4)
+DOT_OFF = disc(1.1)
+
 ICONS = {
     0x10: battery(0), 0x11: battery(1), 0x12: battery(2), 0x13: battery(3), 0x14: battery(4),
     0x15: BOLT, 0x16: PLAY_R, 0x17: PLAY_L, 0x1C: BAR_FULL, 0x1D: BAR_EMPTY,
+    0x1E: DOT_ON, 0x1F: DOT_OFF,
 }
 FROM_FONT = {0x18: 0x2191, 0x19: 0x2193, 0x1A: 0x2192, 0x1B: 0x2190}
 
-FIRST_EXTRA, LAST_EXTRA = 0x10, 0x1D
+FIRST_EXTRA, LAST_EXTRA = 0x10, 0x1F
 FIRST_ASCII, LAST_ASCII = 0x20, 0x7E
 
 
@@ -197,7 +220,7 @@ def main():
     lines.append(" * Authors (https://github.com/JetBrains/JetBrainsMono). Licensed under the")
     lines.append(" * SIL Open Font License, Version 1.1 (THIRD_PARTY.md, tools/fonts/OFL.txt).")
     lines.append(" * Rasterised glyph bitmaps of the unmodified font; the battery, bolt, play")
-    lines.append(" * and bar icons (0x10-0x17, 0x1C, 0x1D) are MIDIum's own.")
+    lines.append(" * bar and routing-dot icons (0x10-0x17, 0x1C-0x1F) are MIDIum's own.")
     lines.append(" *")
     lines.append(f" * Cell {CELL_W} x {CELL_H} px, baseline under row {BASELINE - 1}. Each glyph: {CELL_H} rows of")
     lines.append(f" * {CELL_W // 2} bytes, two pixels per byte (high nibble = left), alpha 0..15.")

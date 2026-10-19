@@ -66,6 +66,7 @@ button, select, input { font: inherit; color: inherit; }
 .top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px; }
 .top h1 { margin: 0; font-size: 1.6rem; font-weight: 400; letter-spacing: 0.01em; text-wrap: balance; }
 .top h1 span { color: var(--muted); }
+.top h1 .maker { font-size: 0.62em; letter-spacing: 0.06em; margin-right: 0.35em; }
 .top p { margin: 4px 0 0; color: var(--muted); max-width: 62ch; font-size: 0.92rem; }
 .top-ctl { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--panel); }
@@ -221,6 +222,8 @@ td:first-child { white-space: nowrap; }
 .out-h { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; margin-bottom: 6px; }
 .out-h strong { font-weight: 400; font-size: 1.05rem; letter-spacing: 0.04em; }
 .route { display: inline-flex; align-items: center; gap: 4px; font-size: 0.76rem; color: var(--muted); }
+.flow { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.port-h .route { font-size: 0.76rem; }
 .chip { font-family: var(--f-mono); font-size: 0.7rem; padding: 1px 6px; border-radius: 10px; border: 1px solid var(--line); color: var(--c-dim); }
 .chip.on { border-color: var(--accent); color: var(--ink); background: color-mix(in srgb, var(--accent) 18%, transparent); }
 .counts { font-family: var(--f-mono); font-size: 0.72rem; color: var(--muted); font-variant-numeric: tabular-nums; display: flex; gap: 10px; flex-wrap: wrap; }
@@ -252,8 +255,8 @@ td:first-child { white-space: nowrap; }
 <div class="wrap">
   <header class="top">
     <div>
-      <h1>MIDIum <span>simulator</span></h1>
-      <p>The screen, menus, monitor, generator, thru / merge engine and soft power below are the real v0.6 firmware, compiled to WebAssembly. Inject traffic on IN A and IN B, drive the joystick, and watch what leaves OUT A and OUT B.</p>
+      <h1><span class="maker">melling.audio</span> MIDIum MT-1 <span>simulator</span></h1>
+      <p>The screen, menus, monitor, generator, thru / merge engine and soft power below are the real v0.6.1 firmware, compiled to WebAssembly. Inject traffic on IN A and IN B, drive the joystick, and watch what leaves OUT A and OUT B.</p>
     </div>
     <div class="top-ctl">
       <div class="seg" role="group" aria-label="Display fitted">
@@ -365,7 +368,7 @@ td:first-child { white-space: nowrap; }
     </div>
   </div>
 
-  <p class="foot" id="foot">Default routing is the firmware default: IN A goes to both outputs and IN B is monitored only. Change it on the device under Menu &gt; Routing. Settings live in RAM, as on the hardware so far, so a power cycle or display change resets them (including the power settings). The clock starts from this computer's time, and the flash log (emulated in RAM with the real format code) survives power cycles until the page is reloaded.</p>
+  <p class="foot" id="foot">Default routing is the firmware default, <i>Thru</i>: IN A &rarr; OUT A + OUT B, IN B monitored only. Change it on the device under Menu &gt; Routing (presets, or the Custom matrix); the chips beside each input and output follow it. Settings live in RAM, as on the hardware so far, so a power cycle or display change resets them (including the power settings). The clock starts from this computer's time, and the flash log (emulated in RAM with the real format code) survives power cycles until the page is reloaded.</p>
 </div>
 
 <script>/*__MIDIUM_SIM_JS__*/</script>
@@ -589,7 +592,8 @@ td:first-child { white-space: nowrap; }
       var L = P.p ? "B" : "A";
       var el = document.createElement("div");
       el.className = "port";
-      var h = '<div class="port-h"><strong><span class="act" id="act-' + L + '"></span>IN ' + L + '</strong>' +
+      var h = '<div class="port-h"><span class="flow"><strong><span class="act" id="act-' + L + '"></span>IN ' + L + '</strong>' +
+        '<span class="route" aria-label="Outputs IN ' + L + ' is routed to">&rarr; <span class="chip" id="ri-' + L + '-0">OUT A</span><span class="chip" id="ri-' + L + '-1">OUT B</span></span></span>' +
         '<label for="ch-' + L + '">Channel <select id="ch-' + L + '">';
       for (var c = 1; c <= 16; c++) h += '<option value="' + (c - 1) + '"' + (c - 1 === P.ch ? " selected" : "") + ">" + c + "</option>";
       h += "</select></label></div>";
@@ -735,8 +739,9 @@ td:first-child { white-space: nowrap; }
       var L = O.o ? "B" : "A";
       var el = document.createElement("div");
       el.innerHTML =
-        '<div class="out-h"><strong>OUT ' + L + '</strong>' +
-        '<span class="route" aria-label="Sources routed to OUT ' + L + '">&larr; <span class="chip" id="r-' + L + '-0">IN A</span><span class="chip" id="r-' + L + '-1">IN B</span><span class="chip" id="r-' + L + '-2">GEN</span></span>' +
+        '<div class="out-h"><span class="flow">' +
+        '<span class="route" aria-label="Sources routed to OUT ' + L + '"><span class="chip" id="r-' + L + '-0">IN A</span><span class="chip" id="r-' + L + '-1">IN B</span><span class="chip" id="r-' + L + '-2">GEN</span> &rarr;</span>' +
+        '<strong>OUT ' + L + '</strong></span>' +
         '<span class="counts"><span><b id="c-' + L + '-b">0</b> bytes</span><span><b id="c-' + L + '-m">0</b> msgs</span><span id="c-' + L + '-dw"><b id="c-' + L + '-d">0</b> merge drops</span></span>' +
         '<button type="button" class="btn" id="clr-' + L + '">Clear</button></div>' +
         '<div class="log" id="log-' + L + '" tabindex="0" aria-label="OUT ' + L + ' byte log, newest first"><div class="empty">Nothing sent yet.</div></div>';
@@ -885,6 +890,12 @@ td:first-child { white-space: nowrap; }
     if (bits !== lastBits) {
       lastBits = bits;
       outs.forEach(function (O) { O.chips.forEach(function (c, s) { c.classList.toggle("on", !!(bits & (1 << (O.o * 3 + s)))); }); });
+      ["A", "B"].forEach(function (L, s) {
+        [0, 1].forEach(function (o) {
+          var c = document.getElementById("ri-" + L + "-" + o);
+          if (c) c.classList.toggle("on", !!(bits & (1 << (o * 3 + s))));
+        });
+      });
     }
     statT += dtMs;
     if (statT < 120) return;

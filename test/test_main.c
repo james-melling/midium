@@ -780,26 +780,68 @@ static void test_routing_ui(void) {
     printf("routing presets / display widths\n");
     me_settings_t r;
     memset(&r, 0, sizeof r);
-    char a[4], b[4];
+    char a[4], b[4], line[16], w[48];
+    /* per input, IN -> OUT: the outputs each input feeds */
     static const char *const sum[ROUTE_PRESET_COUNT][2] = {
-        { "a", "a" }, { "ab", "ab" }, { "a", "b" }, { "b", "b" } };
+        { "AB", "-" }, { "AB", "AB" }, { "A", "B" }, { "-", "AB" } };
+    static const char *const hdr_line[ROUTE_PRESET_COUNT] = {
+        "A\x1A" "AB B\x1A" "- ", "A\x1A" "AB B\x1A" "AB", "A\x1A" "A  B\x1A" "B ", "A\x1A" "-  B\x1A" "AB" };
+    static const char *const names[ROUTE_PRESET_COUNT] = { "Thru", "Merge", "Split", "B to both" };
+    static const char *const flow[ROUTE_PRESET_COUNT] = {
+        "IN A \x1A OUT A + OUT B", "IN A + IN B \x1A both outs",
+        "IN A \x1A OUT A, IN B \x1A OUT B", "IN B \x1A OUT A + OUT B" };
+    static const char *const words_a[ROUTE_PRESET_COUNT] = {
+        "IN A \x1A OUT A, OUT B", "IN A \x1A OUT A, OUT B", "IN A \x1A OUT A", "IN A \x1A monitor only" };
+    static const char *const words_b[ROUTE_PRESET_COUNT] = {
+        "IN B \x1A monitor only", "IN B \x1A OUT A, OUT B", "IN B \x1A OUT B", "IN B \x1A OUT A, OUT B" };
     for (int p = 0; p < ROUTE_PRESET_COUNT; p++) {
         r.src[0][ME_SRC_GEN] = true; r.src[1][ME_SRC_GEN] = false;
         route_preset_apply(&r, p);
         for (int q = 0; q < ROUTE_PRESET_COUNT; q++) CHECK(route_preset_active(&r, q) == (p == q));
         CHECK(r.src[0][ME_SRC_GEN] && !r.src[1][ME_SRC_GEN]);   /* generator left alone */
-        route_summary(&r, 0, a, sizeof a);
-        route_summary(&r, 1, b, sizeof b);
+        route_summary(&r, ME_SRC_A, a, sizeof a);
+        route_summary(&r, ME_SRC_B, b, sizeof b);
         CHECK_STR(a, sum[p][0]);
         CHECK_STR(b, sum[p][1]);
+        route_summary_line(&r, line, sizeof line);
+        CHECK_STR(line, hdr_line[p]);
+        CHECK(strlen(line) == 9);                    /* fixed width in the header */
         char hdr[32];
-        snprintf(hdr, sizeof hdr, "%-7s A:%-2s B:%s", "PAUSED", a, b);
-        CHECK(strlen(hdr) <= 19);                    /* room for the activity '*' */
-        CHECK(strlen(route_preset_name(p)) <= 19);   /* + " *" marker on 21 cols */
+        /* OLED: "MIDIum  A>AB B>AB" + activity '*' (no gauge), or the route
+         * alone, a gap, the 4-cell battery and '*' */
+        snprintf(hdr, sizeof hdr, "%-7s %s", "MIDIum", line);
+        CHECK(strlen(hdr) <= 21 - 1);
+        CHECK(strlen(line) + 1 <= 21 - 4 - 1);
+        /* TFT with MTC: route from column 21, battery from column 32 */
+        CHECK(21 + strlen(line) <= 32);
+        CHECK_STR(route_preset_name(p), names[p]);
+        CHECK_STR(route_preset_flow(p, true), flow[p]);
+        /* menu rows: "%-10s" name + flow, with the "* " marker (21 / 40 cols) */
+        CHECK(10 + strlen(route_preset_flow(p, false)) + 2 <= 21);
+        CHECK(11 + strlen(route_preset_flow(p, true)) + 2 <= 40);
+        CHECK(strlen(route_preset_name(p)) < 10);
+        route_flow_text(&r, ME_SRC_A, true, w, sizeof w);
+        CHECK_STR(w, words_a[p]);
+        route_flow_text(&r, ME_SRC_B, true, w, sizeof w);
+        CHECK_STR(w, words_b[p]);
+        for (int s = 0; s < ME_NUM_SRCS; s++) {
+            route_flow_text(&r, s, false, w, sizeof w);
+            CHECK(strlen(w) <= 20);                  /* OLED matrix page, from column 1 */
+        }
     }
+    route_flow_text(&r, ME_SRC_GEN, true, w, sizeof w);
+    CHECK_STR(w, "GEN \x1A OUT A");
     memset(&r, 0, sizeof r);
-    route_summary(&r, 0, a, sizeof a);
+    route_summary(&r, ME_SRC_A, a, sizeof a);
     CHECK_STR(a, "-");
+    route_summary_line(&r, line, sizeof line);
+    CHECK_STR(line, "A\x1A" "-  B\x1A" "- ");
+    route_flow_text(&r, ME_SRC_GEN, true, w, sizeof w);
+    CHECK_STR(w, "GEN \x1A not sent");
+    route_flow_text(&r, ME_SRC_B, false, w, sizeof w);
+    CHECK_STR(w, "IN B \x1A monitored");
+    CHECK_STR(route_preset_name(-1), "?");
+    CHECK_STR(route_preset_flow(ROUTE_PRESET_COUNT, true), "?");
     settings_defaults(&g_settings);
     CHECK(route_preset_active(&g_settings.route, 0));
     CHECK(g_settings.route.src[0][ME_SRC_GEN] && g_settings.route.src[1][ME_SRC_GEN]);

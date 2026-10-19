@@ -1,5 +1,5 @@
 /*
- * pins.h - MIDIum (NSK MT-1) GPIO map, Raspberry Pi Pico 2 (RP2350) prototype.
+ * pins.h - MIDIum MT-1 GPIO map, Raspberry Pi Pico 2 (RP2350) prototype.
  *
  * This is the single source of truth for pin assignments. docs/wiring.md
  * documents the same map for the breadboard; keep the two in sync.

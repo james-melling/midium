@@ -633,13 +633,13 @@ def sheet4():
          "Send notes.", "Notes arrive at OUT A through the relays (passive "
          "bypass)."),
         ("Power from USB. Watch relays and screen.",
-         "Relays click ~1 s after power-up, splash, then 'MIDIum  A:on B:on'."),
+         "Relays click ~1 s after power-up, splash, then 'MIDIum  A→AB B→-'."),
         ("Laptop OUT → IN A, OUT A → interface 2, OUT B → laptop IN. "
          "Send notes, CC, PC, bend, sysex.",
          "Shown on screen, LED blinks, same data on A and B; sysex "
          "byte-identical on B."),
-        ("Same. Menu > Thru > Thru A off. Send notes.",
-         "Nothing on OUT A, OUT B still passes. Turn A back on."),
+        ("Same. Menu > Routing > Custom: IN A → OUT A off. Send notes.",
+         "Nothing on OUT A, OUT B still passes. Then Routing > Thru."),
         ("Generate > Note test C4, CC, PC, MSC GO, MMC Play, PANIC.",
          "Laptop sees each on OUT B; MSC GO = F0 7F 7F 02 7F 01 F7."),
         ("Generate > Clock BPM 120 > Clock out on.",
@@ -648,7 +648,7 @@ def sheet4():
          "Note sweep + Clock out running.",
          "Every byte on OUT B; Drops A/B = 0, UART errors = 0, Thru orphans "
          "= 0 (Mon overflow allowed)."),
-        ("Second source into IN B. Menu > Routing > A+B to both outputs. "
+        ("Second source into IN B. Menu > Routing > Merge (IN A + IN B → both). "
          "Send from both at once, incl. sysex on each.",
          "Both streams merged on OUT A and OUT B, every message intact "
          "(sysex never interleaved). Monitor tags each line A or B."),

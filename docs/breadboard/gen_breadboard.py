@@ -32,7 +32,7 @@ import bb_route
 from bb_route import module_rect, part_xy
 
 FONT = "'Century Gothic','URW Gothic','URW Gothic L','Questrial',sans-serif"
-TITLE = "MIDIum (NSK MT-1) · Breadboard prototype · Rev B · 18/10/2026 · J Melling"
+TITLE = "melling.audio MIDIum MT-1 · Breadboard prototype · Rev C · 19/10/2026 · J Melling"
 PAGE_W, PAGE_H = 420.0, 297.0
 
 # drawing scale on sheet 1: mm per 0.1 inch
@@ -115,11 +115,11 @@ def frame(s, sheet, title):
     s.line(x0, y0 + 9, x0 + w, y0 + 9, sw=0.3)
     s.line(x0, y0 + 16.5, x0 + w, y0 + 16.5, sw=0.3)
     s.line(x0 + 112, y0 + 9, x0 + 112, y0 + h, sw=0.3)
-    s.text(x0 + 3, y0 + 6.3, "MIDIum (NSK MT-1)", size=5, weight="bold")
+    s.text(x0 + 3, y0 + 6.3, "MIDIum MT-1", size=5, weight="bold")
     s.text(x0 + w - 3, y0 + 6.3, "melling.audio", size=3.2, anchor="end",
            fill="#555")
     s.text(x0 + 3, y0 + 14.2, f"Breadboard prototype · {title}", size=3.4)
-    s.text(x0 + 3, y0 + 21.6, "Rev B · 18/10/2026 · J Melling", size=3.2)
+    s.text(x0 + 3, y0 + 21.6, "Rev C · 19/10/2026 · J Melling", size=3.2)
     s.text(x0 + 115, y0 + 14.2, f"Sheet {sheet} of 4", size=3.2)
     s.text(x0 + 115, y0 + 21.6, "A3 · milestone 1", size=3.0, fill="#444")
 
@@ -683,7 +683,8 @@ def build_pdf(svgs, out):
     from playwright.sync_api import sync_playwright
     pages = "".join(f'<div class="page">{svg[svg.index("<svg"):]}</div>'
                     for svg in svgs)
-    doc = ("<!doctype html><html><head><meta charset='utf-8'><style>"
+    doc = ("<!doctype html><html><head><meta charset='utf-8'>"
+           "<title>" + TITLE + "</title><style>"
            "@page { size: 420mm 297mm; margin: 0 }"
            "html,body { margin:0; padding:0 }"
            ".page { width:420mm; height:297mm; page-break-after: always;"

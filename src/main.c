@@ -1,5 +1,5 @@
 /*
- * MIDIum (NSK MT-1) - inline MIDI test / thru box.
+ * MIDIum MT-1 (melling.audio) - inline MIDI test / thru box.
  * Thru + merge engine (two inputs, routing matrix), monitor, generator, menus.
  *
  * core1: MIDI engine only (src/midi_io.c, src/midi_engine.c).
@@ -38,8 +38,9 @@ static void splash(void) {
     con_clear();
     int r = con_rows() >= 16 ? con_rows() / 2 - 3 : 1;   /* centred on the 2.8" */
     con_row(r, CLS_HEADER, "  " MIDIUM_NAME);
-    con_row(r + 1, CLS_DIM, "  " MIDIUM_MODEL " v" MIDIUM_VERSION);
+    con_row(r + 1, CLS_DIM, "  " MIDIUM_MODEL "  v" MIDIUM_VERSION);
     con_row(r + 3, CLS_NORMAL, "  inline MIDI tester");
+    con_row(r + 5, CLS_DIM, "  " MIDIUM_MAKER);
     con_flush_all();
 }
 
@@ -83,7 +84,7 @@ int main(void) {
     if (spent < 700000u) sleep_us(700000u - spent);
     con_clear();
 
-    dbg_printf("\n%s %s v%s, display: %s\n", MIDIUM_NAME, MIDIUM_MODEL, MIDIUM_VERSION, drv->name);
+    dbg_printf("\n%s %s v%s (%s), display: %s\n", MIDIUM_NAME, MIDIUM_MODEL, MIDIUM_VERSION, MIDIUM_MAKER, drv->name);
 
     for (;;) {
         uint64_t now = time_us_64();

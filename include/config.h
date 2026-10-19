@@ -6,11 +6,12 @@
 #define MIDIUM_CONFIG_H
 
 #ifndef MIDIUM_VERSION
-#define MIDIUM_VERSION "0.6.0"
+#define MIDIUM_VERSION "0.6.1"
 #endif
 
 #define MIDIUM_NAME   "MIDIum"
-#define MIDIUM_MODEL  "NSK MT-1"
+#define MIDIUM_MODEL  "MT-1"
+#define MIDIUM_MAKER  "melling.audio"   /* brand font: Century Gothic (print / case work only) */
 
 /* Display selection: 0 = auto (probe OLED at I2C 0x3C/0x3D, else TFT),
  *                    1 = force OLED, 2 = force TFT. */

@@ -63,19 +63,30 @@ extern settings_t g_settings;
 void settings_defaults(settings_t *s);
 
 /* ---- routing presets (inputs only; generator routing is left alone) ----
- *   0  "A->A, A->B (thru)"   default: IN A to both outputs, IN B monitored only
- *   1  "A+B merge -> both"
- *   2  "A->A, B->B (split)"
- *   3  "B->A, B->B"                                                           */
+ * Read as signal flow, IN -> OUT:
+ *   0  Thru       IN A -> OUT A + OUT B   (default; IN B monitored only)
+ *   1  Merge      IN A + IN B -> both outs
+ *   2  Split      IN A -> OUT A, IN B -> OUT B
+ *   3  B to both  IN B -> OUT A + OUT B                                     */
 #define ROUTE_PRESET_COUNT 4
 const char *route_preset_name(int idx);
+/* The preset's signal flow, arrows as CH_RIGHT (0x1A): wide = the 40-column
+ * form ("IN A > OUT A + OUT B"), else the 21-column one ("A>A+B"). */
+const char *route_preset_flow(int idx, bool wide);
 /* Apply a preset. Routes are added before any are removed, so a message
  * that is routed both before and after the change is never dropped by a
  * half-written matrix (core1 latches routes per message start). */
 void route_preset_apply(me_settings_t *r, int idx);
 /* True if the input columns of r match the preset. */
 bool route_preset_active(const me_settings_t *r, int idx);
-/* Header summary for one output: input letters ("a", "b", "ab") or "-". */
-void route_summary(const me_settings_t *r, int out, char *buf, unsigned n);
+/* For one input (ME_SRC_A / _B / _GEN): the outputs it feeds, "AB", "A",
+ * "B", or "-" for none. */
+void route_summary(const me_settings_t *r, int src, char *buf, unsigned n);
+/* Monitor header routing, per input, IN -> OUT, 9 cells fixed width:
+ * "A>AB B>- " (> = CH_RIGHT 0x1A): IN A feeds both outputs, IN B none. */
+void route_summary_line(const me_settings_t *r, char *buf, unsigned n);
+/* One source's routing in words: "IN A > OUT A, OUT B", "IN B > monitor
+ * only" (wide) / "IN B > monitored", "GEN > not sent" / "GEN > off". */
+void route_flow_text(const me_settings_t *r, int src, bool wide, char *buf, unsigned n);
 
 #endif /* MIDIUM_SETTINGS_H */

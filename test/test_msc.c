@@ -733,7 +733,7 @@ static void test_detail(void) {
             "NOTE ON  1 C4   100", "NOTE OFF 1 C4     0", "CC  1 #7=100", "PC  1 4",
             "MSC SND STOP", "MSC ALL GO Q1 L2", "MSC LTG GO Q12.5 L1"
         };
-        show_screen("PAUSED  A:on B:on   *", mon, 7, 21, 8);
+        show_screen("PAUSED +7           *", mon, 7, 21, 8);
         int pages = (d_n + 6) / 7;
         for (int p = 0; p < pages; p++) {
             char h[48];

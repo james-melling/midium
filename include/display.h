@@ -31,7 +31,8 @@
 /* Icon characters (control codes that never occur in text; both fonts
  * have them: src/glyphs.h for the OLED, src/font_jbm13.h for the TFT):
  * battery levels 0 (empty outline) .. 4 (full), a charging bolt, play
- * triangles and arrows (the arrows at their CP437 positions). */
+ * triangles and arrows (the arrows at their CP437 positions), and the
+ * routing matrix cells. */
 #define CH_BATT0     '\x10'
 #define CH_BATT(n)   ((char)(0x10 + (n)))
 #define CH_BOLT      '\x15'
@@ -43,6 +44,8 @@
 #define CH_LEFT      '\x1B'
 #define CH_BAR_FULL  '\x1C'   /* TFT only: progress bar cell, full */
 #define CH_BAR_EMPTY '\x1D'   /* TFT only: progress bar track */
+#define CH_DOT_ON    '\x1E'   /* routing matrix: routed (filled disc) */
+#define CH_DOT_OFF   '\x1F'   /* routing matrix: not routed (small dot) */
 
 typedef struct {
     char    ch;
